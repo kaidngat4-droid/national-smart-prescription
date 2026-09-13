@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediPrescribe | إدارة المستخدمين</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a1628">
+<link rel="stylesheet" href="css/style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="dashboard-body">
+
+<!-- ==================== الهيدر ==================== -->
+<header class="app-header">
+  <div class="logo">
+    <div class="logo-icon">⚕️</div>
+    <div>
+      <h1>MediPrescribe</h1>
+      <small>إدارة المستخدمين والصلاحيات · RBAC</small>
+    </div>
+  </div>
+
+  <nav id="main-nav">
+    <a class="nav-link" href="dashboard.html">🩺 وصفة جديدة</a>
+    <a class="nav-link" href="dashboard.html#records-section">📋 السجلات</a>
+    <a class="nav-link active" href="users.html">👥 المستخدمون</a>
+    <a class="nav-link" href="index.html">🌐 الموقع</a>
+  </nav>
+
+  <div class="user-box">
+    <span class="user-badge gold" id="user-badge"></span>
+    <button id="logout-btn" class="btn btn-danger btn-sm" type="button">🚪 خروج</button>
+  </div>
+</header>
+
+<!-- ==================== المحتوى الرئيسي ==================== -->
+<main class="users-container">
+
+  <!-- تنبيه الصلاحيات (يظهر لغير المدير) -->
+  <div id="permission-alert" class="alert alert-warning hidden">
+    ⚠️ <strong>صلاحيات غير كافية</strong> — هذه الصفحة مخصّصة لمدير النظام فقط.
+    يمكنك تصفح المستخدمين للقراءة، لكن لا يمكنك التعديل أو الحذف.
+  </div>
+
+  <!-- إخلاء المسؤولية -->
+  <div class="disclaimer dark">
+    🔐 جميع العمليات في هذه الصفحة تُسجَّل تلقائياً في سجل التدقيق (Audit Log) لأغراض الأمان والمراجعة.
+  </div>
+
+  <!-- ==================== إحصائيات الأدوار ==================== -->
+  <div class="roles-stats">
+    <div class="role-stat">
+      <span class="role-icon">👑</span>
+      <div>
+        <div class="role-num" id="count-admin">0</div>
+        <div class="role-name">مدراء</div>
+      </div>
+    </div>
+    <div class="role-stat">
+      <span class="role-icon">🩺</span>
+      <div>
+        <div class="role-num" id="count-doctor">0</div>
+        <div class="role-name">أطباء</div>
+      </div>
+    </div>
+    <div class="role-stat">
+      <span class="role-icon">💊</span>
+      <div>
+        <div class="role-num" id="count-pharmacist">0</div>
+        <div class="role-name">صيادلة</div>
+      </div>
+    </div>
+    <div class="role-stat">
+      <span class="role-icon">👩‍⚕️</span>
+      <div>
+        <div class="role-num" id="count-nurse">0</div>
+        <div class="role-name">ممرضون</div>
+      </div>
+    </div>
+    <div class="role-stat">
+      <span class="role-icon">📋</span>
+      <div>
+        <div class="role-num" id="count-receptionist">0</div>
+        <div class="role-name">استقبال</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== شريط الأدوات ==================== -->
+  <div class="users-toolbar">
+    <input type="search" id="users-search"
+           class="search-input"
+           placeholder="🔍 بحث بالاسم، اسم المستخدم، البريد، أو الهاتف..."
+           autocomplete="off">
+
+    <div class="filter-group">
+      <select id="filter-role" aria-label="فلترة بالدور">
+        <option value="">— كل الأدوار —</option>
+        <option value="admin">👑 مدير</option>
+        <option value="doctor">🩺 طبيب</option>
+        <option value="pharmacist">💊 صيدلي</option>
+        <option value="nurse">👩‍⚕️ ممرض</option>
+        <option value="receptionist">📋 استقبال</option>
+      </select>
+
+      <select id="filter-status" aria-label="فلترة بالحالة">
+        <option value="">— كل الحالات —</option>
+        <option value="active">🟢 نشط</option>
+        <option value="inactive">⚪ غير نشط</option>
+        <option value="suspended">🔴 موقوف</option>
+      </select>
+    </div>
+
+    <div class="view-toggle" id="view-toggle" role="group" aria-label="نوع العرض">
+      <button data-view="grid" class="active" type="button" title="عرض بطاقات">
+        🔲 بطاقات
+      </button>
+      <button data-view="table" type="button" title="عرض جدول">
+        📋 جدول
+      </button>
+    </div>
+
+    <button class="btn btn-gold" id="add-user-btn" type="button">
+      ➕ مستخدم جديد
+    </button>
+  </div>
+
+  <!-- ==================== عرض البطاقات (Grid) ==================== -->
+  <div id="users-view-grid" class="users-grid">
+    <!-- تُملأ ديناميكياً من users.js -->
+  </div>
+
+  <!-- ==================== عرض الجدول (Table) ==================== -->
+  <div id="users-view-table" class="table-wrap hidden">
+    <table class="users-table">
+      <thead>
+        <tr>
+          <th>المستخدم</th>
+          <th>الدور</th>
+          <th>المستشفى</th>
+          <th>الهاتف</th>
+          <th>الحالة</th>
+          <th>آخر دخول</th>
+          <th>إجراءات</th>
+        </tr>
+      </thead>
+      <tbody id="users-tbody">
+        <!-- تُملأ ديناميكياً من users.js -->
+      </tbody>
+    </table>
+  </div>
+
+</main>
+
+<!-- ==================== الفوتر ==================== -->
+<footer class="dashboard-footer">
+  <b>MediPrescribe ⚕️</b> — إدارة المستخدمين · نظام RBAC آمن ·
+  جميع العمليات مسجّلة في Audit Log · البيانات محفوظة محلياً عبر IndexedDB
+</footer>
+
+<!-- ==================== التوقيع الإلكتروني ==================== -->
+<div class="e-signature">
+  <span class="sig-label">هندسة وتطوير</span>
+  <span class="sig-name">Dr.Salah Al-Ahdal</span>
+  <span class="sig-role">Design &amp; Development</span>
+  <span class="sig-underline"></span>
+</div>
+
+<!-- ==================== Modal إضافة/تعديل مستخدم ==================== -->
+<div class="modal hidden" id="user-modal">
+  <div class="modal-content dark">
+    <button class="modal-close" id="modal-close" type="button" aria-label="إغلاق">×</button>
+
+    <div class="modal-header">
+      <h3 class="modal-title" id="modal-title">➕ مستخدم جديد</h3>
+    </div>
+
+    <form id="user-form" class="user-form" autocomplete="off">
+      <!-- الحقول الأساسية -->
+      <input type="hidden" id="u-id">
+
+      <div class="form-field">
+        <label class="required" for="u-fullname">الاسم الكامل</label>
+        <input type="text"
+               id="u-fullname"
+               class="input-dark"
+               required
+               placeholder="مثال: د. سالم العمري"
+               autocomplete="off">
+      </div>
+
+      <div class="form-field">
+        <label class="required" for="u-username">اسم المستخدم</label>
+        <input type="text"
+               id="u-username"
+               class="input-dark"
+               required
+               placeholder="dr.salem"
+               autocomplete="off"
+               spellcheck="false"
+               pattern="[a-zA-Z0-9._-]{3,}">
+      </div>
+
+      <div class="form-field">
+        <label class="required" for="u-password">كلمة المرور</label>
+        <input type="password"
+               id="u-password"
+               class="input-dark"
+               placeholder="••••••••"
+               autocomplete="new-password">
+        <small class="text-muted text-xs" id="pass-hint"
+               style="display:none;margin-top:4px;display:block;">
+          اتركها فارغة للإبقاء على كلمة المرور الحالية
+        </small>
+      </div>
+
+      <div class="form-field">
+        <label for="u-email">البريد الإلكتروني</label>
+        <input type="email"
+               id="u-email"
+               class="input-dark"
+               placeholder="user@hospital.gov">
+      </div>
+
+      <div class="form-field">
+        <label class="required" for="u-role">الدور</label>
+        <select id="u-role" class="input-dark" required>
+          <option value="">— اختر —</option>
+          <option value="admin">👑 مدير النظام</option>
+          <option value="doctor">🩺 طبيب باطنية</option>
+          <option value="pharmacist">💊 صيدلي</option>
+          <option value="nurse">👩‍⚕️ ممرض</option>
+          <option value="receptionist">📋 استقبال</option>
+        </select>
+      </div>
+
+      <div class="form-field">
+        <label for="u-hospital">المستشفى / المنشأة</label>
+        <select id="u-hospital" class="input-dark">
+          <!-- تُملأ ديناميكياً من users.js -->
+        </select>
+      </div>
+
+      <div class="form-field">
+        <label for="u-phone">الهاتف</label>
+        <input type="tel"
+               id="u-phone"
+               class="input-dark"
+               placeholder="77xxxxxxx"
+               inputmode="tel">
+      </div>
+
+      <div class="form-field">
+        <label for="u-status">الحالة</label>
+        <select id="u-status" class="input-dark">
+          <option value="active">🟢 نشط</option>
+          <option value="inactive">⚪ غير نشط</option>
+          <option value="suspended">🔴 موقوف</option>
+        </select>
+      </div>
+
+      <!-- شبكة الصلاحيات -->
+      <div class="form-field full-width">
+        <label>الصلاحيات المخصّصة</label>
+        <div class="permissions-grid" id="permissions-grid">
+          <!-- تُملأ ديناميكياً من users.js -->
+        </div>
+      </div>
+
+      <!-- الأزرار -->
+      <div class="form-field full-width action-row" style="margin-top:8px;">
+        <button type="submit" class="btn btn-gold w-full">
+          💾 حفظ
+        </button>
+        <button type="button" class="btn btn-ghost" id="cancel-btn">
+          إلغاء
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ==================== Modal تأكيد الحذف ==================== -->
+<div class="modal hidden" id="confirm-modal">
+  <div class="modal-content dark" style="max-width:420px;">
+    <h3 class="modal-title mb-md" style="text-align:center;">
+      ⚠️ تأكيد الحذف
+    </h3>
+    <p id="confirm-text"
+       class="mb-lg"
+       style="text-align:center;color:#c7d2de;line-height:1.8;">
+      هل أنت متأكد من حذف هذا المستخدم؟ لا يمكن التراجع.
+    </p>
+    <div class="action-row" style="justify-content:center;">
+      <button class="btn btn-danger-solid" id="confirm-yes" type="button">
+        🗑️ نعم، احذف
+      </button>
+      <button class="btn btn-ghost" id="confirm-no" type="button">
+        إلغاء
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== Toast ==================== -->
+<div id="toast-box"></div>
+
+<!-- ==================== السكربتات ==================== -->
+<script src="js/data.js"></script>
+<script src="js/db.js"></script>
+<script src="js/users.js"></script>
+</body>
+</html>

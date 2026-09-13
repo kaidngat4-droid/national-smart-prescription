@@ -1,0 +1,39 @@
+# ═══ النظام ═══
+.DS_Store
+Thumbs.db
+
+# ═══ Termux/Linux ═══
+*.swp
+*~
+*#
+
+# ═══ Node ═══
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# ═══ بيئة ═══
+.env
+.env.local
+*.env
+
+# ═══ محرر ═══
+.vscode/
+.idea/
+*.sublime-*
+
+# ═══ مؤقتات ═══
+*.tmp
+*.bak
+*.log
+
+# ═══ ضغط ═══
+*.zip
+*.rar
+*.7z
+*.tar.gz
+
+# ═══ مفاتيح ═══
+*.key
+*.pem
+secrets/

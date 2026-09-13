@@ -1,0 +1,1820 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<!-- ==================== SEO ==================== -->
+<title>المركز الطبي الذكي | النظام الوطني الذكي للوصفات الطبية</title>
+<meta name="description" content="نظام طبي متكامل — وزارة الصحة والبيئة اليمنية. احجز موعدك، استشر أطباءنا، واستفد من خدماتنا الطبية الشاملة.">
+<meta name="keywords" content="المركز الطبي, وزارة الصحة, اليمن, حجز موعد, استشارة طبية, وصفات طبية">
+<meta name="author" content="Dr.Salah Al-Ahdal">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#0a1628">
+<meta name="color-scheme" content="dark light">
+
+<!-- ==================== Open Graph ==================== -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ar_YE">
+<meta property="og:site_name" content="MediPrescribe">
+<meta property="og:title" content="المركز الطبي الذكي | وزارة الصحة والبيئة">
+<meta property="og:description" content="رعاية صحية ذكية على بُعد نقرة — احجز موعدك واستشر أطباءنا.">
+<meta property="og:image" content="images/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+
+<!-- ==================== Twitter Card ==================== -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="المركز الطبي الذكي">
+<meta name="twitter:description" content="رعاية صحية ذكية على بُعد نقرة.">
+<meta name="twitter:image" content="images/twitter-card.jpg">
+
+<!-- ==================== PWA / Icons ==================== -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%230a1628'/%3E%3Ccircle cx='50' cy='50' r='42' fill='none' stroke='%23d4af37' stroke-width='2.5'/%3E%3Cpath d='M50 28v44M32 38h36M38 68h24' stroke='%23d4af37' stroke-width='3.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MediPrescribe">
+
+<!-- ==================== Fonts ==================== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cairo:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<style>
+/* ═══════════════ نظام الألوان والأساسيات ═══════════════ */
+:root {
+  --bg: #0a1628;
+  --bg-light: #12233d;
+  --bg-card: rgba(255, 255, 255, 0.045);
+  --gold: #d4af37;
+  --gold-light: #f1d878;
+  --text: #eef3f8;
+  --text-muted: #93a2b5;
+  --border: rgba(212, 175, 55, 0.18);
+  --danger: #dc3545;
+  --success: #28a745;
+  --info: #0288d1;
+  --radius: 14px;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --primary-color: #00796b;
+  --primary-light: rgba(0, 121, 107, 0.12);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body.public-body {
+  font-family: 'Tajawal', 'Cairo', sans-serif;
+  background:
+    radial-gradient(1000px 500px at 80% -10%, rgba(212, 175, 55, 0.07), transparent 60%),
+    radial-gradient(800px 400px at 10% 110%, rgba(2, 136, 209, 0.08), transparent 60%),
+    var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.7;
+}
+
+h1, h2, h3 { font-family: 'Cairo', 'Tajawal', sans-serif; }
+
+a { color: inherit; }
+
+::selection { background: rgba(212, 175, 55, 0.35); }
+
+:focus-visible {
+  outline: 2px solid var(--gold-light);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ═══════════════ الهيدر الرسمي المركزي ═══════════════ */
+.app-header-centered {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  background: rgba(10, 22, 40, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.official-header-top {
+  padding: 18px 20px 14px;
+  text-align: center;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+  background: radial-gradient(600px 100px at 50% 0%, rgba(212, 175, 55, 0.06), transparent 70%);
+}
+
+.official-header-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.official-emblem {
+  width: 62px;
+  height: 62px;
+  object-fit: contain;
+  border-radius: 50%;
+  border: 2.5px solid rgba(212, 175, 55, 0.35);
+  padding: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+  display: block;
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+.official-emblem:hover { transform: scale(1.08); box-shadow: 0 0 30px rgba(212, 175, 55, 0.4); }
+.official-emblem.institute { width: 54px; height: 54px; border-color: rgba(212, 175, 55, 0.4); }
+.official-emblem.fallback {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.official-header-republic {
+  font-family: 'Tajawal', 'Cairo', sans-serif;
+  font-weight: 800;
+  font-size: clamp(0.95rem, 2.5vw, 1.15rem);
+  color: #fff;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 15px rgba(0, 0, 0, 0.6);
+  margin-top: 4px;
+}
+
+.official-header-divider {
+  width: 220px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), var(--gold-light), var(--gold), transparent);
+  margin: 6px auto;
+  border-radius: 2px;
+}
+
+.official-header-title {
+  font-family: 'Cairo', 'Tajawal', sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.05rem, 2.8vw, 1.35rem);
+  color: var(--gold-light);
+  text-shadow: 0 3px 20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(212, 175, 55, 0.25);
+  letter-spacing: 1px;
+  line-height: 1.5;
+  margin: 4px 0 0;
+}
+
+.official-header-subtitle {
+  font-family: 'Tajawal', 'Cairo', sans-serif;
+  font-weight: 600;
+  font-size: clamp(0.78rem, 1.8vw, 0.92rem);
+  color: var(--text);
+  opacity: 0.95;
+  letter-spacing: 0.5px;
+  line-height: 1.5;
+  margin: 2px 0 0;
+}
+
+.app-header-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 24px;
+  flex-wrap: wrap;
+}
+
+#main-nav { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+
+.nav-link {
+  padding: 8px 14px;
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.88rem;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+.nav-link:hover { color: var(--gold-light); background: rgba(212, 175, 55, 0.08); }
+.nav-link.active {
+  color: var(--gold-light);
+  background: rgba(212, 175, 55, 0.12);
+  border-color: rgba(212, 175, 55, 0.18);
+}
+
+.user-box { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.user-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.user-badge.gold {
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  color: var(--gold-light);
+}
+
+/* ═══════════════ الأزرار ═══════════════ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  text-align: center;
+  user-select: none;
+  text-decoration: none;
+}
+.btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none !important; }
+.btn-sm { padding: 6px 14px; font-size: 0.82rem; }
+.btn-danger {
+  background: rgba(220, 53, 69, 0.1);
+  color: #ff9aa5;
+  border: 1px solid rgba(220, 53, 69, 0.35);
+}
+.btn-danger:hover { background: rgba(220, 53, 69, 0.22); transform: translateY(-2px); }
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+.btn-ghost:hover { background: rgba(255, 255, 255, 0.12); transform: translateY(-2px); }
+.btn-secondary {
+  background: linear-gradient(135deg, #0288d1, #0277bd);
+  color: #fff;
+  border: none;
+}
+.btn-secondary:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(2, 136, 209, 0.3); }
+.btn-primary {
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  color: var(--bg);
+  box-shadow: 0 10px 24px rgba(212, 175, 55, 0.28);
+}
+.btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(212, 175, 55, 0.4); }
+.btn-outline {
+  background: transparent;
+  color: var(--gold-light);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+}
+.btn-outline:hover { background: rgba(212, 175, 55, 0.12); transform: translateY(-2px); }
+
+/* ═══════════════ skip link ═══════════════ */
+.skip-link {
+  position: absolute;
+  top: -50px;
+  right: 10px;
+  background: var(--gold);
+  color: var(--bg);
+  padding: 8px 16px;
+  border-radius: 0 0 10px 10px;
+  font-weight: 800;
+  z-index: 9999;
+  transition: top 0.2s;
+  text-decoration: none;
+}
+.skip-link:focus { top: 0; }
+
+/* ═══════════════ Hero ═══════════════ */
+.hero-section {
+  padding: 90px 20px 70px;
+  text-align: center;
+  background:
+    radial-gradient(700px 300px at 50% 0%, rgba(212, 175, 55, 0.09), transparent 70%);
+}
+.hero-content { max-width: 720px; margin: 0 auto; }
+.hero-content h2 {
+  font-size: clamp(1.6rem, 5vw, 2.6rem);
+  font-weight: 800;
+  background: linear-gradient(135deg, #fff, var(--gold-light));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 14px;
+}
+.hero-content p {
+  color: var(--text-muted);
+  font-size: clamp(0.95rem, 2.5vw, 1.15rem);
+  margin-bottom: 32px;
+}
+
+.search-bar {
+  display: flex;
+  gap: 8px;
+  max-width: 560px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px;
+  backdrop-filter: blur(8px);
+}
+.search-bar input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: 10px 18px;
+}
+.search-bar input::placeholder { color: var(--text-muted); }
+.search-bar button {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 24px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  color: var(--bg);
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.search-bar button:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(212, 175, 55, 0.35); }
+
+/* ═══════════════ الأقسام ═══════════════ */
+.section { max-width: 1100px; margin: 0 auto; padding: 60px 20px; }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 30px;
+}
+.section-header h3 {
+  font-size: 1.5rem;
+  color: var(--gold-light);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.departments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.dept-card {
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.dept-card::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0;
+  height: 3px;
+  width: 0;
+  background: linear-gradient(90deg, var(--gold), var(--gold-light));
+  transition: width 0.3s ease;
+  z-index: 2;
+}
+.dept-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(212, 175, 55, 0.35);
+  box-shadow: var(--shadow);
+}
+.dept-card:hover::before { width: 100%; }
+.dept-card.hidden-by-search { display: none; }
+
+/* ═══ صورة بطاقة القسم ═══ */
+.dept-card-image {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(0,121,107,0.15), rgba(2,136,209,0.1));
+}
+.dept-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transition: transform 0.5s ease;
+  display: block;
+}
+.dept-card:hover .dept-card-image img {
+  transform: scale(1.06);
+}
+.dept-card-image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 55%, rgba(10, 22, 40, 0.35) 100%);
+  pointer-events: none;
+}
+
+/* ✅ حالة الاحتياط: عند فشل تحميل الصورة */
+.dept-card-image.fallback-mode {
+  height: auto;
+  padding: 22px 22px 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+}
+.dept-card-image.fallback-mode img { display: none; }
+.dept-card-image.fallback-mode::after { display: none; }
+.dept-card-image.fallback-mode .dept-icon {
+  display: flex;
+  margin-bottom: 0;
+}
+
+/* أيقونة الاحتياط (مخفية افتراضياً) */
+.dept-card-image .dept-icon-fallback {
+  display: none;
+  width: 54px;
+  height: 54px;
+  border-radius: var(--radius-md, 10px);
+  background: var(--primary-light);
+  border: 1px solid rgba(0,121,107,0.22);
+  font-size: 1.4rem;
+  color: var(--primary-color);
+  align-items: center;
+  justify-content: center;
+}
+.dept-card-image.fallback-mode .dept-icon-fallback {
+  display: flex;
+}
+
+/* ═══ جسم البطاقة ═══ */
+.dept-card-body {
+  padding: 22px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.dept-card-body h4 { font-size: 1.15rem; margin-bottom: 8px; color: #fff; }
+.dept-card-body p { font-size: 0.88rem; color: var(--text-muted); margin-bottom: 14px; flex: 1; }
+
+.dept-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.dept-meta .doctors-count { color: var(--gold-light); font-weight: 700; }
+.dept-meta .doctors-count:hover { color: #fff; }
+
+/* ═══ أيقونة القسم (تُستخدم في fallback) ═══ */
+.dept-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  color: var(--gold-light);
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  margin-bottom: 16px;
+}
+
+.no-results {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--text-muted);
+  padding: 40px 20px;
+  font-size: 1rem;
+}
+.no-results i { font-size: 2rem; display: block; margin-bottom: 12px; color: var(--gold); }
+
+/* ═══════════════ قسم الحجز — مع خلفية المستشفى ═══════════════ */
+.booking-section {
+  position: relative;
+  max-width: 720px;
+  margin: 0 auto 70px;
+  padding: 50px 24px;
+  text-align: center;
+  background:
+    linear-gradient(rgba(10, 22, 40, 0.82), rgba(10, 22, 40, 0.82)),
+    url('images/hospital-bg.jpg') center/cover no-repeat;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  overflow: hidden;
+  color: #fff;
+}
+.booking-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    600px 300px at 50% 0%,
+    rgba(212, 175, 55, 0.12),
+    transparent 70%
+  );
+  pointer-events: none;
+  border-radius: inherit;
+}
+.booking-section > * {
+  position: relative;
+  z-index: 1;
+}
+.booking-section h3 {
+  font-size: 1.5rem;
+  color: var(--gold-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.booking-section > p { color: rgba(255, 255, 255, 0.85); margin-bottom: 30px; font-size: 0.95rem; }
+
+#booking-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  text-align: right;
+}
+#booking-form input,
+#booking-form select {
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(10, 22, 40, 0.65);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.92rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  backdrop-filter: blur(6px);
+}
+#booking-form select option { background: var(--bg-light); color: var(--text); }
+#booking-form input::placeholder { color: rgba(255, 255, 255, 0.55); }
+#booking-form input:focus,
+#booking-form select:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+}
+#booking-form input.invalid,
+#booking-form select.invalid {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.2);
+}
+#booking-form input[type="date"],
+#booking-form input[type="time"] { color-scheme: dark; }
+#booking-form button[type="submit"] {
+  grid-column: 1 / -1;
+  padding: 14px;
+  font-size: 1rem;
+  margin-top: 6px;
+}
+
+/* ═══════════════ الفوتر ═══════════════ */
+.app-footer {
+  border-top: 1px solid var(--border);
+  padding: 40px 20px 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  background: rgba(10, 22, 40, 0.6);
+}
+.footer-links { margin-bottom: 16px; }
+.footer-links a {
+  color: var(--text);
+  text-decoration: none;
+  transition: color 0.15s ease;
+  font-weight: 600;
+}
+.footer-links a:hover { color: var(--gold-light); }
+.visitor-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  color: var(--gold-light);
+  font-weight: 700;
+}
+.app-footer small { opacity: 0.7; }
+
+/* ═══════════════ التوقيع ═══════════════ */
+.e-signature {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 30px 20px 60px;
+  background: rgba(10, 22, 40, 0.6);
+}
+.sig-label { font-size: 0.75rem; color: var(--text-muted); letter-spacing: 1px; }
+.sig-name {
+  font-family: 'Great Vibes', cursive;
+  font-size: 2rem;
+  color: var(--gold-light);
+  text-shadow: 0 0 25px rgba(212, 175, 55, 0.3);
+}
+.sig-role { font-size: 0.7rem; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; }
+.sig-underline {
+  width: 180px;
+  height: 1px;
+  margin-top: 8px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+/* ═══════════════ الشات الذكي ═══════════════ */
+.floating-chat {
+  position: fixed;
+  bottom: 20px;
+  inset-inline-start: 20px;
+  width: min(360px, calc(100vw - 40px));
+  background: var(--bg-light);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  z-index: 60;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: height 0.25s ease;
+  height: 460px;
+}
+.floating-chat.minimized { height: 52px; }
+.floating-chat.minimized .chat-body,
+.floating-chat.minimized .chat-footer { display: none; }
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(212, 175, 55, 0.05));
+  border-bottom: 1px solid var(--border);
+  font-weight: 800;
+  color: var(--gold-light);
+  flex-shrink: 0;
+}
+.chat-header button {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: var(--gold-light);
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+.chat-header button:hover { background: rgba(212, 175, 55, 0.2); }
+
+.chat-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chat-body::-webkit-scrollbar { width: 6px; }
+.chat-body::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.3); border-radius: 3px; }
+
+.chat-msg {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 0.88rem;
+  line-height: 1.7;
+  animation: msgIn 0.25s ease;
+}
+@keyframes msgIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.chat-msg.bot {
+  align-self: flex-start;
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  color: var(--text);
+  border-start-start-radius: 4px;
+}
+.chat-msg.user {
+  align-self: flex-end;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  color: var(--bg);
+  font-weight: 600;
+  border-start-end-radius: 4px;
+}
+.chat-typing {
+  align-self: flex-start;
+  padding: 10px 16px;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  letter-spacing: 3px;
+}
+
+.chat-footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
+}
+.chat-footer input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(10, 22, 40, 0.6);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.88rem;
+  outline: none;
+}
+.chat-footer input:focus { border-color: var(--gold); }
+.chat-footer button {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  color: var(--bg);
+  font-weight: 800;
+  font-family: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: transform 0.15s ease;
+}
+.chat-footer button:hover { transform: translateY(-1px); }
+
+/* ═══════════════ المشاركة الاجتماعية ═══════════════ */
+.social-share-sidebar {
+  position: fixed;
+  top: 50%;
+  inset-inline-end: 0;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 55;
+  padding: 8px 6px;
+  background: rgba(10, 22, 40, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-inline-end: none;
+  border-radius: 14px 0 0 14px;
+  backdrop-filter: blur(10px);
+}
+.share-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 1.05rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.share-btn:hover { transform: translateX(-3px) scale(1.05); }
+.share-btn.whatsapp { background: #25d366; }
+.share-btn.facebook { background: #1877f2; }
+.share-btn.twitter { background: #1da1f2; }
+.share-btn.telegram { background: #0088cc; }
+
+/* ═══════════════ Modal ═══════════════ */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 10, 20, 0.75);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+.modal.hidden { display: none; }
+.modal-content {
+  background: #fff;
+  color: #1a2332;
+  border-radius: 20px;
+  padding: 36px 30px;
+  max-width: 520px;
+  width: 100%;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+  animation: modalIn 0.3s ease;
+}
+@keyframes modalIn { from { opacity: 0; transform: translateY(20px) scale(0.97); } to { opacity: 1; transform: none; } }
+.modal-close {
+  position: absolute;
+  top: 12px;
+  inset-inline-start: 14px;
+  background: rgba(0, 0, 0, 0.06);
+  border: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 1.3rem;
+  cursor: pointer;
+  color: #555;
+  line-height: 1;
+  transition: background 0.15s ease;
+}
+.modal-close:hover { background: rgba(0, 0, 0, 0.12); }
+
+/* ═══════════════ Toast ═══════════════ */
+#toast-box {
+  position: fixed;
+  bottom: 24px;
+  inset-inline-end: 24px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: min(360px, calc(100vw - 48px));
+}
+.toast {
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #fff;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: toastIn 0.3s ease;
+  border-inline-start: 4px solid transparent;
+}
+@keyframes toastIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: none; } }
+.toast.out { animation: toastOut 0.3s ease forwards; }
+@keyframes toastOut { to { opacity: 0; transform: translateX(-20px); } }
+.toast.success { background: #1e3d2b; border-color: var(--success); }
+.toast.error   { background: #3d1e22; border-color: var(--danger); }
+.toast.warning { background: #3d351e; border-color: var(--gold); }
+.toast.info    { background: #1e2c3d; border-color: var(--info); }
+
+/* ═══════════════ الطباعة ═══════════════ */
+@media print {
+  .app-header-centered, .skip-link, .floating-chat, .social-share-sidebar,
+  .app-footer, .hero-section, #booking, .auth-buttons, #toast-box, .modal,
+  .e-signature, .print-share-controls { display: none !important; }
+  body { background: #fff !important; color: #000 !important; }
+  .departments-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .dept-card { border: 1px solid #ccc; background: #fff; }
+  .dept-card h4, .dept-card p, .dept-meta { color: #000 !important; }
+}
+
+/* ═══════════════ Responsive ═══════════════ */
+@media (max-width: 1024px) {
+  .official-header-top { padding: 14px 16px 10px; }
+  .official-emblem { width: 52px; height: 52px; }
+  .official-emblem.institute { width: 46px; height: 46px; }
+  .app-header-nav { padding: 12px 16px; }
+}
+
+@media (max-width: 768px) {
+  .official-header-top { padding: 12px 12px 8px; }
+  .official-emblem { width: 46px; height: 46px; padding: 4px; }
+  .official-emblem.institute { width: 42px; height: 42px; }
+  .official-header-republic { font-size: 0.85rem; letter-spacing: 1.5px; }
+  .official-header-title { font-size: 1rem; }
+  .official-header-subtitle { font-size: 0.72rem; }
+  .official-header-divider { width: 160px; }
+  .app-header-nav { padding: 10px 12px; flex-direction: column; align-items: stretch; gap: 10px; }
+  #main-nav { justify-content: center; order: 2; }
+  .user-box { justify-content: center; order: 1; }
+  #booking-form { grid-template-columns: 1fr; }
+  .hero-section { padding: 60px 16px 50px; }
+  .social-share-sidebar { top: auto; bottom: 90px; transform: none; }
+  .floating-chat { bottom: 12px; inset-inline-start: 12px; }
+  .booking-section { margin-inline: 16px; margin-bottom: 50px; padding: 36px 18px; }
+  .dept-card-image { height: 160px; }
+}
+
+@media (max-width: 480px) {
+  .official-emblem { width: 42px; height: 42px; padding: 3px; }
+  .official-emblem.institute { width: 38px; height: 38px; }
+  .official-header-republic { font-size: 0.78rem; }
+  .official-header-title { font-size: 0.92rem; }
+  .official-header-subtitle { font-size: 0.68rem; }
+  .nav-link { font-size: 0.75rem; padding: 6px 8px; }
+  .search-bar { flex-direction: column; border-radius: 18px; }
+  .search-bar button { justify-content: center; }
+  .dept-card-image { height: 140px; }
+}
+</style>
+</head>
+
+<body class="public-body">
+
+<a href="#main-content" class="skip-link">تخطَّ إلى المحتوى الرئيسي</a>
+
+<!-- ==================== الهيدر الرسمي المركزي ==================== -->
+<header class="app-header-centered" role="banner">
+  <div class="official-header-top">
+    <div class="official-header-content">
+      <img src="images/logo-yemen.png" alt="شعار الجمهورية اليمنية"
+           class="official-emblem" loading="eager" data-fallback="🇾🇪" width="62" height="62">
+
+      <span class="official-header-republic">الجمهورية اليمنية</span>
+      <div class="official-header-divider" aria-hidden="true"></div>
+
+      <img src="images/logo-health.png" alt="شعار وزارة الصحة والبيئة"
+           class="official-emblem institute" loading="eager" data-fallback="⚕️" width="54" height="54">
+
+      <h1 class="official-header-title">وزارة الصحة والبيئة</h1>
+      <p class="official-header-subtitle">النظام الوطني الذكي للوصفات الطبية — المركز الطبي الذكي</p>
+    </div>
+  </div>
+
+  <div class="app-header-nav">
+    <nav id="main-nav" role="navigation" aria-label="التنقل الرئيسي">
+      <a class="nav-link active" href="index.html" aria-current="page">
+        <i class="fas fa-home" aria-hidden="true"></i>
+        الرئيسية
+      </a>
+      <a class="nav-link" href="#departments">
+        <i class="fas fa-hospital" aria-hidden="true"></i>
+        الأقسام
+      </a>
+      <a class="nav-link" href="#booking">
+        <i class="fas fa-calendar-check" aria-hidden="true"></i>
+        حجز موعد
+      </a>
+      <a class="nav-link" href="#ai-chat" id="nav-consult">
+        <i class="fas fa-comments" aria-hidden="true"></i>
+        استشارة
+      </a>
+      <a class="nav-link" href="#contact">
+        <i class="fas fa-phone" aria-hidden="true"></i>
+        تواصل
+      </a>
+    </nav>
+
+    <div class="user-box" id="auth-buttons">
+      <a href="login.html" class="btn btn-outline btn-sm" id="login-link">
+        <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+        دخول الأطباء
+      </a>
+      <button class="btn btn-primary btn-sm" id="register-btn" type="button">
+        <i class="fas fa-user-plus" aria-hidden="true"></i>
+        تسجيل جديد
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ==================== المحتوى الرئيسي ==================== -->
+<main id="main-content" role="main">
+
+  <!-- ==================== Hero Section ==================== -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <h2>رعاية صحية ذكية على بُعد نقرة</h2>
+      <p>ابحث عن الأقسام والخدمات الطبية، احجز موعدك، واستشر أطباءنا</p>
+
+      <div class="search-bar" role="search">
+        <input
+          type="search"
+          id="hero-search"
+          placeholder="ابحث عن قسم، عرض، أو خدمة..."
+          autocomplete="off"
+          aria-label="بحث">
+        <button type="button" id="hero-search-btn" aria-label="ابحث">
+          <i class="fas fa-search" aria-hidden="true"></i>
+          ابحث
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== الأقسام الطبية ==================== -->
+  <section class="section" id="departments">
+    <div class="section-header">
+      <h3><i class="fas fa-hospital" aria-hidden="true"></i> الأقسام الطبية</h3>
+      <div class="print-share-controls">
+        <button class="btn btn-secondary btn-sm" onclick="window.print()" type="button">
+          <i class="fas fa-print" aria-hidden="true"></i>
+          طباعة
+        </button>
+      </div>
+    </div>
+
+    <div class="departments-grid" id="departments-grid">
+      <!-- تُملأ ديناميكياً -->
+    </div>
+  </section>
+
+  <!-- ==================== قسم حجز المواعيد ==================== -->
+  <section class="booking-section" id="booking">
+    <h3><i class="fas fa-calendar-check" aria-hidden="true"></i> احجز موعدك الآن</h3>
+    <p>اختر التخصص والوقت المناسب وسنتواصل معك للتأكيد</p>
+
+    <form id="booking-form" autocomplete="on" novalidate>
+      <input
+        type="text"
+        name="name"
+        placeholder="الاسم الكامل"
+        required
+        autocomplete="name"
+        aria-label="الاسم الكامل"
+        minlength="2"
+        maxlength="80">
+
+      <input
+        type="tel"
+        name="phone"
+        placeholder="رقم الهاتف (مثال: 777123456)"
+        required
+        autocomplete="tel"
+        inputmode="tel"
+        aria-label="رقم الهاتف">
+
+      <select name="department" required aria-label="التخصص">
+        <option value="">— اختر التخصص —</option>
+        <option value="الباطنية العامة">الباطنية العامة</option>
+        <option value="أمراض القلب">أمراض القلب</option>
+        <option value="طب الأطفال">طب الأطفال</option>
+        <option value="الجلدية">الجلدية</option>
+        <option value="العيون">العيون</option>
+        <option value="العظام">العظام</option>
+      </select>
+
+      <input type="date" name="date" required aria-label="التاريخ">
+
+      <input type="time" name="time" required aria-label="الوقت">
+
+      <button type="submit" class="btn btn-primary" id="booking-submit">
+        <i class="fas fa-check-circle" aria-hidden="true"></i>
+        تأكيد الحجز
+      </button>
+    </form>
+  </section>
+
+</main>
+
+<!-- ==================== الفوتر الرسمي ==================== -->
+<footer class="app-footer" id="contact" role="contentinfo">
+  <div class="footer-links">
+    <a href="#departments">الأقسام</a> ·
+    <a href="#booking">حجز موعد</a> ·
+    <a href="login.html">دخول الأطباء</a> ·
+    <a href="#ai-chat" class="footer-consult">استشارة</a>
+  </div>
+
+  <div class="visitor-counter">
+    <i class="fas fa-users" aria-hidden="true"></i>
+    عدد الزوار: <span id="visitor-count" aria-live="polite">0</span>
+  </div>
+
+  <p>
+    <b>MediPrescribe ⚕️</b> — وحدة التخطيط والتطوير وضمان الجودة · المركز الطبي الذكي
+    <br>
+    <small>© 2026 جميع الحقوق محفوظة · البيانات محفوظة محلياً عبر متصفحك</small>
+  </p>
+</footer>
+
+<!-- ==================== التوقيع الإلكتروني ==================== -->
+<div class="e-signature" role="contentinfo" aria-label="التوقيع الإلكتروني">
+  <span class="sig-label">هندسة وتطوير</span>
+  <span class="sig-name">Dr.Salah Al-Ahdal</span>
+  <span class="sig-role">Design &amp; Development</span>
+  <span class="sig-underline"></span>
+</div>
+
+<!-- ==================== الشات الذكي ==================== -->
+<div class="floating-chat" id="ai-chat" role="dialog" aria-label="المساعد الطبي الذكي">
+  <div class="chat-header" id="chat-header">
+    <span><i class="fas fa-robot" aria-hidden="true"></i> المساعد الطبي الذكي</span>
+    <button type="button" aria-label="تصغير" id="chat-minimize">—</button>
+  </div>
+
+  <div class="chat-body" id="chat-body" aria-live="polite" aria-label="محادثة المساعد الطبي"></div>
+
+  <div class="chat-footer">
+    <input
+      type="text"
+      id="chat-input"
+      placeholder="اكتب سؤالك..."
+      autocomplete="off"
+      aria-label="اكتب سؤالك"
+      maxlength="500">
+    <button type="button" id="chat-send" aria-label="إرسال">
+      <i class="fas fa-paper-plane" aria-hidden="true"></i>
+      إرسال
+    </button>
+  </div>
+</div>
+
+<!-- ==================== أزرار المشاركة الاجتماعية ==================== -->
+<div class="social-share-sidebar" aria-label="مشاركة">
+  <a class="share-btn whatsapp" href="#" target="_blank" rel="noopener noreferrer" aria-label="شارك على واتساب" title="واتساب">
+    <i class="fab fa-whatsapp" aria-hidden="true"></i>
+  </a>
+  <a class="share-btn facebook" href="#" target="_blank" rel="noopener noreferrer" aria-label="شارك على فيسبوك" title="فيسبوك">
+    <i class="fab fa-facebook-f" aria-hidden="true"></i>
+  </a>
+  <a class="share-btn twitter" href="#" target="_blank" rel="noopener noreferrer" aria-label="شارك على تويتر" title="تويتر">
+    <i class="fab fa-twitter" aria-hidden="true"></i>
+  </a>
+  <a class="share-btn telegram" href="#" target="_blank" rel="noopener noreferrer" aria-label="شارك على تليجرام" title="تليجرام">
+    <i class="fab fa-telegram" aria-hidden="true"></i>
+  </a>
+</div>
+
+<!-- ==================== Modal ترحيبي ==================== -->
+<div class="modal hidden" id="welcome-modal" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+  <div class="modal-content">
+    <button class="modal-close" data-close-modal type="button" aria-label="إغلاق">×</button>
+
+    <h3 id="welcome-title" style="color:#0a1628;margin-bottom:12px;font-size:1.3rem;">
+      👋 مرحباً بك في المركز الطبي الذكي
+    </h3>
+
+    <p style="color:#4a5568;line-height:1.9;margin-bottom:24px;">
+      نظام صحي متكامل يتيح لك حجز المواعيد، الاستشارات، والوصول إلى أطبائنا بسهولة.
+      <br>
+      <strong style="color:#0a1628;">هل أنت طبيب؟</strong>
+      سجّل الدخول للوصول إلى لوحة الوصفات.
+    </p>
+
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn btn-primary" id="quick-book-btn" type="button">
+        <i class="fas fa-calendar-check" aria-hidden="true"></i>
+        احجز موعدك
+      </button>
+
+      <a href="login.html" class="btn btn-outline">
+        <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+        دخول الأطباء
+      </a>
+
+      <button class="btn btn-ghost" data-close-modal type="button" style="border-color:#cbd5e0;color:#4a5568;">
+        تصفح الموقع
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== Toast ==================== -->
+<div id="toast-box" role="log" aria-live="polite" aria-atomic="true"></div>
+
+<noscript>
+  <div style="position:fixed;inset:0;background:#0a1628;color:#f1d878;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:Tajawal,sans-serif;text-align:center;padding:20px;">
+    ⚠️ هذا النظام يتطلب تفعيل JavaScript في المتصفح.
+  </div>
+</noscript>
+
+<!-- ==========================================================
+     النسخة النهائية v4 — الصور الحقيقية + hospital-bg
+     ========================================================== -->
+<script>
+(function initMediPrescribe() {
+  'use strict';
+
+  /* ═══════════════ أدوات أساسية ═══════════════ */
+  function $(id) { return document.getElementById(id); }
+
+  const storage = {
+    get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} },
+    remove(k) { try { localStorage.removeItem(k); } catch (_) {} }
+  };
+
+  function escapeHTML(str) {
+    return String(str).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  /* ═══════════════ Toast ═══════════════ */
+  function toast(msg, type, ms) {
+    const box = $('toast-box');
+    if (!box) return;
+    const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+    const el = document.createElement('div');
+    el.className = 'toast ' + (type || 'info');
+    el.innerHTML = '<i class="fas ' + (icons[type] || icons.info) + '" aria-hidden="true"></i><span>' + escapeHTML(msg) + '</span>';
+    box.appendChild(el);
+    setTimeout(() => {
+      el.classList.add('out');
+      setTimeout(() => el.remove(), 350);
+    }, ms || 3000);
+  }
+
+  /* ═══════════════ 1. حارس: إزالة <base target="_blank"> ═══════════════ */
+  (function stripDangerousBase() {
+    document.querySelectorAll('base[target="_blank"]').forEach(b => b.remove());
+    if (!document.head) return;
+    const mo = new MutationObserver(muts => {
+      muts.forEach(m => m.addedNodes.forEach(n => {
+        if (n.nodeType === 1 && n.tagName === 'BASE') n.remove();
+      }));
+    });
+    mo.observe(document.head, { childList: true });
+    window.addEventListener('beforeunload', () => { try { mo.disconnect(); } catch (_) {} });
+  })();
+
+  /* ═══════════════ 2. بدائل الشعارات ═══════════════ */
+  function initEmblemFallbacks() {
+    document.querySelectorAll('img.official-emblem').forEach(img => {
+      const swap = () => {
+        if (img.dataset.swapped) return;
+        img.dataset.swapped = '1';
+        const div = document.createElement('div');
+        div.className = img.className + ' fallback';
+        div.textContent = img.dataset.fallback || '🏥';
+        div.setAttribute('role', 'img');
+        div.setAttribute('aria-label', img.alt || '');
+        if (img.parentNode) img.replaceWith(div);
+      };
+      img.addEventListener('error', swap);
+      if (img.complete && img.naturalWidth === 0) swap();
+    });
+  }
+
+  /* ═══════════════ 3. بيانات الأقسام — مع صور حقيقية ═══════════════ */
+  const DEPARTMENTS = [
+    {
+      name: 'الباطنية العامة',
+      icon: 'fa-stethoscope',
+      img: 'images/internal.jpg',
+      desc: 'تشخيص وعلاج أمراض الجهاز الهضمي، التنفسي، والغدد الصم.',
+      doctors: 8
+    },
+    {
+      name: 'أمراض القلب',
+      icon: 'fa-heart-pulse',
+      img: 'images/cardio.jpg',
+      desc: 'فحوصات القلب الشاملة، تخطيط القلب، ومتابعة ضغط الدم.',
+      doctors: 5
+    },
+    {
+      name: 'طب الأطفال',
+      icon: 'fa-baby',
+      img: 'images/pediatrics.jpg',
+      desc: 'رعاية صحية متكاملة للأطفال حديثي الولادة حتى المراهقة.',
+      doctors: 6
+    },
+    {
+      name: 'الجلدية',
+      icon: 'fa-hand-dots',
+      img: 'images/derma.jpg',
+      desc: 'علاج أمراض الجلد والشعر والحساسية والتجميل الطبي.',
+      doctors: 4
+    },
+    {
+      name: 'العيون',
+      icon: 'fa-eye',
+      img: 'images/eyes.jpg',
+      desc: 'فحص النظر، علاج أمراض العين، ومتابعة المياه البيضاء والزرقاء.',
+      doctors: 4
+    },
+    {
+      name: 'العظام',
+      icon: 'fa-bone',
+      img: 'images/ortho.jpg',
+      desc: 'علاج الكسور، إصابات المفاصل، والعمود الفقري والعلاج الطبيعي.',
+      doctors: 5
+    }
+  ];
+
+  /* ═══════════════ 4. renderDepartments ═══════════════ */
+  function renderDepartments() {
+    const grid = $('departments-grid');
+    if (!grid) return;
+
+    grid.innerHTML = DEPARTMENTS.map((d, i) => `
+      <article class="dept-card" data-name="${escapeHTML(d.name)}">
+        <div class="dept-card-image" data-dept-index="${i}">
+          <img src="${escapeHTML(d.img)}"
+               alt="قسم ${escapeHTML(d.name)}"
+               loading="lazy"
+               decoding="async"
+               width="600" height="400"
+               data-dept-index="${i}">
+          <div class="dept-icon-fallback" aria-hidden="true">
+            <i class="fas ${d.icon}"></i>
+          </div>
+        </div>
+        <div class="dept-card-body">
+          <h4>${escapeHTML(d.name)}</h4>
+          <p>${escapeHTML(d.desc)}</p>
+          <div class="dept-meta">
+            <span><i class="fas fa-user-doctor" aria-hidden="true"></i> ${d.doctors} أطباء</span>
+            <a href="#booking" class="doctors-count" style="text-decoration:none;">احجز الآن ←</a>
+          </div>
+        </div>
+      </article>
+    `).join('');
+
+    /* ✅ معالجة فشل تحميل الصور تلقائياً */
+    grid.querySelectorAll('.dept-card-image img').forEach(img => {
+      const parent = img.parentElement;
+      const swap = () => {
+        if (!parent || parent.dataset.swapped) return;
+        parent.dataset.swapped = '1';
+        parent.classList.add('fallback-mode');
+      };
+      img.addEventListener('error', swap);
+      if (img.complete && img.naturalWidth === 0) swap();
+    });
+
+    /* ✅ IntersectionObserver للأجهزة القديمة */
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const img = entry.target;
+            if (img.dataset.src) {
+              img.src = img.dataset.src;
+              delete img.dataset.src;
+            }
+            io.unobserve(img);
+          }
+        });
+      }, { rootMargin: '200px' });
+
+      grid.querySelectorAll('img[loading="lazy"]').forEach(img => io.observe(img));
+    }
+  }
+
+  /* ═══════════════ 5. البحث ═══════════════ */
+  function initSearch() {
+    const input = $('hero-search');
+    const btn = $('hero-search-btn');
+    if (!input || !btn) return;
+
+    let noResultsEl = null;
+    let scrollTimer = null;
+
+    function doSearch(scroll = true) {
+      const q = input.value.trim().toLowerCase();
+      const cards = document.querySelectorAll('.dept-card');
+      let visible = 0;
+
+      cards.forEach(card => {
+        const match = !q || card.textContent.toLowerCase().includes(q);
+        card.classList.toggle('hidden-by-search', !match);
+        if (match) visible++;
+      });
+
+      if (noResultsEl) { noResultsEl.remove(); noResultsEl = null; }
+      if (q && visible === 0) {
+        noResultsEl = document.createElement('div');
+        noResultsEl.className = 'no-results';
+        noResultsEl.innerHTML = '<i class="fas fa-search" aria-hidden="true"></i>لا توجد نتائج مطابقة لـ "' + escapeHTML(input.value.trim()) + '"';
+        $('departments-grid').appendChild(noResultsEl);
+      }
+
+      if (scroll) $('departments').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    btn.addEventListener('click', () => doSearch(true));
+
+    input.addEventListener('input', () => {
+      doSearch(false);
+      clearTimeout(scrollTimer);
+      const q = input.value.trim();
+      if (q) {
+        scrollTimer = setTimeout(() => {
+          $('departments').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 500);
+      }
+    });
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        clearTimeout(scrollTimer);
+        doSearch(true);
+      }
+    });
+  }
+
+  /* ═══════════════ 6. نموذج الحجز ═══════════════ */
+  function initBookingForm() {
+    const form = $('booking-form');
+    if (!form) return;
+
+    const nameEl = form.querySelector('[name="name"]');
+    const phoneEl = form.querySelector('[name="phone"]');
+    const deptEl = form.querySelector('[name="department"]');
+    const dateEl = form.querySelector('[name="date"]');
+    const timeEl = form.querySelector('[name="time"]');
+
+    if (!nameEl || !phoneEl || !deptEl || !dateEl || !timeEl) return;
+
+    const today = new Date().toISOString().split('T')[0];
+    dateEl.min = today;
+
+    function markInvalid(el, bad) {
+      el.classList.toggle('invalid', bad);
+      return !bad;
+    }
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+
+      let ok = true;
+      ok = markInvalid(nameEl, nameEl.value.trim().length < 2) && ok;
+      const digits = phoneEl.value.replace(/\D/g, '');
+      ok = markInvalid(phoneEl, digits.length < 7 || digits.length > 15) && ok;
+      ok = markInvalid(deptEl, !deptEl.value) && ok;
+      ok = markInvalid(dateEl, !dateEl.value) && ok;
+      ok = markInvalid(timeEl, !timeEl.value) && ok;
+
+      if (!ok) {
+        toast('⚠️ يرجى تصحيح الحقول المحددة بالأحمر', 'warning', 3000);
+        const firstInvalid = form.querySelector('.invalid');
+        if (firstInvalid) firstInvalid.focus();
+        return;
+      }
+
+      let bookings = [];
+      try { bookings = JSON.parse(storage.get('mp_bookings') || '[]'); } catch (_) { bookings = []; }
+
+      const booking = {
+        id: 'BK-' + Date.now(),
+        name: nameEl.value.trim(),
+        phone: phoneEl.value.trim(),
+        department: deptEl.value,
+        date: dateEl.value,
+        time: timeEl.value,
+        createdAt: new Date().toISOString()
+      };
+      bookings.push(booking);
+      storage.set('mp_bookings', JSON.stringify(bookings));
+
+      const btn = $('booking-submit');
+      btn.disabled = true;
+      const original = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> جارٍ التأكيد...';
+
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = original;
+        form.reset();
+        toast('✅ تم استلام حجزك بنجاح! رقم الحجز: ' + booking.id, 'success', 5000);
+      }, 900);
+    });
+
+    form.addEventListener('input', e => {
+      if (e.target && e.target.classList) e.target.classList.remove('invalid');
+    });
+  }
+
+  /* ═══════════════ 7. عدّاد الزوار ═══════════════ */
+  function initVisitorCounter() {
+    const el = $('visitor-count');
+    if (!el) return;
+    const KEY = 'mp_visits';
+    const count = (parseInt(storage.get(KEY) || '0', 10) || 0) + 1;
+    storage.set(KEY, String(count));
+
+    let current = 0;
+    const step = Math.max(1, Math.ceil(count / 30));
+    const timer = setInterval(() => {
+      current = Math.min(count, current + step);
+      el.textContent = current.toLocaleString('ar-EG');
+      if (current >= count) clearInterval(timer);
+    }, 30);
+  }
+
+  /* ═══════════════ 8. روابط المشاركة ═══════════════ */
+  function initSocialShare() {
+    const url = encodeURIComponent(location.href);
+    const title = encodeURIComponent(document.title);
+    const links = {
+      whatsapp: 'https://wa.me/?text=' + title + '%20' + url,
+      facebook: 'https://www.facebook.com/sharer/sharer.php?u=' + url,
+      twitter: 'https://twitter.com/intent/tweet?text=' + title + '&url=' + url,
+      telegram: 'https://t.me/share/url?url=' + url + '&text=' + title
+    };
+    document.querySelectorAll('.social-share-sidebar .share-btn').forEach(btn => {
+      const cls = Object.keys(links).find(c => btn.classList.contains(c));
+      if (cls) btn.href = links[cls];
+    });
+  }
+
+  /* ═══════════════ 9. أزرار المصادقة ═══════════════ */
+  function renderAuthButtons() {
+    const container = $('auth-buttons');
+    if (!container) return;
+
+    let session = null;
+    try {
+      const raw = storage.get('mp_session');
+      session = raw ? JSON.parse(raw) : null;
+    } catch (_) { session = null; }
+
+    if (session && (session.fullName || session.username)) {
+      const safeName = escapeHTML(session.fullName || session.username);
+      const safeRole = escapeHTML(session.roleLabel || session.role || '');
+      container.innerHTML =
+        '<span class="user-badge gold" title="' + safeName + '">' +
+          '<i class="fas fa-user-circle" aria-hidden="true"></i> ' + safeName + (safeRole ? ' · ' + safeRole : '') +
+        '</span>' +
+        '<a href="dashboard.html" class="btn btn-primary btn-sm">' +
+          '<i class="fas fa-prescription" aria-hidden="true"></i> لوحة التحكم</a>' +
+        '<button class="btn btn-danger btn-sm" id="session-logout" type="button">' +
+          '<i class="fas fa-sign-out-alt" aria-hidden="true"></i> خروج</button>';
+
+      const logoutBtn = $('session-logout');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+          if (confirm('هل تريد تسجيل الخروج؟')) {
+            storage.remove('mp_session');
+            location.reload();
+          }
+        });
+      }
+    } else {
+      container.innerHTML =
+        '<a href="login.html" class="btn btn-outline btn-sm" id="login-link">' +
+          '<i class="fas fa-sign-in-alt" aria-hidden="true"></i> دخول الأطباء</a>' +
+        '<button class="btn btn-primary btn-sm" id="register-btn" type="button">' +
+          '<i class="fas fa-user-plus" aria-hidden="true"></i> تسجيل جديد</button>';
+
+      const regBtn = $('register-btn');
+      if (regBtn) {
+        regBtn.addEventListener('click', () => {
+          toast('🚧 خدمة التسجيل قادمة قريباً — تواصل مع الإدارة', 'info', 3000);
+        });
+      }
+    }
+  }
+
+  function initAuthButtons() {
+    renderAuthButtons();
+    window.addEventListener('storage', e => {
+      if (e.key === 'mp_session') renderAuthButtons();
+    });
+  }
+
+  /* ═══════════════ 10. Modal مع Focus Trap ═══════════════ */
+  function initModal() {
+    const modal = $('welcome-modal');
+    if (!modal) return;
+    let lastFocused = null;
+
+    function isVisible(el) {
+      if (!el || el.disabled) return false;
+      const rect = el.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return false;
+      return getComputedStyle(el).visibility !== 'hidden';
+    }
+    function focusables() {
+      return Array.from(modal.querySelectorAll('button, a[href], [tabindex]:not([tabindex="-1"])'))
+        .filter(isVisible);
+    }
+
+    function openModal() {
+      lastFocused = document.activeElement;
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      const closeBtn = modal.querySelector('.modal-close');
+      if (closeBtn) closeBtn.focus();
+    }
+
+    function closeModal() {
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+      if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
+    }
+
+    modal.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', closeModal));
+    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+    document.addEventListener('keydown', e => {
+      if (modal.classList.contains('hidden')) return;
+      if (e.key === 'Escape') { closeModal(); return; }
+      if (e.key === 'Tab') {
+        const f = focusables();
+        if (!f.length) return;
+        const first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    });
+
+    const quickBtn = $('quick-book-btn');
+    if (quickBtn) {
+      quickBtn.addEventListener('click', () => {
+        closeModal();
+        const booking = $('booking');
+        booking.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setTimeout(() => {
+          const nameField = booking.querySelector('input[name="name"]');
+          if (nameField) nameField.focus();
+        }, 600);
+      });
+    }
+
+    const WELCOME_KEY = 'mp_welcome_shown';
+    if (!storage.get(WELCOME_KEY)) {
+      setTimeout(() => {
+        openModal();
+        storage.set(WELCOME_KEY, '1');
+      }, 1500);
+    }
+  }
+
+  /* ═══════════════ 11. الشات الذكي ═══════════════ */
+  function initChat() {
+    const chat = $('ai-chat');
+    const body = $('chat-body');
+    const input = $('chat-input');
+    const sendBtn = $('chat-send');
+    const minimizeBtn = $('chat-minimize');
+    if (!chat || !body || !input || !sendBtn) return;
+
+    const GREETING = 'مرحباً بك 👋 أنا المساعد الطبي الذكي. يمكنني مساعدتك في: حجز المواعيد، معلومات الأقسام، والإجابة عن استفساراتك الصحية العامة. كيف أساعدك؟';
+
+    function addMsg(text, who) {
+      const el = document.createElement('div');
+      el.className = 'chat-msg ' + who;
+      el.textContent = text;
+      body.appendChild(el);
+      body.scrollTop = body.scrollHeight;
+    }
+
+    function botReply(userText) {
+      const t = userText.toLowerCase();
+      const rules = [
+        { keys: ['حجز', 'موعد', 'احجز'], reply: 'يمكنك حجز موعدك بسهولة من قسم "حجز موعد" بالأسفل — اختر التخصص والتاريخ والوقت المناسب. هل تريد أن أنقلك إليه الآن؟ اكتب "نعم".' },
+        { keys: ['نعم', 'أجل', 'اوك', 'ok'], reply: 'تمام! سأنقلك الآن إلى نموذج الحجز. املأ بياناتك وسنتواصل معك للتأكيد. 🏥', action: () => { $('booking').scrollIntoView({ behavior: 'smooth' }); } },
+        { keys: ['قسم', 'أقسام', 'اقسام', 'تخصص'], reply: 'لدينا 6 أقسام رئيسية: الباطنية العامة، أمراض القلب، طب الأطفال، الجلدية، العيون، والعظام. تصفحها في قسم "الأقسام الطبية".' },
+        { keys: ['قلب'], reply: 'قسم أمراض القلب يقدم فحوصات شاملة وتخطيط القلب ومتابعة ضغط الدم. الدوام: السبت–الخميس 8ص–2م.' },
+        { keys: ['طفل', 'أطفال', 'اطفال'], reply: 'قسم طب الأطفال يقدم رعاية متكاملة لحديثي الولادة حتى المراهقة. يفضل إحضار سجل التطعيمات السابق عند الزيارة.' },
+        { keys: ['عين', 'عيون', 'نظر'], reply: 'قسم العيون يجري فحص النظر وعلاج أمراض العين والمياه البيضاء والزرقاء. احجز موعدك للفحص الدوري.' },
+        { keys: ['جلد', 'حساسية'], reply: 'قسم الجلدية يعالج أمراض الجلد والشعر والحساسية. تجنب استخدام كريمات بدون استشارة طبية.' },
+        { keys: ['عظم', 'عظام', 'كسر', 'مفصل'], reply: 'قسم العظام يعالج الكسور وإصابات المفاصل والعمود الفقري مع العلاج الطبيعي. في حالة كسر حاد توجه للطوارئ فوراً.' },
+        { keys: ['دوام', 'ساعات', 'وقت العمل'], reply: 'دوام المركز: السبت إلى الخميس، من 8:00 صباحاً حتى 2:00 ظهراً. الطوارئ على مدار الساعة.' },
+        { keys: ['عنوان', 'مكان', 'موقع'], reply: 'المركز الطبي الذكي — صنعاء. يمكنك التواصل معنا عبر نموذج الحجز أو الاتصال بالرقم الموحد للوزارة.' },
+        { keys: ['سعر', 'أسعار', 'اسعار', 'تكلفة', 'رسوم'], reply: 'الفحص الأول مجاني لحاملي البطاقة الصحية الوطنية. للتفاصيل تواصل مع الاستقبال.' },
+        { keys: ['صداع', 'حما', 'حرار', 'الم'], reply: '⚠️ هذه معلومات عامة فقط وليست تشخيصاً طبياً. إذا استمرت الأعراض أو اشتدت، احجز موعداً في الباطنية العامة. في الحالات الطارئة اتصل بالإسعاف فوراً.' },
+        { keys: ['دواء', 'وصفة', 'علاج'], reply: 'الوصفات الإلكترونية تُصدر عبر لوحة الأطباء بعد الكشف. لا تتناول أي دواء دون استشارة طبيب مرخّص.' },
+        { keys: ['شكرا', 'شكراً', 'thank'], reply: 'العفو! تمنياتي لك بدوام الصحة والعافية. أنا هنا إذا احتجت أي مساعدة أخرى. 🌟' },
+        { keys: ['سلام', 'مرحبا', 'مرحباً', 'هلا', 'اهلا', 'أهلا'], reply: GREETING },
+        { keys: ['طبيب', 'دكتور', 'أطباء', 'اطباء'], reply: 'يضم المركز 32 طبيباً متخصصاً في جميع الأقسام. يمكنك معرفة أعداد الأطباء في كل قسم من بطاقات الأقسام أعلاه.' }
+      ];
+
+      for (const r of rules) {
+        if (r.keys.some(k => t.includes(k))) {
+          if (r.action) setTimeout(r.action, 800);
+          return r.reply;
+        }
+      }
+      return 'شكراً لسؤالك. لم أفهم طلبك تماماً — يمكنك السؤال عن: الأقسام، الدوام، الحجز، أو كتابة "حجز" لحجز موعدك مباشرة.';
+    }
+
+    function send() {
+      const text = input.value.trim();
+      if (!text) return;
+      addMsg(text, 'user');
+      input.value = '';
+      sendBtn.disabled = true;
+
+      const typing = document.createElement('div');
+      typing.className = 'chat-typing';
+      typing.textContent = '●●●';
+      body.appendChild(typing);
+      body.scrollTop = body.scrollHeight;
+
+      setTimeout(() => {
+        typing.remove();
+        addMsg(botReply(text), 'bot');
+        sendBtn.disabled = false;
+        input.focus();
+      }, 700 + Math.random() * 600);
+    }
+
+    sendBtn.addEventListener('click', send);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+
+    function toggleMinimize() {
+      const minimized = chat.classList.toggle('minimized');
+      minimizeBtn.textContent = minimized ? '+' : '—';
+      minimizeBtn.setAttribute('aria-label', minimized ? 'تكبير' : 'تصغير');
+    }
+    minimizeBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      toggleMinimize();
+    });
+
+    if (!body.children.length) addMsg(GREETING, 'bot');
+
+    const consultLink = $('nav-consult');
+    if (consultLink) {
+      consultLink.addEventListener('click', e => {
+        e.preventDefault();
+        chat.classList.remove('minimized');
+        minimizeBtn.textContent = '—';
+        input.focus();
+      });
+    }
+    document.querySelectorAll('.footer-consult').forEach(link => {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        chat.classList.remove('minimized');
+        minimizeBtn.textContent = '—';
+        input.focus();
+      });
+    });
+  }
+
+  /* ═══════════════ 12. Service Worker ═══════════════ */
+  function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('sw.js', { scope: './' })
+      .then(reg => {
+        console.log('✅ Service Worker مسجّل:', reg.scope);
+        reg.addEventListener('updatefound', () => {
+          const w = reg.installing;
+          if (!w) return;
+          w.addEventListener('statechange', () => {
+            if (w.state === 'installed' && navigator.serviceWorker.controller) {
+              if (confirm('🆕 يوجد تحديث جديد. هل تريد إعادة التحميل الآن؟')) {
+                w.postMessage({ type: 'SKIP_WAITING' });
+              }
+            }
+          });
+        });
+      })
+      .catch(() => { /* فشل صامت */ });
+  }
+
+  /* ═══════════════ التشغيل ═══════════════ */
+  const modules = [
+    ['emblems',        initEmblemFallbacks],
+    ['departments',    renderDepartments],
+    ['search',         initSearch],
+    ['booking',        initBookingForm],
+    ['visitors',       initVisitorCounter],
+    ['social-share',   initSocialShare],
+    ['auth',           initAuthButtons],
+    ['modal',          initModal],
+    ['chat',           initChat],
+    ['service-worker', registerServiceWorker]
+  ];
+
+  function init() {
+    modules.forEach(([name, fn]) => {
+      try { fn(); }
+      catch (e) { console.error('❌ فشل تهيئة (' + name + '):', e); }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1899 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediPrescribe | تسجيل الدخول — وزارة الصحة والبيئة</title>
+<meta name="description" content="النظام الوطني الذكي للوصفات الطبية — وزارة الصحة والبيئة">
+<meta name="theme-color" content="#0a1628">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%230a1628'/><circle cx='50' cy='50' r='38' fill='none' stroke='%23d4af37' stroke-width='2'/><path d='M50 30v40M35 38h30M42 66h16' stroke='%23d4af37' stroke-width='2.4' fill='none' stroke-linecap='round'/></svg>">
+
+<!-- الخطوط الرسمية (مطابقة لـ NIAS) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Cairo:wght@400;500;600;700;800&family=Amiri+Quran&family=Great+Vibes&display=swap" rel="stylesheet">
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<link rel="manifest" href="manifest.json">
+
+<style>
+/* ==========================================================
+   MediPrescribe — صفحة الدخول الرسمية v3.1
+   مطابقة لمعايير NIAS
+   ========================================================== */
+
+:root {
+  /* الهوية الذهبية */
+  --mp-navy:     #0a1628;
+  --mp-navy-2:   #0f2138;
+  --mp-navy-3:   #132a45;
+  --mp-gold:     #d4af37;
+  --mp-gold-light: #f1d878;
+  --mp-gold-dark: #b8892e;
+  --mp-gold-dim: rgba(200,148,10,0.18);
+
+  /* هوية NIAS */
+  --azure:       #1a6bff;
+  --azure-glow:  rgba(26,107,255,0.35);
+  --cyan:        #00F3FF;
+  --green:       #0fd98a;
+  --red:         #ff4d6d;
+  --orange:      #ffa726;
+
+  /* الخلفيات */
+  --surface:     rgba(14,28,55,0.95);
+  --input-bg:    rgba(8,14,28,0.7);
+
+  /* النصوص */
+  --txt:         #eef2ff;
+  --txt-muted:   rgba(200,215,255,0.65);
+  --txt-faint:   rgba(160,185,225,0.45);
+
+  /* الخطوط */
+  --font:        'Tajawal', 'Cairo', system-ui, sans-serif;
+  --font-kufi:   'Cairo', 'Tajawal', sans-serif;
+
+  /* الأنصاف */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 22px;
+
+  /* التسارع */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+*,
+*::before,
+*::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font);
+  background: var(--mp-navy);
+  color: var(--txt);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ==========================================================
+   الخلفيات المتحركة
+   ========================================================== */
+#bgCanvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.65;
+}
+
+.grid-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(212,175,55,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212,175,55,0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+}
+
+.vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.75) 100%);
+  pointer-events: none;
+}
+
+.scanlines {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none;
+  animation: scanMove 8s linear infinite;
+}
+@keyframes scanMove {
+  from { background-position: 0 0; }
+  to   { background-position: 0 100px; }
+}
+
+/* ==========================================================
+   الشارات العلوية
+   ========================================================== */
+.security-badge {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  background: rgba(10,14,22,0.85);
+  border: 1px solid rgba(15,217,138,0.25);
+  border-radius: 100px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--green);
+  backdrop-filter: blur(12px);
+  animation: badgeIn 0.8s var(--ease) 0.3s both;
+  user-select: none;
+}
+.security-badge::before {
+  content: '';
+  width: 7px; height: 7px;
+  background: var(--green);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--green);
+  animation: blink 1.8s ease-in-out infinite;
+}
+@keyframes blink {
+  0%,100% { opacity: 1; }
+  50%     { opacity: 0.3; }
+}
+@keyframes badgeIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.version-badge {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 100;
+  padding: 7px 16px;
+  background: rgba(10,14,22,0.85);
+  border: 1px solid var(--mp-gold-dim);
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mp-gold);
+  backdrop-filter: blur(12px);
+  animation: badgeIn2 0.8s var(--ease) 0.5s both;
+  letter-spacing: 0.5px;
+}
+@keyframes badgeIn2 {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ==========================================================
+   Toasts
+   ========================================================== */
+.toast-region {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 90%;
+  max-width: 420px;
+  pointer-events: none;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-radius: var(--r-md);
+  font-size: 0.85rem;
+  font-weight: 600;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  animation: toastIn 0.4s var(--ease) both;
+  pointer-events: auto;
+  border: 1px solid;
+}
+.toast.is-out { animation: toastOut 0.3s ease forwards; }
+.toast.success { background: rgba(15,217,138,0.1); color: var(--green);  border-color: rgba(15,217,138,0.2); }
+.toast.error   { background: rgba(255,77,109,0.1); color: var(--red);    border-color: rgba(255,77,109,0.2); }
+.toast.warning { background: rgba(255,167,38,0.1); color: var(--orange); border-color: rgba(255,167,38,0.2); }
+.toast.info    { background: rgba(26,107,255,0.1); color: var(--azure);  border-color: rgba(26,107,255,0.2); }
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-15px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0)     scale(1); }
+}
+@keyframes toastOut {
+  to { opacity: 0; transform: translateY(-10px) scale(0.95); }
+}
+
+/* ==========================================================
+   الصفحة
+   ========================================================== */
+.page-wrap {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 500px;
+  padding: 20px 16px;
+  animation: pageIn 0.9s var(--ease) 0.1s both;
+}
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(30px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)     scale(1); }
+}
+
+/* ==========================================================
+   الرأس الرسمي (الجمهورية اليمنية)
+   ========================================================== */
+.official-header {
+  text-align: center;
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
+}
+.official-header-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.official-emblem {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 20px rgba(0,0,0,0.5))
+          drop-shadow(0 0 30px rgba(212,175,55,0.2));
+  transition: transform 0.5s ease;
+  display: block;
+  margin: 0 auto;
+}
+.official-emblem:hover { transform: scale(1.08); }
+
+.official-emblem.institute {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 3px solid rgba(212,175,55,0.35);
+  padding: 6px;
+  background: rgba(255,255,255,0.04);
+  box-shadow: 0 0 30px rgba(212,175,55,0.2);
+}
+
+.official-header-divider {
+  width: 240px;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--mp-gold),
+    var(--mp-gold-light),
+    var(--mp-gold),
+    transparent
+  );
+  margin: 6px auto;
+  border-radius: 2px;
+}
+
+.official-header-republic {
+  font-family: var(--font);
+  font-weight: 800;
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
+  color: #fff;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 15px rgba(0,0,0,0.6);
+}
+
+.official-header-title {
+  font-family: var(--font-kufi);
+  font-weight: 800;
+  font-size: clamp(1.15rem, 2.8vw, 1.5rem);
+  color: var(--mp-gold-light);
+  text-shadow:
+    0 3px 20px rgba(0,0,0,0.5),
+    0 0 40px rgba(212,175,55,0.25);
+  letter-spacing: 1px;
+  line-height: 1.5;
+}
+
+.official-header-subtitle {
+  font-family: var(--font);
+  font-weight: 600;
+  font-size: clamp(0.82rem, 1.8vw, 0.95rem);
+  color: #fff;
+  opacity: 0.95;
+  letter-spacing: 0.5px;
+  line-height: 1.5;
+}
+
+/* ==========================================================
+   بطاقة الدخول
+   ========================================================== */
+.login-card {
+  background: var(--surface);
+  border: 1px solid rgba(212,175,55,0.15);
+  border-radius: var(--r-lg);
+  padding: 30px 26px 26px;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  box-shadow:
+    0 40px 80px -20px rgba(0,0,0,0.8),
+    0 0 0 1px rgba(255,255,255,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.login-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212,175,55,0.5),
+    transparent
+  );
+}
+.login-card::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 220px; height: 220px;
+  background: radial-gradient(circle at top right, rgba(212,175,55,0.08), transparent 70%);
+  border-radius: 0 var(--r-lg) 0 0;
+  pointer-events: none;
+}
+
+/* رأس البطاقة */
+.card-icon-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 18px;
+  position: relative;
+  z-index: 1;
+}
+.card-icon {
+  width: 54px; height: 54px;
+  background: linear-gradient(135deg, rgba(212,175,55,0.2), rgba(212,175,55,0.05));
+  border: 1px solid rgba(212,175,55,0.35);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  color: var(--mp-gold-light);
+  box-shadow:
+    0 0 20px rgba(212,175,55,0.15),
+    inset 0 0 10px rgba(212,175,55,0.08);
+  animation: iconPulse 3s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes iconPulse {
+  0%,100% { box-shadow: 0 0 20px rgba(212,175,55,0.15), inset 0 0 10px rgba(212,175,55,0.08); }
+  50%     { box-shadow: 0 0 35px rgba(212,175,55,0.3),  inset 0 0 15px rgba(212,175,55,0.14); }
+}
+.card-icon img {
+  width: 32px; height: 32px;
+  object-fit: contain;
+}
+
+.card-title-block { text-align: right; }
+.card-title-block h2 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--txt);
+  line-height: 1.2;
+  font-family: var(--font-kufi);
+}
+.card-title-block p {
+  font-size: 0.72rem;
+  color: var(--txt-muted);
+  margin-top: 2px;
+  line-height: 1.5;
+}
+
+/* ==========================================================
+   شريط التقدم
+   ========================================================== */
+.login-progress {
+  height: 3px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 100px;
+  margin-bottom: 22px;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+.login-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--mp-gold-dark), var(--mp-gold), var(--mp-gold-light));
+  border-radius: 100px;
+  transition: width 0.4s var(--ease);
+  box-shadow: 0 0 10px rgba(212,175,55,0.4);
+}
+
+/* ==========================================================
+   تنبيه Rate Limit
+   ========================================================== */
+.rate-limit-warn {
+  display: none;
+  text-align: center;
+  padding: 10px 14px;
+  background: rgba(255,77,109,0.08);
+  border: 1px solid rgba(255,77,109,0.18);
+  border-radius: var(--r-sm);
+  margin-bottom: 16px;
+  font-size: 0.78rem;
+  color: var(--red);
+  font-weight: 700;
+  animation: fadeUp 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+.rate-limit-warn.is-visible { display: block; }
+.rate-limit-warn i { margin-left: 6px; }
+.rate-limit-timer {
+  font-family: 'Cairo', monospace;
+  font-weight: 800;
+  color: var(--orange);
+  margin: 0 4px;
+}
+
+/* ==========================================================
+   الحقول
+   ========================================================== */
+.field-wrap {
+  position: relative;
+  margin-bottom: 20px;
+  z-index: 1;
+}
+
+.field-input {
+  width: 100%;
+  padding: 20px 44px 8px 44px;
+  background: var(--input-bg);
+  border: 1.5px solid rgba(212,175,55,0.18);
+  border-radius: var(--r-md);
+  color: var(--txt);
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 500;
+  outline: none;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-appearance: none;
+}
+.field-input:-webkit-autofill,
+.field-input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #0a1628 inset;
+  -webkit-text-fill-color: var(--txt);
+  transition: background-color 9999s;
+}
+.field-input:hover:not(:focus) {
+  border-color: rgba(212,175,55,0.3);
+}
+.field-input:focus {
+  border-color: var(--mp-gold);
+  background: rgba(14,28,55,0.9);
+  box-shadow:
+    0 0 0 3px rgba(212,175,55,0.12),
+    0 4px 20px rgba(0,0,0,0.25);
+}
+.field-input.is-error {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(255,77,109,0.08);
+}
+.field-input.is-success {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(15,217,138,0.06);
+}
+
+/* التسمية الطائرة */
+.field-label {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--txt-muted);
+  pointer-events: none;
+  transition: all 0.25s var(--ease);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transform-origin: right center;
+}
+.field-label i {
+  font-size: 0.8rem;
+  color: var(--mp-gold);
+  opacity: 0.7;
+  transition: opacity 0.25s;
+}
+.field-input:focus + .field-label,
+.field-input:not(:placeholder-shown) + .field-label {
+  top: 6px;
+  font-size: 0.7rem;
+  color: var(--mp-gold);
+  letter-spacing: 0.3px;
+}
+.field-input:focus + .field-label i,
+.field-input:not(:placeholder-shown) + .field-label i {
+  opacity: 1;
+}
+.field-input::placeholder { color: transparent; }
+
+/* الخط المتحرك */
+.field-line {
+  position: absolute;
+  bottom: 0; right: 0;
+  height: 2px;
+  width: 0%;
+  background: linear-gradient(90deg, var(--mp-gold-dark), var(--mp-gold-light));
+  border-radius: 0 0 var(--r-md) var(--r-md);
+  transition: width 0.35s var(--ease);
+}
+.field-input:focus ~ .field-line { width: 100%; }
+
+/* زر إظهار كلمة المرور */
+.field-action {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--txt-muted);
+  font-size: 1rem;
+  padding: 6px;
+  transition: color 0.2s;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+}
+.field-action:hover { color: var(--mp-gold); }
+.field-action:focus-visible {
+  outline: 2px solid var(--mp-gold);
+  outline-offset: 2px;
+}
+
+/* أخطاء الحقول */
+.field-error {
+  display: none;
+  font-size: 0.74rem;
+  color: var(--red);
+  margin-top: 5px;
+  font-weight: 600;
+  padding-right: 4px;
+  animation: shakeX 0.4s ease;
+}
+.field-error.is-visible {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.caps-warn {
+  display: none;
+  font-size: 0.74rem;
+  color: var(--orange);
+  margin-top: 5px;
+  font-weight: 600;
+  padding-right: 4px;
+}
+.caps-warn.is-visible {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+@keyframes shakeX {
+  0%,100% { transform: translateX(0); }
+  20%,60% { transform: translateX(-6px); }
+  40%,80% { transform: translateX(6px); }
+}
+
+/* ==========================================================
+   قوة كلمة المرور
+   ========================================================== */
+.strength-wrap {
+  margin-top: 8px;
+  display: none;
+  animation: fadeUp 0.3s ease;
+}
+.strength-wrap.is-visible { display: block; }
+.strength-bars {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+.strength-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 100px;
+  overflow: hidden;
+  position: relative;
+}
+.strength-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 0%;
+  border-radius: 100px;
+  transition: width 0.4s var(--ease), background 0.4s ease;
+}
+.strength-bar.filled::after { width: 100%; }
+.strength-bar.weak::after    { background: var(--red); }
+.strength-bar.fair::after    { background: var(--orange); }
+.strength-bar.good::after    { background: var(--mp-gold); }
+.strength-bar.strong::after  { background: var(--green); }
+.strength-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--txt-muted);
+  text-align: left;
+  direction: ltr;
+  font-family: var(--font);
+  transition: color 0.3s;
+}
+
+/* ==========================================================
+   صف "تذكرني" + "نسيت كلمة المرور"
+   ========================================================== */
+.form-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
+}
+.remember-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--txt-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.remember-label input[type=checkbox] {
+  appearance: none;
+  width: 16px; height: 16px;
+  border: 1.5px solid rgba(212,175,55,0.4);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  flex-shrink: 0;
+}
+.remember-label input[type=checkbox]:checked {
+  background: var(--mp-gold);
+  border-color: var(--mp-gold);
+}
+.remember-label input[type=checkbox]:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  font-size: 10px;
+  color: #1a1200;
+  font-weight: 900;
+}
+.forgot-link {
+  color: var(--mp-gold);
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 700;
+  transition: color 0.2s;
+  cursor: pointer;
+}
+.forgot-link:hover {
+  color: var(--mp-gold-light);
+  text-decoration: underline;
+}
+
+/* ==========================================================
+   زر الدخول
+   ========================================================== */
+.btn-login {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, var(--mp-gold), var(--mp-gold-light));
+  border: none;
+  border-radius: var(--r-md);
+  color: var(--mp-navy);
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s var(--ease);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow:
+    0 6px 24px rgba(212,175,55,0.3),
+    inset 0 1px 0 rgba(255,255,255,0.3);
+  z-index: 1;
+}
+.btn-login:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow:
+    0 10px 32px rgba(212,175,55,0.45),
+    inset 0 1px 0 rgba(255,255,255,0.4);
+}
+.btn-login:active:not(:disabled) { transform: translateY(0); }
+.btn-login:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.btn-login .spinner {
+  display: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(10,22,40,0.3);
+  border-top-color: var(--mp-navy);
+  animation: spin 0.7s linear infinite;
+}
+.btn-login.is-loading .btn-text,
+.btn-login.is-loading .fa-lock-open { display: none; }
+.btn-login.is-loading .spinner { display: inline-block; }
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Ripple */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.4);
+  transform: scale(0);
+  animation: rippleEffect 0.6s linear;
+  pointer-events: none;
+}
+@keyframes rippleEffect {
+  to { transform: scale(4); opacity: 0; }
+}
+
+/* ==========================================================
+   الفوتر
+   ========================================================== */
+.card-footer {
+  text-align: center;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  font-size: 0.68rem;
+  color: var(--txt-faint);
+  position: relative;
+  z-index: 1;
+}
+.card-footer .version {
+  margin-top: 3px;
+  font-weight: 700;
+  color: var(--mp-gold);
+  opacity: 0.7;
+}
+
+/* ==========================================================
+   ✅ التوقيع الإلكتروني — مطابق لـ dashboard.html
+   ========================================================== */
+.e-signature {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 24px 16px 12px;
+  margin-top: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.e-signature .sig-label {
+  font-family: 'Tajawal', 'Cairo', sans-serif;
+  font-size: 0.75rem;
+  color: rgba(200, 215, 255, 0.55);
+  letter-spacing: 1px;
+}
+
+.e-signature .sig-name {
+  font-family: 'Great Vibes', cursive;
+  font-size: 2rem;
+  line-height: 1.2;
+  color: var(--mp-gold-light, #f1d878);
+  text-shadow:
+    0 0 25px rgba(212, 175, 55, 0.4),
+    0 0 60px rgba(212, 175, 55, 0.2);
+}
+
+.e-signature .sig-role {
+  font-family: 'Tajawal', 'Cairo', sans-serif;
+  font-size: 0.7rem;
+  color: rgba(160, 185, 225, 0.55);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.e-signature .sig-underline {
+  width: 180px;
+  height: 1px;
+  margin-top: 8px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--mp-gold, #d4af37),
+    transparent
+  );
+  border-radius: 1px;
+}
+
+/* ==========================================================
+   Overlay التحميل
+   ========================================================== */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(10,22,40,0.92);
+  backdrop-filter: blur(20px);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+.loading-overlay.is-active {
+  display: flex;
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.loading-ring {
+  width: 56px; height: 56px;
+  border: 3px solid rgba(212,175,55,0.15);
+  border-top-color: var(--mp-gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.loading-text {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--mp-gold);
+  letter-spacing: 1px;
+}
+
+/* ==========================================================
+   Modal "نسيت كلمة المرور"
+   ========================================================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10,22,40,0.75);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+  padding: 1rem;
+}
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.modal {
+  width: 100%;
+  max-width: 400px;
+  background: var(--surface);
+  border: 1px solid rgba(212,175,55,0.18);
+  border-radius: var(--r-lg);
+  box-shadow: 0 40px 80px -20px rgba(0,0,0,0.8);
+  overflow: hidden;
+  transform: translateY(15px);
+  transition: transform 0.25s;
+}
+.modal-overlay.active .modal { transform: translateY(0); }
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.2rem 1.5rem;
+  background: linear-gradient(135deg, var(--mp-gold-dark), var(--mp-gold));
+  color: var(--mp-navy);
+}
+.modal-head h3 {
+  margin: 0;
+  font-family: var(--font-kufi);
+  font-weight: 700;
+  font-size: 1rem;
+}
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--mp-navy);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  transition: background 0.2s;
+  font-size: 1.1rem;
+}
+.modal-close:hover { background: rgba(0,0,0,0.1); }
+.modal-body { padding: 1.5rem; }
+.modal-body p {
+  margin: 0 0 1.2rem;
+  color: var(--txt-muted);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+.modal-foot {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0 1.5rem 1.5rem;
+}
+.btn-modal {
+  flex: 1;
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: none;
+  font-family: var(--font);
+  transition: all 0.2s;
+}
+.btn-ghost {
+  background: rgba(255,255,255,0.05);
+  color: var(--txt);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.btn-ghost:hover { background: rgba(255,255,255,0.1); }
+.btn-gold {
+  background: var(--mp-gold);
+  color: var(--mp-navy);
+}
+.btn-gold:hover { background: var(--mp-gold-dark); }
+
+/* ==========================================================
+   Responsive
+   ========================================================== */
+@media (max-width: 480px) {
+  .official-emblem { width: 72px; height: 72px; }
+  .official-emblem.institute { width: 64px; height: 64px; }
+  .official-header-title { font-size: 1.15rem; }
+  .login-card { padding: 24px 18px 20px; }
+  .security-badge,
+  .version-badge { font-size: 10px; padding: 6px 12px; }
+  .e-signature .sig-name { font-size: 1.65rem; }
+  .e-signature .sig-underline { width: 140px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="bgCanvas"></canvas>
+<div class="grid-overlay" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+<div class="scanlines" aria-hidden="true"></div>
+
+<!-- شارات الحالة -->
+<div class="security-badge" role="status" aria-label="نظام آمن">
+  <i class="fas fa-shield-alt" aria-hidden="true"></i>
+  نظام آمن · RBAC
+</div>
+<div class="version-badge" aria-hidden="true">
+  MediPrescribe · v3.1 · 2026
+</div>
+
+<!-- منطقة التنبيهات -->
+<div class="toast-region" id="toastRegion" role="log" aria-live="polite"></div>
+
+<div class="page-wrap">
+
+  <!-- ═══════════════════════════════════════════════════════
+       الرأس الرسمي — الجمهورية اليمنية
+       ═══════════════════════════════════════════════════════ -->
+  <header class="official-header">
+    <div class="official-header-content">
+
+      <!-- شعار الجمهورية -->
+      <img
+        src="images/logo-yemen.png"
+        alt="شعار الجمهورية اليمنية"
+        class="official-emblem"
+        loading="eager"
+        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+      <div class="official-emblem" style="display:none; align-items:center; justify-content:center; font-size:2.5rem; background:rgba(212,175,55,.15); border-radius:50%;">🇾🇪</div>
+
+      <span class="official-header-republic">الجمهورية اليمنية</span>
+
+      <div class="official-header-divider" aria-hidden="true"></div>
+
+      <!-- شعار وزارة الصحة -->
+      <img
+        src="images/logo-health.png"
+        alt="شعار وزارة الصحة والبيئة"
+        class="official-emblem institute"
+        loading="eager"
+        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+      <div class="official-emblem institute" style="display:none; align-items:center; justify-content:center; font-size:2rem;">⚕️</div>
+
+      <h1 class="official-header-title">وزارة الصحة والبيئة</h1>
+      <p class="official-header-subtitle">النظام الوطني الذكي للوصفات الطبية — الأمراض الباطنية</p>
+
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════
+       بطاقة الدخول
+       ═══════════════════════════════════════════════════════ -->
+  <div class="login-card" role="region" aria-label="نموذج تسجيل الدخول">
+
+    <div class="card-icon-row">
+      <div class="card-icon" aria-hidden="true">
+        <i class="fas fa-prescription"></i>
+      </div>
+      <div class="card-title-block">
+        <h2>MediPrescribe Portal</h2>
+        <p>بوابة الأطباء والصيادلة<br>Physician & Pharmacist Portal</p>
+      </div>
+    </div>
+
+    <!-- تنبيه Rate Limit -->
+    <div class="rate-limit-warn" id="rateLimitWarn" role="alert" aria-live="assertive">
+      <i class="fas fa-ban" aria-hidden="true"></i>
+      عدد محاولات كبير. يرجى الانتظار <span class="rate-limit-timer" id="rateTimer">30</span> ثانية
+    </div>
+
+    <!-- شريط التقدم -->
+    <div class="login-progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+      <div class="login-progress-bar" id="progressBar"></div>
+    </div>
+
+    <!-- النموذج -->
+    <form id="loginForm" autocomplete="on" novalidate aria-label="تسجيل الدخول">
+
+      <!-- اسم المستخدم -->
+      <div class="field-wrap">
+        <input type="text"
+               class="field-input"
+               id="username"
+               name="username"
+               required
+               placeholder="اسم المستخدم"
+               autocomplete="username"
+               minlength="3" maxlength="50"
+               spellcheck="false"
+               aria-required="true"
+               aria-describedby="usernameErr">
+        <label class="field-label" for="username">
+          <i class="fas fa-user-circle" aria-hidden="true"></i>
+          اسم المستخدم
+        </label>
+        <div class="field-line" aria-hidden="true"></div>
+        <p class="field-error" id="usernameErr" role="alert"></p>
+      </div>
+
+      <!-- كلمة المرور -->
+      <div class="field-wrap">
+        <input type="password"
+               class="field-input"
+               id="password"
+               name="password"
+               required
+               placeholder="كلمة المرور"
+               autocomplete="current-password"
+               minlength="6" maxlength="100"
+               aria-required="true"
+               aria-describedby="passwordErr capsWarn">
+        <label class="field-label" for="password">
+          <i class="fas fa-lock" aria-hidden="true"></i>
+          كلمة المرور
+        </label>
+        <div class="field-line" aria-hidden="true"></div>
+
+        <button type="button"
+                class="field-action"
+                id="togglePwd"
+                aria-label="إظهار كلمة المرور"
+                aria-pressed="false">
+          <i class="fas fa-eye" id="eyeIcon" aria-hidden="true"></i>
+        </button>
+
+        <p class="field-error" id="passwordErr" role="alert"></p>
+        <p class="caps-warn" id="capsWarn" role="status">
+          <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+          Caps Lock مفعّل
+        </p>
+
+        <!-- قوة كلمة المرور -->
+        <div class="strength-wrap" id="strengthWrap" aria-label="قوة كلمة المرور">
+          <div class="strength-bars" aria-hidden="true">
+            <div class="strength-bar" id="bar1"></div>
+            <div class="strength-bar" id="bar2"></div>
+            <div class="strength-bar" id="bar3"></div>
+            <div class="strength-bar" id="bar4"></div>
+          </div>
+          <div class="strength-label" id="strengthLabel" aria-live="polite">ضعيفة</div>
+        </div>
+      </div>
+
+      <!-- المستشفى -->
+      <div class="field-wrap">
+        <select class="field-input" id="hospital" name="hospital"
+                style="padding: 18px 16px 8px 16px; appearance:none;">
+          <!-- تُملأ من JS -->
+        </select>
+        <label class="field-label" for="hospital"
+               style="top: 6px; font-size: 0.7rem; color: var(--mp-gold);">
+          <i class="fas fa-hospital" aria-hidden="true"></i>
+          المستشفى / المنشأة
+        </label>
+        <div class="field-line" aria-hidden="true"></div>
+      </div>
+
+      <!-- تذكرني + نسيت -->
+      <div class="form-row">
+        <label class="remember-label">
+          <input type="checkbox" id="rememberMe" name="rememberMe" checked>
+          <span>تذكرني</span>
+        </label>
+        <a href="#" class="forgot-link" id="forgotLink">نسيت كلمة المرور؟</a>
+      </div>
+
+      <!-- زر الدخول -->
+      <button type="submit" class="btn-login" id="loginBtn" aria-label="تسجيل الدخول الآمن">
+        <i class="fas fa-lock-open" aria-hidden="true"></i>
+        <span class="btn-text">تسجيل الدخول</span>
+        <span class="spinner" aria-hidden="true"></span>
+      </button>
+    </form>
+
+    <!-- حسابات تجريبية -->
+    <div class="card-footer">
+      <p>حسابات تجريبية: <code style="color: var(--mp-gold-light);">admin / admin123</code> · <code style="color: var(--mp-gold-light);">dr.salem / salam123</code> · <code style="color: var(--mp-gold-light);">pharma.ali / ali123</code></p>
+      <p class="version">© 2026 وزارة الصحة والبيئة — جميع الحقوق محفوظة</p>
+    </div>
+
+    <!-- زر إعادة تعيين القاعدة -->
+    <div style="text-align: center; margin-top: 12px; position: relative; z-index: 1;">
+      <button type="button"
+              id="reset-db-btn"
+              style="background:none; border:none; color:#6d7c8f; font-size:.7rem;
+                     cursor:pointer; font-family:inherit; text-decoration:underline;
+                     text-underline-offset:3px; transition:color .2s;">
+        <i class="fas fa-database" aria-hidden="true"></i>
+        إعادة تعيين قاعدة البيانات (للتطوير فقط)
+      </button>
+    </div>
+  </div>
+
+  <!-- ✅ التوقيع الإلكتروني — مطابق تماماً لـ dashboard.html -->
+  <div class="e-signature" role="contentinfo" aria-label="التوقيع الإلكتروني">
+    <span class="sig-label">هندسة وتطوير</span>
+    <span class="sig-name">Dr.Salah Al-Ahdal</span>
+    <span class="sig-role">Design &amp; Development</span>
+    <span class="sig-underline"></span>
+  </div>
+
+</div><!-- /page-wrap -->
+
+<!-- Overlay التحميل -->
+<div class="loading-overlay" id="loadingOverlay" role="status" aria-live="polite">
+  <div class="loading-ring" aria-hidden="true"></div>
+  <div class="loading-text">جاري التحقق...</div>
+</div>
+
+<!-- Modal نسيت كلمة المرور -->
+<div class="modal-overlay" id="forgotModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>استعادة كلمة المرور</h3>
+      <button class="modal-close" id="modalClose" aria-label="إغلاق">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p>أدخل اسم المستخدم وسيتم إرسال طلب إعادة التعيين إلى مسؤول النظام.</p>
+      <div class="field-wrap" style="margin-bottom: 0;">
+        <input type="text"
+               class="field-input"
+               id="forgotUser"
+               placeholder="اسم المستخدم"
+               autocomplete="off">
+        <label class="field-label" for="forgotUser"
+               style="top: 6px; font-size: 0.7rem; color: var(--mp-gold);">
+          <i class="fas fa-user" aria-hidden="true"></i>
+          اسم المستخدم
+        </label>
+        <div class="field-line" aria-hidden="true"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-modal btn-ghost" id="modalCancel">إلغاء</button>
+      <button class="btn-modal btn-gold" id="modalSubmit">إرسال الطلب</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/db.js"></script>
+
+<script>
+(() => {
+'use strict';
+
+/* ═══════════════════════════════════════════════════════
+   CANVAS — شبكة عقد مترابطة (مثل NIAS)
+   ═══════════════════════════════════════════════════════ */
+(function initCanvas() {
+  const canvas = document.getElementById('bgCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W, H, nodes = [];
+
+  const GOLD  = 'rgba(212,175,55,';
+  const AZURE = 'rgba(2,136,209,';
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+
+  function buildNodes(n) {
+    nodes = Array.from({ length: n }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.35,
+      vy: (Math.random() - 0.5) * 0.35,
+      r: Math.random() * 1.8 + 0.5,
+      color: Math.random() < 0.6 ? GOLD : AZURE,
+      alpha: Math.random() * 0.5 + 0.2
+    }));
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 130) {
+          const a = (1 - dist / 130) * 0.15;
+          ctx.beginPath();
+          ctx.strokeStyle = `${nodes[i].color}${a})`;
+          ctx.lineWidth = 0.6;
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+
+    nodes.forEach(n => {
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.fillStyle = `${n.color}${n.alpha})`;
+      ctx.fill();
+
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < 0 || n.x > W) n.vx *= -1;
+      if (n.y < 0 || n.y > H) n.vy *= -1;
+    });
+
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', () => { resize(); buildNodes(70); });
+  resize();
+  buildNodes(70);
+  draw();
+})();
+
+/* ═══════════════════════════════════════════════════════
+   ADAPTER — ربط دوال db.js بالصفحة
+   ═══════════════════════════════════════════════════════ */
+const initDB = window.initDB || (async () => {});
+const getUserByUsername = window.getUserByUsername || (async () => null);
+const verifyPassword = window.verifyPassword || (async () => false);
+const logAudit = window.logAudit || (async () => {});
+const updateLastLogin = window.updateLastLogin || (async () => {});
+const resetDatabase = window.resetDatabase || (async () => false);
+
+/* ═══════════════════════════════════════════════════════
+   UI HELPERS
+   ═══════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const D = {
+  form:        $('loginForm'),
+  username:    $('username'),
+  password:    $('password'),
+  hospital:    $('hospital'),
+  remember:    $('rememberMe'),
+  loginBtn:    $('loginBtn'),
+  progress:    $('progressBar'),
+  uErr:        $('usernameErr'),
+  pErr:        $('passwordErr'),
+  capsWarn:    $('capsWarn'),
+  togglePwd:   $('togglePwd'),
+  eyeIcon:     $('eyeIcon'),
+  strengthWrap:$('strengthWrap'),
+  strengthLbl: $('strengthLabel'),
+  bars:        [1,2,3,4].map(i => $('bar'+i)),
+  loading:     $('loadingOverlay'),
+  toasts:      $('toastRegion'),
+  forgot:      $('forgotLink'),
+  forgotModal: $('forgotModal'),
+  forgotUser:  $('forgotUser'),
+  modalClose:  $('modalClose'),
+  modalCancel: $('modalCancel'),
+  modalSubmit: $('modalSubmit'),
+  rateWarn:    $('rateLimitWarn'),
+  rateTimer:   $('rateTimer'),
+  resetBtn:    $('reset-db-btn')
+};
+
+const ICONS = {
+  success: 'fa-check-circle',
+  error:   'fa-times-circle',
+  warning: 'fa-exclamation-triangle',
+  info:    'fa-info-circle'
+};
+
+/* ═══════════════════════════════════════════════════════
+   Toast
+   ═══════════════════════════════════════════════════════ */
+function toast(msg, type = 'info', ms = 4000) {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<i class="fas ${ICONS[type] || ICONS.info}" aria-hidden="true"></i><span>${msg}</span>`;
+  D.toasts.appendChild(t);
+  setTimeout(() => {
+    t.classList.add('is-out');
+    t.addEventListener('animationend', () => t.remove(), { once: true });
+  }, ms);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Ripple Effect
+   ═══════════════════════════════════════════════════════ */
+function addRipple(btn, e) {
+  const r = document.createElement('span');
+  const rect = btn.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height) * 2;
+  r.className = 'ripple';
+  r.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - rect.left - size/2}px;top:${e.clientY - rect.top - size/2}px`;
+  btn.appendChild(r);
+  r.addEventListener('animationend', () => r.remove(), { once: true });
+}
+
+/* ═══════════════════════════════════════════════════════
+   Rate Limiting
+   ═══════════════════════════════════════════════════════ */
+const RATE_LIMIT = {
+  maxAttempts: 5,
+  lockoutSeconds: 30,
+  attempts: 0,
+  lockedUntil: 0,
+
+  isLocked() {
+    if (this.lockedUntil && Date.now() < this.lockedUntil) return true;
+    this.lockedUntil = 0;
+    return false;
+  },
+
+  getRemainingSeconds() {
+    return Math.max(0, Math.ceil((this.lockedUntil - Date.now()) / 1000));
+  },
+
+  recordAttempt(success) {
+    if (success) {
+      this.attempts = 0;
+      this.lockedUntil = 0;
+      return;
+    }
+    this.attempts++;
+    if (this.attempts >= this.maxAttempts) {
+      this.lockedUntil = Date.now() + (this.lockoutSeconds * 1000);
+      this.attempts = 0;
+    }
+  }
+};
+
+let rateInterval = null;
+
+function showRateLimit() {
+  D.rateWarn.classList.add('is-visible');
+  D.loginBtn.disabled = true;
+
+  if (rateInterval) clearInterval(rateInterval);
+
+  const tick = () => {
+    const sec = RATE_LIMIT.getRemainingSeconds();
+    D.rateTimer.textContent = sec;
+    if (sec <= 0) {
+      clearInterval(rateInterval);
+      rateInterval = null;
+      D.rateWarn.classList.remove('is-visible');
+      D.loginBtn.disabled = false;
+      toast('يمكنك المحاولة الآن', 'info', 3000);
+    }
+  };
+
+  tick();
+  rateInterval = setInterval(tick, 1000);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Progress Bar
+   ═══════════════════════════════════════════════════════ */
+function setProgress(pct) {
+  D.progress.style.width = pct + '%';
+  D.progress.closest('[role=progressbar]')?.setAttribute('aria-valuenow', pct);
+}
+
+function computeProgress() {
+  let pct = 0;
+  if (D.username.value.trim().length >= 3) pct += 50;
+  if (D.password.value.length >= 6) pct += 50;
+  return pct;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Password Strength
+   ═══════════════════════════════════════════════════════ */
+function evalStrength(pwd) {
+  if (!pwd) return 0;
+  let score = 0;
+  if (pwd.length >= 6)  score++;
+  if (pwd.length >= 10) score++;
+  if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) score++;
+  if (/\d/.test(pwd)) score++;
+  if (/[^A-Za-z0-9]/.test(pwd)) score++;
+  return Math.min(4, Math.ceil(score * 4 / 5));
+}
+
+const STRENGTH_META = [
+  null,
+  { label: 'ضعيفة جداً', cls: 'weak',   color: 'var(--red)' },
+  { label: 'ضعيفة',      cls: 'fair',   color: 'var(--orange)' },
+  { label: 'جيدة',       cls: 'good',   color: 'var(--mp-gold)' },
+  { label: 'قوية',       cls: 'strong', color: 'var(--green)' }
+];
+
+function updateStrength(pwd) {
+  if (!pwd) {
+    D.strengthWrap.classList.remove('is-visible');
+    return;
+  }
+  D.strengthWrap.classList.add('is-visible');
+  const lvl = Math.max(1, evalStrength(pwd));
+  const meta = STRENGTH_META[lvl] || STRENGTH_META[1];
+
+  D.bars.forEach((bar, i) => {
+    bar.className = 'strength-bar';
+    if (i < lvl) bar.classList.add('filled', meta.cls);
+  });
+
+  D.strengthLbl.textContent = meta?.label || '';
+  D.strengthLbl.style.color = meta?.color || 'var(--txt-muted)';
+}
+
+/* ═══════════════════════════════════════════════════════
+   Field Validation
+   ═══════════════════════════════════════════════════════ */
+function fieldOk(input) { input.classList.remove('is-error'); input.classList.add('is-success'); }
+function fieldErr(input) { input.classList.add('is-error'); input.classList.remove('is-success'); }
+function fieldReset(input) { input.classList.remove('is-error', 'is-success'); }
+
+function showErr(el, msg) {
+  el.innerHTML = `<i class="fas fa-times-circle" aria-hidden="true"></i><span>${msg}</span>`;
+  el.classList.add('is-visible');
+}
+
+function clearErr(el, input) {
+  el.textContent = '';
+  el.classList.remove('is-visible');
+  if (input) fieldReset(input);
+}
+
+function clearAll() {
+  clearErr(D.uErr, D.username);
+  clearErr(D.pErr, D.password);
+}
+
+function validate() {
+  clearAll();
+  let ok = true;
+
+  const uname = D.username.value.trim();
+  const pwd = D.password.value;
+
+  if (!uname) {
+    showErr(D.uErr, 'الرجاء إدخال اسم المستخدم');
+    fieldErr(D.username);
+    ok = false;
+  } else if (uname.length < 3) {
+    showErr(D.uErr, 'اسم المستخدم قصير جداً (3 أحرف على الأقل)');
+    fieldErr(D.username);
+    ok = false;
+  } else {
+    fieldOk(D.username);
+  }
+
+  if (!pwd) {
+    showErr(D.pErr, 'الرجاء إدخال كلمة المرور');
+    fieldErr(D.password);
+    ok = false;
+  } else if (pwd.length < 6) {
+    showErr(D.pErr, 'كلمة المرور قصيرة جداً (6 أحرف على الأقل)');
+    fieldErr(D.password);
+    ok = false;
+  } else {
+    fieldOk(D.password);
+  }
+
+  return ok;
+}
+
+function setLoading(on) {
+  D.loginBtn.disabled = on;
+  D.loginBtn.classList.toggle('is-loading', on);
+  D.loginBtn.setAttribute('aria-busy', on);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Fill Hospitals
+   ═══════════════════════════════════════════════════════ */
+(function fillHospitals() {
+  if (typeof HOSPITALS === 'undefined' || !HOSPITALS.length) {
+    D.hospital.innerHTML = '<option value="">— لا توجد مستشفيات —</option>';
+    return;
+  }
+  D.hospital.innerHTML = HOSPITALS.map(h => `<option>${h}</option>`).join('');
+})();
+
+/* ═══════════════════════════════════════════════════════
+   CAPS LOCK
+   ═══════════════════════════════════════════════════════ */
+D.password.addEventListener('keyup', e => {
+  if (typeof e.getModifierState === 'function') {
+    D.capsWarn.classList.toggle('is-visible', e.getModifierState('CapsLock'));
+  }
+});
+D.password.addEventListener('blur', () => D.capsWarn.classList.remove('is-visible'));
+
+/* ═══════════════════════════════════════════════════════
+   PASSWORD TOGGLE
+   ═══════════════════════════════════════════════════════ */
+D.togglePwd.addEventListener('click', () => {
+  const isPwd = D.password.type === 'password';
+  D.password.type = isPwd ? 'text' : 'password';
+  D.eyeIcon.classList.toggle('fa-eye', !isPwd);
+  D.eyeIcon.classList.toggle('fa-eye-slash', isPwd);
+  D.togglePwd.setAttribute('aria-pressed', String(isPwd));
+  D.togglePwd.setAttribute('aria-label', isPwd ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
+  D.password.focus();
+});
+
+/* ═══════════════════════════════════════════════════════
+   LIVE FEEDBACK
+   ═══════════════════════════════════════════════════════ */
+D.username.addEventListener('input', () => {
+  clearErr(D.uErr, D.username);
+  setProgress(computeProgress());
+});
+
+D.password.addEventListener('input', () => {
+  clearErr(D.pErr, D.password);
+  updateStrength(D.password.value);
+  setProgress(computeProgress());
+});
+
+/* ═══════════════════════════════════════════════════════
+   RESTORE REMEMBERED USERNAME
+   ═══════════════════════════════════════════════════════ */
+(function restoreRemembered() {
+  try {
+    const saved = localStorage.getItem('mp_username');
+    if (saved) {
+      D.username.value = saved;
+      setProgress(computeProgress());
+    }
+  } catch (_) {}
+})();
+
+/* ═══════════════════════════════════════════════════════
+   LOGIN SUBMIT
+   ═══════════════════════════════════════════════════════ */
+D.form.addEventListener('submit', async e => {
+  e.preventDefault();
+
+  if (RATE_LIMIT.isLocked()) {
+    showRateLimit();
+    return;
+  }
+
+  if (!validate()) {
+    toast('يرجى تصحيح الأخطاء قبل المتابعة', 'warning');
+    return;
+  }
+
+  setLoading(true);
+  D.loading.classList.add('is-active');
+  setProgress(100);
+
+  try {
+    await initDB();
+
+    const username = D.username.value.trim();
+    const password = D.password.value;
+    const hospital = D.hospital.value;
+
+    try {
+      if (D.remember.checked) {
+        localStorage.setItem('mp_username', username);
+      } else {
+        localStorage.removeItem('mp_username');
+      }
+    } catch (_) {}
+
+    const user = await getUserByUsername(username);
+    const passwordValid = user && await verifyPassword(password, user.password);
+
+    if (!passwordValid) {
+      RATE_LIMIT.recordAttempt(false);
+      await logAudit('محاولة دخول فاشلة', `اسم المستخدم: ${username}`);
+
+      D.loading.classList.remove('is-active');
+      setLoading(false);
+      setProgress(computeProgress());
+
+      showErr(D.pErr, 'اسم المستخدم أو كلمة المرور غير صحيحة');
+      fieldErr(D.password);
+      toast('اسم المستخدم أو كلمة المرور غير صحيحة', 'error');
+
+      D.password.focus();
+      D.password.select();
+
+      if (RATE_LIMIT.isLocked()) showRateLimit();
+      return;
+    }
+
+    const status = user.status || 'active';
+
+    if (status === 'suspended') {
+      RATE_LIMIT.recordAttempt(false);
+      await logAudit('محاولة دخول لحساب موقوف', username);
+      D.loading.classList.remove('is-active');
+      setLoading(false);
+      showErr(D.pErr, 'هذا الحساب موقوف — راجع مدير النظام');
+      fieldErr(D.password);
+      toast('هذا الحساب موقوف', 'error');
+      return;
+    }
+
+    if (status === 'inactive') {
+      RATE_LIMIT.recordAttempt(false);
+      await logAudit('محاولة دخول لحساب غير نشط', username);
+      D.loading.classList.remove('is-active');
+      setLoading(false);
+      showErr(D.pErr, 'هذا الحساب غير نشط — راجع مدير النظام');
+      fieldErr(D.password);
+      toast('هذا الحساب غير نشط', 'warning');
+      return;
+    }
+
+    RATE_LIMIT.recordAttempt(true);
+
+    const session = {
+      id: user.id,
+      username: user.username,
+      fullName: user.fullName || user.username,
+      role: user.role,
+      roleLabel: user.roleLabel || (window.getRoleLabel ? getRoleLabel(user.role) : user.role),
+      permissions: user.permissions || [],
+      hospital: hospital,
+      loginAt: Date.now()
+    };
+    localStorage.setItem('mp_session', JSON.stringify(session));
+
+    try { await updateLastLogin(user.id); } catch (_) {}
+
+    await logAudit('تسجيل دخول', `الدور: ${session.roleLabel} · المستشفى: ${hospital}`);
+
+    toast('✅ تم تسجيل الدخول بنجاح، جاري التحويل...', 'success');
+
+    setTimeout(() => {
+      window.location.href = 'dashboard.html';
+    }, 900);
+
+  } catch (ex) {
+    console.error('❌ خطأ:', ex);
+    RATE_LIMIT.recordAttempt(false);
+
+    D.loading.classList.remove('is-active');
+    setLoading(false);
+    setProgress(computeProgress());
+
+    let msg = 'حدث خطأ غير متوقع — حاول مرة أخرى';
+    if (ex.message && ex.message.includes('IndexedDB')) {
+      msg = 'تعذر فتح قاعدة البيانات المحلية';
+    } else if (ex.message && ex.message.includes('onblocked')) {
+      msg = 'أغلق التبويبات الأخرى المفتوحة للتطبيق';
+    }
+
+    showErr(D.pErr, msg);
+    toast(msg, 'error');
+
+    if (RATE_LIMIT.isLocked()) showRateLimit();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════
+   RIPPLE على زر الدخول
+   ═══════════════════════════════════════════════════════ */
+D.loginBtn.addEventListener('click', e => {
+  if (!D.loginBtn.disabled) addRipple(D.loginBtn, e);
+});
+
+/* ═══════════════════════════════════════════════════════
+   FORGOT PASSWORD MODAL
+   ═══════════════════════════════════════════════════════ */
+function openModal() {
+  D.forgotModal.classList.add('active');
+  setTimeout(() => D.forgotUser.focus(), 150);
+}
+function closeModal() {
+  D.forgotModal.classList.remove('active');
+  D.forgotUser.value = '';
+}
+
+D.forgot.addEventListener('click', e => {
+  e.preventDefault();
+  openModal();
+});
+D.modalClose.addEventListener('click', closeModal);
+D.modalCancel.addEventListener('click', closeModal);
+D.forgotModal.addEventListener('click', e => {
+  if (e.target === D.forgotModal) closeModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && D.forgotModal.classList.contains('active')) closeModal();
+});
+
+D.modalSubmit.addEventListener('click', async () => {
+  const uname = D.forgotUser.value.trim();
+  if (!uname) {
+    toast('الرجاء إدخال اسم المستخدم', 'warning');
+    D.forgotUser.focus();
+    return;
+  }
+
+  D.modalSubmit.disabled = true;
+  const originalText = D.modalSubmit.textContent;
+  D.modalSubmit.textContent = 'جاري الإرسال...';
+
+  try {
+    const user = await getUserByUsername(uname);
+    if (!user) {
+      toast('اسم المستخدم غير موجود في النظام', 'error');
+      return;
+    }
+
+    await logAudit('طلب استعادة كلمة المرور', `المستخدم: ${uname}`);
+    toast('تم تسجيل طلبك — راجع مسؤول النظام', 'success');
+    closeModal();
+  } catch (err) {
+    console.error('forgot password error:', err);
+    toast('حدث خطأ غير متوقع', 'error');
+  } finally {
+    D.modalSubmit.disabled = false;
+    D.modalSubmit.textContent = originalText;
+  }
+});
+
+/* ═══════════════════════════════════════════════════════
+   RESET DATABASE
+   ═══════════════════════════════════════════════════════ */
+D.resetBtn.addEventListener('click', async () => {
+  const confirmed = confirm(
+    '⚠️ تحذير!\n\n' +
+    'سيتم حذف كل البيانات (المستخدمين، الوصفات، سجل التدقيق).\n' +
+    'هذا الإجراء لا يمكن التراجع عنه.\n\n' +
+    'هل أنت متأكد؟'
+  );
+  if (!confirmed) return;
+
+  try {
+    if (typeof resetDatabase !== 'function') {
+      toast('دالة resetDatabase غير متوفرة', 'error');
+      return;
+    }
+    await resetDatabase();
+    toast('تم حذف قاعدة البيانات — جاري التحديث...', 'success');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    console.error('reset error:', e);
+    toast('فشل حذف قاعدة البيانات', 'error');
+  }
+});
+
+/* ═══════════════════════════════════════════════════════
+   KEYBOARD SHORTCUTS
+   ═══════════════════════════════════════════════════════ */
+D.username.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    D.password.focus();
+  }
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') hideAllErrors();
+});
+
+function hideAllErrors() {
+  clearAll();
+}
+
+})();
+</script>
+
+</body>
+</html>

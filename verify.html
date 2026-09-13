@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediPrescribe | التحقق من وصفة</title>
+<meta name="theme-color" content="#0a1628">
+<meta name="description" content="التحقق من صحة وأصالة الوصفة الطبية — MediPrescribe">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%230a1628'/%3E%3Ccircle cx='50' cy='50' r='42' fill='none' stroke='%23d4af37' stroke-width='2.5'/%3E%3Cpath d='M50 28v44M32 38h36M38 68h24' stroke='%23d4af37' stroke-width='3.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<style>
+:root {
+  --navy: #0a1628;
+  --navy-2: #0f2138;
+  --navy-3: #132a45;
+  --gold: #d4af37;
+  --gold-light: #f1d878;
+  --gold-dark: #b8892e;
+  --green: #43a047;
+  --green-light: #81c784;
+  --red: #e53935;
+  --red-light: #ff8a80;
+  --blue: #0288d1;
+  --blue-light: #64b5f6;
+  --orange: #ff9800;
+  --text: #eef3f8;
+  --muted: #93a2b5;
+  --border: rgba(212, 175, 55, 0.2);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Tajawal', 'Cairo', system-ui, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 15% -10%, rgba(2, 136, 209, 0.15), transparent 60%),
+    radial-gradient(1000px 700px at 110% 10%, rgba(212, 175, 55, 0.12), transparent 55%),
+    linear-gradient(180deg, var(--navy) 0%, var(--navy-2) 100%);
+  background-attachment: fixed;
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  line-height: 1.6;
+}
+
+.verify-page { width: 100%; max-width: 520px; margin: 0 auto; }
+
+/* ═══ الهيدر ═══ */
+.verify-header { text-align: center; margin-bottom: 24px; }
+
+.header-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+  filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.4));
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.verify-header h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+  background: linear-gradient(90deg, var(--gold-light), #fff 50%, var(--gold-light));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.verify-header p {
+  font-size: 0.85rem;
+  color: var(--muted);
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+/* ═══ البطاقة ═══ */
+.verify-card {
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* ═══ الحقول ═══ */
+.field { margin-bottom: 16px; text-align: right; }
+
+.field label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.field input {
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  background: rgba(10, 22, 40, 0.55);
+  color: var(--text);
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: all 0.2s;
+  outline: none;
+  direction: ltr;
+  text-align: right;
+  letter-spacing: 1px;
+}
+
+.field input::placeholder { color: #5f7086; letter-spacing: 0; }
+
+.field input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.18);
+  background: rgba(10, 22, 40, 0.8);
+}
+
+.field input.code {
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-family: 'Courier New', monospace;
+}
+
+/* ═══ الزر ═══ */
+.verify-btn {
+  width: 100%;
+  padding: 14px;
+  margin-top: 6px;
+  border: none;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--navy);
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(212, 175, 55, 0.3);
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.verify-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(212, 175, 55, 0.45);
+}
+
+.verify-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.verify-btn .spinner {
+  display: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(10, 22, 40, 0.3);
+  border-top-color: var(--navy);
+  animation: spin 0.7s linear infinite;
+}
+
+.verify-btn.loading .spinner { display: inline-block; }
+.verify-btn.loading .btn-text { display: none; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ═══ النتيجة ═══ */
+.result {
+  margin-top: 20px;
+  padding: 18px;
+  border-radius: 14px;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.result.hidden { display: none; }
+.result.ok { background: rgba(67, 160, 71, 0.08); border: 1.5px solid rgba(67, 160, 71, 0.4); }
+.result.warn { background: rgba(255, 152, 0, 0.08); border: 1.5px solid rgba(255, 152, 0, 0.4); }
+.result.bad { background: rgba(229, 57, 53, 0.08); border: 1.5px solid rgba(229, 57, 53, 0.4); }
+
+.result-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
+}
+
+.result.ok .result-header { color: var(--green-light); }
+.result.warn .result-header { color: #ffb74d; }
+.result.bad .result-header { color: var(--red-light); }
+
+.result-icon { font-size: 1.8rem; line-height: 1; }
+
+.result-message {
+  font-size: 0.88rem;
+  color: rgba(200, 215, 255, 0.85);
+  line-height: 1.8;
+  margin-bottom: 14px;
+}
+
+.result-row {
+  display: flex;
+  padding: 8px 0;
+  font-size: 0.88rem;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.result-row:last-child { border-bottom: none; }
+
+.result-row .label {
+  color: var(--muted);
+  font-weight: 600;
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.result-row .value {
+  color: var(--text);
+  font-weight: 700;
+  flex: 1;
+  word-break: break-word;
+}
+
+.result-row .value.mono {
+  font-family: 'Courier New', monospace;
+  font-size: 0.82rem;
+  direction: ltr;
+  text-align: right;
+  color: var(--gold-light);
+}
+
+.bc-section {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(2, 136, 209, 0.08);
+  border: 1px solid rgba(2, 136, 209, 0.35);
+}
+
+.bc-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--blue-light);
+  margin-bottom: 10px;
+}
+
+.bc-section-title::before { content: '⛓️'; }
+
+.bc-row { display: flex; padding: 6px 0; font-size: 0.82rem; }
+
+.bc-row .label {
+  color: var(--muted);
+  min-width: 90px;
+  flex-shrink: 0;
+}
+
+.bc-row .value {
+  color: var(--blue-light);
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  word-break: break-all;
+  direction: ltr;
+  text-align: right;
+  flex: 1;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.status-issued { background: rgba(67, 160, 71, 0.15); color: #81c784; border: 1px solid rgba(67, 160, 71, 0.3); }
+.status-dispensed { background: rgba(2, 136, 209, 0.15); color: #64b5f6; border: 1px solid rgba(2, 136, 209, 0.3); }
+.status-cancelled { background: rgba(229, 57, 53, 0.15); color: #ff8a80; border: 1px solid rgba(229, 57, 53, 0.3); }
+.status-amended { background: rgba(255, 152, 0, 0.15); color: #ffb74d; border: 1px solid rgba(255, 152, 0, 0.3); }
+
+.result-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mini-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  border-radius: 8px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.mini-btn:hover {
+  background: rgba(212, 175, 55, 0.15);
+  border-color: rgba(212, 175, 55, 0.3);
+  color: var(--gold-light);
+}
+
+.verify-footer {
+  text-align: center;
+  margin-top: 24px;
+  font-size: 0.75rem;
+  color: rgba(160, 185, 225, 0.5);
+  line-height: 1.9;
+}
+
+.verify-footer a { color: var(--gold); text-decoration: none; }
+.verify-footer a:hover { color: var(--gold-light); text-decoration: underline; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 480px) {
+  body { padding: 12px; }
+  .verify-card { padding: 22px 18px; }
+  .verify-header h1 { font-size: 1.25rem; }
+  .header-icon { font-size: 2.5rem; }
+  .result-row .label { min-width: 80px; font-size: 0.82rem; }
+  .result-row .value { font-size: 0.82rem; }
+}
+
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  .verify-card { background: #fff !important; border-color: #ccc !important; box-shadow: none !important; }
+  .verify-btn, .result-actions { display: none !important; }
+}
+</style>
+<base target="_blank">
+</head>
+<body>
+
+<div class="verify-page">
+  <div class="verify-header">
+    <div class="header-icon">🔐</div>
+    <h1>التحقق من وصفة طبية</h1>
+    <p>أدخل رقم الوصفة وكود التحقق، أو امسح رمز QR للتحقق الفوري</p>
+  </div>
+
+  <div class="verify-card">
+    <form id="verify-form" autocomplete="off" novalidate>
+      <div class="field">
+        <label for="v-rx">رقم الوصفة</label>
+        <input type="text" id="v-rx" dir="ltr" maxlength="20"
+               placeholder="Rx-2026-000001"
+               spellcheck="false" autocomplete="off"
+               autocapitalize="characters"
+               aria-label="رقم الوصفة">
+      </div>
+
+      <div class="field">
+        <label for="v-code">كود التحقق (12 خانة)</label>
+        <input type="text" id="v-code" class="code" dir="ltr" maxlength="12"
+               placeholder="ABCD1234EF56"
+               spellcheck="false" autocomplete="off"
+               autocapitalize="characters"
+               inputmode="text"
+               aria-label="كود التحقق">
+      </div>
+
+      <button type="submit" class="verify-btn" id="verify-btn" aria-busy="false">
+        <i class="fas fa-search" aria-hidden="true"></i>
+        <span class="btn-text">تحقق الآن</span>
+        <span class="spinner" aria-hidden="true"></span>
+      </button>
+    </form>
+
+    <div id="result" class="result hidden" role="status" aria-live="polite"></div>
+  </div>
+
+  <div class="verify-footer">
+    <b>MediPrescribe ⚕️</b> — التحقق الفوري من الوصفات<br>
+    وحدة التخطيط والتطوير وضمان الجودة · فرع الأمراض الباطنية<br>
+    <a href="index.html">العودة للصفحة الرئيسية</a>
+  </div>
+</div>
+
+<div id="toast-box" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+     z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:center;
+     pointer-events:none;"></div>
+
+<script src="js/data.js"></script>
+<script src="js/db.js"></script>
+<script src="js/rx.js"></script>
+<script src="js/blockchain.js"></script>
+
+<noscript>
+  <div style="max-width:520px;margin:40px auto;padding:24px;text-align:center;
+       background:rgba(229,57,53,.1);border:1px solid rgba(229,57,53,.4);
+       border-radius:14px;color:#ff8a80;font-weight:700;">
+    ⚠️ يتطلب هذا التطبيق تفعيل JavaScript في المتصفح.
+  </div>
+</noscript>
+
+<script>
+(() => {
+'use strict';
+
+/* ═══════════════════════════════════════════════════════
+   1. الاختصارات
+   ═══════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const el = {
+  form: $('verify-form'),
+  rx: $('v-rx'),
+  code: $('v-code'),
+  btn: $('verify-btn'),
+  out: $('result'),
+  toast: $('toast-box')
+};
+
+/* ═══════════════════════════════════════════════════════
+   2. XSS Escape
+   ═══════════════════════════════════════════════════════ */
+function esc(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/* ═══════════════════════════════════════════════════════
+   3. أدوات مساعدة
+   ═══════════════════════════════════════════════════════ */
+/* [إصلاح-5] normalizeRx أكثر صرامة */
+function normalizeRx(v) {
+  return String(v || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9-]/g, '');
+}
+
+function normalizeCode(v) {
+  return String(v || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function formatDate(iso) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  try {
+    return d.toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' });
+  } catch (_) {
+    return d.toLocaleString('ar-EG');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   4. Toast
+   ═══════════════════════════════════════════════════════ */
+function showToast(msg, type = 'info', ms = 3000) {
+  const box = el.toast;
+  if (!box) return;
+
+  const colors = {
+    info:    { bg: 'rgba(2,136,209,0.95)', color: '#fff' },
+    success: { bg: 'rgba(67,160,71,0.95)', color: '#fff' },
+    error:   { bg: 'rgba(229,57,53,0.95)', color: '#fff' },
+    warning: { bg: 'rgba(255,152,0,0.95)', color: '#fff' }
+  };
+  const c = colors[type] || colors.info;
+
+  const t = document.createElement('div');
+  /* يعتمد على @keyframes fadeIn المُعرَّفة في CSS */
+  t.style.cssText = `
+    background: ${c.bg};
+    color: ${c.color};
+    padding: 12px 22px;
+    border-radius: 10px;
+    font-size: .88rem;
+    font-weight: 700;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    animation: fadeIn .3s;
+    max-width: 90vw;
+    text-align: center;
+  `;
+  t.textContent = msg;
+  box.appendChild(t);
+
+  setTimeout(() => {
+    t.style.transition = 'opacity .3s';
+    t.style.opacity = '0';
+    setTimeout(() => t.remove(), 300);
+  }, ms);
+}
+
+/* ═══════════════════════════════════════════════════════
+   5. عرض النتيجة
+   ═══════════════════════════════════════════════════════ */
+function showResult(html, type = 'ok') {
+  el.out.className = `result ${type}`;
+  el.out.innerHTML = html;
+  el.out.classList.remove('hidden');
+  bindResultActions();
+}
+
+function clearResult() {
+  el.out.className = 'result hidden';
+  el.out.innerHTML = '';
+}
+
+/* ═══════════════════════════════════════════════════════
+   6. بناء نتيجة النجاح
+   ═══════════════════════════════════════════════════════ */
+function buildSuccessHTML(found, verification) {
+  const d = found.data || {};
+  const status = verification.status || 'issued';
+
+  const statusLabels = {
+    issued:     { text: '🟢 صادرة — قابلة للصرف',     cls: 'status-issued' },
+    dispensed:  { text: '🔵 مصروفة — تم صرف الدواء',   cls: 'status-dispensed' },
+    cancelled:  { text: '🔴 ملغاة — لا تصرف',          cls: 'status-cancelled' },
+    amended:    { text: '🟡 معدَّلة',                  cls: 'status-amended' },
+    verified:   { text: '🟢 موثقة',                    cls: 'status-issued' }
+  };
+  const statusInfo = statusLabels[status] || statusLabels.issued;
+  const doctorName = d.doctorName || d.signedBy || 'غير محدد';
+
+  /* [إصلاح-7] patientLabel محسّن */
+  const patientHashShort = d.patientHash ? esc(String(d.patientHash).substring(0, 6)) : '';
+  const patientLabel = d.patientInitials
+    ? `مريض: ${esc(d.patientInitials)}${patientHashShort ? ' / ' + patientHashShort : ''}`
+    : 'مريض غير معروف';
+
+  /* ─── قسم blockchain ─── */
+  const blk = found.block || {};
+  const bcHTML = blk.hash ? `
+    <div class="bc-section">
+      <div class="bc-section-title">سجل blockchain</div>
+
+      ${typeof blk.index === 'number' ? `
+        <div class="bc-row">
+          <span class="label">الكتلة #</span>
+          <span class="value">${blk.index}</span>
+        </div>
+      ` : ''}
+
+      <div class="bc-row">
+        <span class="label">hash الكتلة</span>
+        <span class="value">${esc(String(blk.hash).substring(0, 32))}...</span>
+      </div>
+
+      ${blk.merkleRoot ? `
+        <div class="bc-row">
+          <span class="label">Merkle root</span>
+          <span class="value">${esc(String(blk.merkleRoot).substring(0, 32))}...</span>
+        </div>
+      ` : ''}
+
+      ${d.sig ? `
+        <div class="bc-row">
+          <span class="label">توقيع الطبيب</span>
+          <span class="value">${esc(String(d.sig).substring(0, 32))}...</span>
+        </div>
+      ` : ''}
+    </div>
+  ` : '';
+
+  /* ─── الأدوية ─── */
+  const meds = Array.isArray(d.medications) ? d.medications : [];
+  const medsHTML = meds.length
+    ? meds.map((m, i) => `
+        <div class="result-row">
+          <span class="label">${i + 1}. ${esc(m && m.n ? m.n : '—')}</span>
+          <span class="value">${esc(m && m.dose ? m.dose : '')}${m && m.freq ? ' — ' + esc(m.freq) : ''}</span>
+        </div>
+      `).join('')
+    : '<div class="result-row"><span class="value">—</span></div>';
+
+  return `
+    <div class="result-header">
+      <span class="result-icon">✅</span>
+      <span>وصفة أصلية مؤكدة</span>
+    </div>
+
+    <div class="result-message">
+      تم التحقق من أصالة الوصفة بنجاح.
+      ${status === 'cancelled' ? '⚠️ لكنها ملغاة — لا تصرف.' : ''}
+      ${status === 'dispensed' ? '✅ تم صرفها مسبقاً.' : ''}
+      ${verification.source === 'traditional' ? '<br><small>⚠️ عبر التحقق التقليدي — السلسلة غير متاحة حالياً.</small>' : ''}
+    </div>
+
+    <div class="result-row">
+      <span class="label">رقم الوصفة</span>
+      <span class="value mono">${esc(d.rxNumber || '—')}</span>
+    </div>
+
+    <div class="result-row">
+      <span class="label">المريض</span>
+      <span class="value">${patientLabel}</span>
+    </div>
+
+    ${d.age ? `
+      <div class="result-row">
+        <span class="label">العمر</span>
+        <span class="value">${esc(d.age)} سنة</span>
+      </div>
+    ` : ''}
+
+    <div class="result-row">
+      <span class="label">التشخيص</span>
+      <span class="value">${esc(d.diagnosis || '—')}</span>
+    </div>
+
+    <div class="result-row">
+      <span class="label">الطبيب</span>
+      <span class="value">${esc(doctorName)}</span>
+    </div>
+
+    ${d.hospital ? `
+      <div class="result-row">
+        <span class="label">المنشأة</span>
+        <span class="value">${esc(d.hospital)}</span>
+      </div>
+    ` : ''}
+
+    <div class="result-row">
+      <span class="label">التاريخ</span>
+      <span class="value">${formatDate(d.createdAt)}</span>
+    </div>
+
+    <div class="result-row">
+      <span class="label">الحالة</span>
+      <span class="value">
+        <span class="status-badge ${statusInfo.cls}">${statusInfo.text}</span>
+      </span>
+    </div>
+
+    <div style="margin-top:14px;padding-top:12px;border-top:1px dashed rgba(255,255,255,.1);">
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">
+        💊 الأدوية (${meds.length}):
+      </div>
+      ${medsHTML}
+    </div>
+
+    ${bcHTML}
+
+    <div class="result-actions">
+      <button type="button" class="mini-btn" data-action="copy">
+        <i class="fas fa-copy" aria-hidden="true"></i> نسخ النتيجة
+      </button>
+      <button type="button" class="mini-btn" data-action="print">
+        <i class="fas fa-print" aria-hidden="true"></i> طباعة
+      </button>
+    </div>
+  `;
+}
+
+/* ═══════════════════════════════════════════════════════
+   7. بناء نتيجة الفشل
+   ═══════════════════════════════════════════════════════ */
+function buildFailureHTML(reason, extra = '') {
+  let title = 'فشل التحقق';
+  let icon = '❌';
+  let message = '';
+  let type = 'bad';
+
+  switch (reason) {
+    case 'not_found':
+      title = 'وصفة غير موجودة';
+      message = 'لم يتم العثور على وصفة بهذا الرقم في النظام. تأكد من الرقم أو راجع الجهة المُصدِرة.';
+      break;
+    case 'invalid_code':
+      title = 'كود التحقق غير مطابق';
+      message = 'رقم الوصفة صحيح، لكن كود التحقق غير متطابق.';
+      break;
+    case 'invalid_format':
+      title = 'صيغة غير صحيحة';
+      message = 'رقم الوصفة غير صحيح. الصيغة المتوقعة: Rx-YYYY-NNNNNN';
+      type = 'warn';
+      break;
+    case 'empty':
+      title = 'حقول ناقصة';
+      message = 'الرجاء إدخال رقم الوصفة وكود التحقق معاً.';
+      type = 'warn';
+      break;
+    case 'invalid_code_short':
+      title = 'كود التحقق قصير';
+      message = 'كود التحقق قصير جداً.';
+      type = 'warn';
+      break;
+    case 'deps_missing':
+      title = 'خطأ في تحميل النظام';
+      message = 'تعذّر تحميل مكونات النظام الأساسية (db.js / rx.js / blockchain.js). حدّث الصفحة أو تواصل مع الدعم الفني.';
+      break;
+    case 'db_error':
+      title = 'خطأ في قاعدة البيانات';
+      message = 'فشل تحميل قاعدة البيانات المحلية.';
+      break;
+    case 'chain_corrupted':
+      title = 'السلسلة معطوبة';
+      message = 'تعذّر التحقق من أصالة الوصفة — السلسلة تعرّضت للتلف.';
+      break;
+    case 'merkle_mismatch':
+      title = 'قائمة الأدوية معدّلة';
+      message = 'قائمة الأدوية في الوصفة تعرّضت للتعديل.';
+      break;
+    case 'signature_mismatch':
+    case 'no_signature':
+      title = 'توقيع غير صالح';
+      message = 'التوقيع الرقمي للطبيب غير صالح — الوصفة مرفوضة.';
+      break;
+    case 'tampering':
+      title = 'تحذير — تلاعب';
+      message = 'تم اكتشاف تعديل خارجي على السلسلة. الرجاء إبلاغ الإدارة فوراً.';
+      break;
+    case 'emergency_verification':
+      title = 'تنبيه خطير';
+      icon = '🚨';
+      message = extra || 'الوصفة تحمل تنبيهات سريرية خطيرة.';
+      type = 'warn';
+      break;
+    default:
+      message = extra || 'حدث خطأ غير متوقع أثناء التحقق.';
+  }
+
+  return `
+    <div class="result-header">
+      <span class="result-icon">${icon}</span>
+      <span>${esc(title)}</span>
+    </div>
+
+    <div class="result-message">${esc(message)}</div>
+
+    <div class="result-actions">
+      <button type="button" class="mini-btn" data-action="retry">
+        <i class="fas fa-redo" aria-hidden="true"></i> إعادة المحاولة
+      </button>
+    </div>
+  `;
+}
+
+/* ═══════════════════════════════════════════════════════
+   8. ربط أزرار النتيجة
+   ═══════════════════════════════════════════════════════ */
+function bindResultActions() {
+  el.out.querySelectorAll('[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const act = btn.getAttribute('data-action');
+      if (act === 'copy') window.copyResult();
+      else if (act === 'print') window.print();
+      else if (act === 'retry') {
+        clearResult();
+        el.rx.focus();
+      }
+    });
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   9. التحقق من الإدخال
+   ═══════════════════════════════════════════════════════ */
+function validateInputs(rx, code) {
+  if (!rx || !code) {
+    showResult(buildFailureHTML('empty'), 'warn');
+    return false;
+  }
+
+  if (typeof RxSecure !== 'undefined' &&
+      typeof RxSecure.isValidRxNumber === 'function') {
+    if (!RxSecure.isValidRxNumber(rx)) {
+      showResult(buildFailureHTML('invalid_format'), 'warn');
+      return false;
+    }
+  }
+
+  if (code.length < 6) {
+    showResult(buildFailureHTML('invalid_code_short'), 'warn');
+    return false;
+  }
+
+  return true;
+}
+
+/* ═══════════════════════════════════════════════════════
+   10. [إصلاح-3] استخراج بيانات موثوق من blockchain
+   ═══════════════════════════════════════════════════════ */
+function extractDataFromChain(bcResult) {
+  if (!bcResult) return null;
+
+  /* blockchain.js v3.1 يُرجع البيانات في bcResult.data مباشرة */
+  const d = bcResult.data;
+  if (!d || typeof d !== 'object') return null;
+
+  /* توحيد الشكل مع ما يتوقعه العرض */
+  return {
+    rxNumber:        d.rxNumber,
+    patientInitials: d.patientInitials,
+    patientHash:     d.patientHash,
+    age:             d.age,
+    gender:          d.gender,
+    diagnosis:       d.diagnosis,
+    medications:     d.medications,
+    doctorName:      d.doctorName,
+    signedBy:        d.signedBy,
+    hospital:        d.hospital,
+    createdAt:       d.createdAt || d.addedAt,
+    sig:             d.sig,
+    verificationCode: d.verificationCode
+  };
+}
+
+/* ═══════════════════════════════════════════════════════
+   11. الإجراء الرئيسي: التحقق
+   ═══════════════════════════════════════════════════════ */
+let verifying = false;
+
+async function doVerify(rawRx, rawCode) {
+  /* [إصلاح-1] رسالة عند التجاهل */
+  if (verifying) {
+    showToast('⏳ جارٍ التحقق بالفعل...', 'info', 1500);
+    return;
+  }
+  verifying = true;
+
+  const rx = normalizeRx(rawRx);
+  const code = normalizeCode(rawCode);
+
+  el.rx.value = rx;
+  el.code.value = code;
+
+  clearResult();
+
+  if (!validateInputs(rx, code)) {
+    verifying = false;
+    return;
+  }
+
+  /* فحص توفر الاعتماديات */
+  if (typeof DB === 'undefined' && typeof PrescriptionChain === 'undefined') {
+    showResult(buildFailureHTML('deps_missing'), 'bad');
+    showToast('❌ مكونات النظام غير محملة', 'error', 4000);
+    verifying = false;
+    return;
+  }
+
+  /* زر التحميل */
+  el.btn.disabled = true;
+  el.btn.classList.add('loading');
+  el.btn.setAttribute('aria-busy', 'true');
+
+  try {
+    /* 1. ابحث في IndexedDB */
+    let localRec = null;
+    if (typeof DB !== 'undefined' && typeof DB.all === 'function') {
+      try {
+        const all = await DB.all('prescriptions');
+        localRec = (all || []).find(r =>
+          normalizeRx(r && r.rxNumber) === rx
+        ) || null;
+      } catch (dbErr) {
+        console.warn('DB lookup error:', dbErr);
+      }
+    }
+
+    /* 2. تحقق تقليدي */
+    let traditionalValid = false;
+    if (localRec && typeof RxSecure !== 'undefined' &&
+        typeof RxSecure.verify === 'function') {
+      try {
+        traditionalValid = !!RxSecure.verify(localRec, code);
+      } catch (rxErr) {
+        console.warn('RxSecure.verify error:', rxErr);
+      }
+    }
+
+    /* 3. تحقق blockchain */
+    let blockchainResult = null;
+    if (typeof PrescriptionChain !== 'undefined' &&
+        typeof PrescriptionChain.verifyPrescription === 'function') {
+      try {
+        blockchainResult = await PrescriptionChain.verifyPrescription(
+          rx, code, { fastChain: false }
+        );
+      } catch (err) {
+        console.warn('blockchain verify error:', err);
+        blockchainResult = {
+          valid: false,
+          reason: 'blockchain_error',
+          message: 'خطأ في الاتصال بالسلسلة'
+        };
+      }
+    }
+
+    /* 4. تقييم النتيجة
+       ملاحظة: عند نجاح blockchain، لا نحتاج توافق كود التحقق التقليدي
+       لأن verifyPrescription يتحقق من الكود داخلياً */
+    let finalValid = false;
+    let source = 'unknown';
+
+    if (blockchainResult && blockchainResult.valid) {
+      finalValid = blockchainResult.authentic !== false;
+      source = 'blockchain';
+    } else if (!blockchainResult && traditionalValid) {
+      finalValid = true;
+      source = 'traditional';
+    } else if (blockchainResult && !blockchainResult.valid) {
+      finalValid = false;
+      source = 'blockchain';
+    }
+
+    /* 5. Audit Log */
+    if (typeof logAudit === 'function') {
+      try {
+        await logAudit(
+          finalValid ? 'التحقق من وصفة ناجح' : 'التحقق من وصفة فاشل',
+          `${rx} — ${source}`
+        );
+      } catch (_) {}
+    }
+
+    /* 6. مصدر بيانات العرض */
+    const displayData = localRec || extractDataFromChain(blockchainResult);
+
+    /* 7. عرض النتيجة */
+    if (finalValid) {
+      if (!displayData) {
+        showResult(buildFailureHTML('unknown',
+          'تم التحقق من الأصالة، لكن تعذّر استرجاع بيانات الوصفة للعرض.'), 'warn');
+        showToast('⚠️ تعذّر عرض البيانات', 'warning', 3000);
+        return;
+      }
+
+      const verification = {
+        status: (blockchainResult && blockchainResult.status) ||
+                displayData.status || 'issued',
+        source
+      };
+
+      showResult(buildSuccessHTML({
+        data: displayData,
+        block: (blockchainResult && blockchainResult.block) || null
+      }, verification), 'ok');
+
+      showToast('✅ وصفة أصلية مؤكدة', 'success', 2500);
+      return;
+    }
+
+    /* فشل */
+    if (blockchainResult && !blockchainResult.valid) {
+      const reason = blockchainResult.reason || 'unknown';
+      showResult(buildFailureHTML(reason, blockchainResult.message), 'bad');
+      showToast('❌ ' + (blockchainResult.message || 'فشل التحقق'), 'error', 3500);
+      return;
+    }
+
+    if (!localRec) {
+      showResult(buildFailureHTML('not_found'), 'bad');
+      showToast('❌ وصفة غير موجودة', 'error', 3000);
+      return;
+    }
+
+    if (!traditionalValid) {
+      showResult(buildFailureHTML('invalid_code'), 'bad');
+      showToast('❌ كود التحقق غير مطابق', 'error', 3000);
+      return;
+    }
+
+    showResult(buildFailureHTML('unknown'), 'bad');
+
+  } catch (err) {
+    console.error('verify error:', err);
+    showResult(buildFailureHTML('unknown',
+      'حدث خطأ غير متوقع: ' + (err && err.message ? err.message : '')), 'bad');
+    showToast('❌ خطأ: ' + (err && err.message ? err.message : 'غير معروف'), 'error', 3500);
+  } finally {
+    el.btn.disabled = false;
+    el.btn.classList.remove('loading');
+    el.btn.setAttribute('aria-busy', 'false');
+    verifying = false;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   12. نسخ النتيجة
+   ═══════════════════════════════════════════════════════ */
+window.copyResult = async function() {
+  const text = el.out.innerText || el.out.textContent || '';
+  if (!text.trim()) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('📋 تم نسخ النتيجة', 'success', 2000);
+  } catch (_) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (_) {}
+    ta.remove();
+    showToast('📋 تم نسخ النتيجة', 'success', 2000);
+  }
+};
+
+/* ═══════════════════════════════════════════════════════
+   13. ربط الأحداث
+   ═══════════════════════════════════════════════════════ */
+el.form.addEventListener('submit', (e) => {
+  e.preventDefault();
+  doVerify(el.rx.value, el.code.value);
+});
+
+/* تنسيق تلقائي للحقول */
+el.rx.addEventListener('input', e => {
+  e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+});
+
+el.code.addEventListener('input', e => {
+  e.target.value = normalizeCode(e.target.value);
+});
+
+/* ═══════════════════════════════════════════════════════
+   14. التهيئة + قراءة QR
+   ═══════════════════════════════════════════════════════ */
+(async () => {
+  /* [إصلاح-2] تتبع توفر المكونات بدقة */
+  let dbAvailable = false;
+  if (typeof initDB === 'function') {
+    try {
+      await initDB();
+      dbAvailable = true;
+    } catch (err) {
+      console.error('initDB failed:', err);
+      /* لا نعرض خطأ بعد — قد تكفي blockchain */
+    }
+  }
+
+  if (typeof PrescriptionChain !== 'undefined' &&
+      typeof PrescriptionChain.init === 'function') {
+    try {
+      await PrescriptionChain.init();
+      console.log('⛓️ blockchain جاهزة');
+    } catch (err) {
+      console.warn('⚠️ blockchain init:', err);
+    }
+  }
+
+  /* إذا فشل كلاهما، أظهر خطأ */
+  if (!dbAvailable && typeof PrescriptionChain === 'undefined') {
+    showResult(buildFailureHTML('deps_missing'), 'bad');
+  }
+
+  /* قراءة QR من URL */
+  const params = new URLSearchParams(location.search);
+  const rxParam = normalizeRx(params.get('rx'));
+  const codeParam = normalizeCode(params.get('code'));
+
+  if (rxParam) {
+    el.rx.value = rxParam;
+
+    if (codeParam) {
+      el.code.value = codeParam;
+      setTimeout(() => {
+        showToast('📱 تم مسح رمز QR — جارٍ التحقق...', 'info', 2000);
+        doVerify(rxParam, codeParam);
+      }, 600);
+    } else {
+      el.code.value = '';
+      setTimeout(() => el.code.focus(), 300);
+    }
+  } else {
+    setTimeout(() => el.rx.focus(), 300);
+  }
+
+  console.log('✅ verify.html v2.2 — جاهز');
+})();
+
+})();
+</script>
+
+</body>
+</html>

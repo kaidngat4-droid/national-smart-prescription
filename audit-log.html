@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<!-- ==================== SEO ==================== -->
+<title>سجل التدقيق | النظام الوطني الذكي للوصفات الطبية</title>
+<meta name="description" content="سجل تدقيق كامل لجميع الأحداث الحساسة — وزارة الصحة والبيئة اليمنية. تسجيل دخول، وصفات، إدارة مستخدمين، محاولات فاشلة. حفظ محلي آمن عبر IndexedDB.">
+<meta name="keywords" content="سجل التدقيق, Audit Log, وزارة الصحة, اليمن, وصفات طبية, RBAC, أمان">
+<meta name="author" content="Dr.Salah Al-Ahdal">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0a1628">
+<meta name="color-scheme" content="dark light">
+
+<!-- ==================== Open Graph ==================== -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ar_YE">
+<meta property="og:site_name" content="MediPrescribe">
+<meta property="og:title" content="سجل التدقيق | النظام الوطني الذكي للوصفات الطبية">
+<meta property="og:description" content="Audit Trail — سجل كامل لجميع الأحداث الحساسة في النظام.">
+<meta property="og:image" content="images/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+
+<!-- ==================== Twitter Card ==================== -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="سجل التدقيق | MediPrescribe">
+<meta name="twitter:description" content="Audit Trail — سجل كامل لجميع الأحداث الحساسة.">
+<meta name="twitter:image" content="images/twitter-card.jpg">
+
+<!-- ==================== PWA / Icons ==================== -->
+<link rel="manifest" href="manifest.json">
+
+<!-- Favicon (مطابق لـ dashboard.html) -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%230a1628'/%3E%3Ccircle cx='50' cy='50' r='42' fill='none' stroke='%23d4af37' stroke-width='2.5'/%3E%3Cpath d='M50 28v44M32 38h36M38 68h24' stroke='%23d4af37' stroke-width='3.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MediPrescribe">
+
+<!-- ==================== Preconnect / Preload ==================== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<!-- ==================== Fonts ==================== -->
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cairo:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+<!-- ==================== Font Awesome ==================== -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<!-- ==================== Styles ==================== -->
+<link rel="stylesheet" href="css/style.css">
+
+<style>
+/* ==========================================================
+   الهيدر الرسمي المركزي (مطابق تماماً لـ dashboard.html)
+   ========================================================== */
+.app-header-centered {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  background: rgba(10, 22, 40, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.18);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.official-header-top {
+  padding: 18px 20px 14px;
+  text-align: center;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+  background: radial-gradient(600px 100px at 50% 0%, rgba(212, 175, 55, 0.06), transparent 70%);
+}
+
+.official-header-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.official-emblem {
+  width: 62px;
+  height: 62px;
+  object-fit: contain;
+  border-radius: 50%;
+  border: 2.5px solid rgba(212, 175, 55, 0.35);
+  padding: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+  display: block;
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+.official-emblem:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 30px rgba(212, 175, 55, 0.4);
+}
+.official-emblem.institute {
+  width: 54px;
+  height: 54px;
+  border-color: rgba(212, 175, 55, 0.4);
+}
+.official-emblem.fallback {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.official-header-republic {
+  font-family: 'Tajawal', 'Cairo', sans-serif;
+  font-weight: 800;
+  font-size: clamp(0.95rem, 2.5vw, 1.15rem);
+  color: #fff;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 15px rgba(0, 0, 0, 0.6);
+  margin-top: 4px;
+}
+
+.official-header-divider {
+  width: 220px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #d4af37, #f1d878, #d4af37, transparent);
+  margin: 6px auto;
+  border-radius: 2px;
+}
+
+.official-header-title {
+  font-family: 'Cairo', 'Tajawal', sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.05rem, 2.8vw, 1.35rem);
+  color: #f1d878;
+  text-shadow: 0 3px 20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(212, 175, 55, 0.25);
+  letter-spacing: 1px;
+  line-height: 1.5;
+  margin: 4px 0 0;
+}
+
+.official-header-subtitle {
+  font-family: 'Tajawal', 'Cairo', sans-serif;
+  font-weight: 600;
+  font-size: clamp(0.78rem, 1.8vw, 0.92rem);
+  color: #eef3f8;
+  opacity: 0.95;
+  letter-spacing: 0.5px;
+  line-height: 1.5;
+  margin: 2px 0 0;
+}
+
+.app-header-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 24px;
+  flex-wrap: wrap;
+}
+
+#main-nav {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.nav-link {
+  padding: 8px 14px;
+  border-radius: 10px;
+  color: #93a2b5;
+  font-weight: 600;
+  font-size: 0.88rem;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  position: relative;
+}
+.nav-link:hover {
+  color: #f1d878;
+  background: rgba(212, 175, 55, 0.08);
+}
+.nav-link.active {
+  color: #f1d878;
+  background: rgba(212, 175, 55, 0.12);
+  border-color: rgba(212, 175, 55, 0.18);
+}
+
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: linear-gradient(135deg, #d4af37, #f1d878);
+  color: #0a1628;
+  font-size: 0.7rem;
+  font-weight: 800;
+  border-radius: 10px;
+  margin-right: 4px;
+}
+.nav-badge.hidden { display: none; }
+
+.user-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.user-badge.gold {
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  color: #f1d878;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  text-align: center;
+  user-select: none;
+}
+.btn:focus-visible {
+  outline: 2px solid #f1d878;
+  outline-offset: 2px;
+}
+.btn-sm { padding: 6px 14px; font-size: 0.82rem; }
+.btn-danger {
+  background: rgba(220, 53, 69, 0.1);
+  color: #ff9aa5;
+  border: 1px solid rgba(220, 53, 69, 0.35);
+}
+.btn-danger:hover {
+  background: rgba(220, 53, 69, 0.22);
+  transform: translateY(-2px);
+}
+.btn-danger-solid {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  color: #fff;
+  border: none;
+}
+.btn-danger-solid:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(220, 53, 69, 0.35);
+}
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.06);
+  color: #eef3f8;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+}
+.btn-secondary {
+  background: linear-gradient(135deg, #0288d1, #0277bd);
+  color: #fff;
+  border: none;
+}
+.btn-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(2, 136, 209, 0.3);
+}
+.btn-gold {
+  background: linear-gradient(135deg, #d4af37, #f1d878);
+  color: #0a1628;
+  box-shadow: 0 10px 24px rgba(212, 175, 55, 0.28);
+}
+.btn-gold:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(212, 175, 55, 0.4);
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* ═══ skip link (a11y) ═══ */
+.skip-link {
+  position: absolute;
+  top: -50px;
+  right: 10px;
+  background: #d4af37;
+  color: #0a1628;
+  padding: 8px 16px;
+  border-radius: 0 0 10px 10px;
+  font-weight: 800;
+  z-index: 9999;
+  transition: top 0.2s;
+  text-decoration: none;
+}
+.skip-link:focus { top: 0; }
+
+/* ═══ Badges لأنواع الأحداث ═══ */
+.audit-action-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.audit-action-badge.login       { background: rgba(67, 160, 71, 0.15); color: #81c784; border: 1px solid rgba(67, 160, 71, 0.35); }
+.audit-action-badge.logout      { background: rgba(117, 117, 117, 0.15); color: #b0bec5; border: 1px solid rgba(117, 117, 117, 0.35); }
+.audit-action-badge.failed      { background: rgba(229, 57, 53, 0.15); color: #ef9a9a; border: 1px solid rgba(229, 57, 53, 0.35); }
+.audit-action-badge.prescription{ background: rgba(2, 136, 209, 0.15); color: #64b5f6; border: 1px solid rgba(2, 136, 209, 0.35); }
+.audit-action-badge.user        { background: rgba(156, 39, 176, 0.15); color: #ce93d8; border: 1px solid rgba(156, 39, 176, 0.35); }
+.audit-action-badge.delete      { background: rgba(244, 67, 54, 0.15); color: #ef9a9a; border: 1px solid rgba(244, 67, 54, 0.35); }
+.audit-action-badge.export      { background: rgba(255, 152, 0, 0.15); color: #ffb74d; border: 1px solid rgba(255, 152, 0, 0.35); }
+.audit-action-badge.default     { background: rgba(255, 255, 255, 0.08); color: #cfd8dc; border: 1px solid rgba(255, 255, 255, 0.15); }
+
+/* ═══ حالة عدم وجود صلاحية: إخفاء المحتوى الحساس ═══ */
+main.restricted .stats-grid,
+main.restricted .users-toolbar,
+main.restricted .table-wrap,
+main.restricted .users-grid {
+  display: none !important;
+}
+
+/* ═══ حالة فارغة للجدول ═══ */
+.audit-empty {
+  text-align: center;
+  padding: 40px 16px;
+  color: #93a2b5;
+  font-weight: 600;
+}
+
+/* ═══ Modal backdrop سلوك ═══ */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  padding: 16px;
+}
+.modal.hidden { display: none; }
+
+/* ═══ Responsive ═══ */
+@media (max-width: 1024px) {
+  .official-header-top { padding: 14px 16px 10px; }
+  .official-emblem { width: 52px; height: 52px; }
+  .official-emblem.institute { width: 46px; height: 46px; }
+  .app-header-nav { padding: 12px 16px; }
+}
+
+@media (max-width: 768px) {
+  .official-header-top { padding: 12px 12px 8px; }
+  .official-emblem { width: 46px; height: 46px; padding: 4px; }
+  .official-emblem.institute { width: 42px; height: 42px; }
+  .official-header-republic { font-size: 0.85rem; letter-spacing: 1.5px; }
+  .official-header-title { font-size: 1rem; }
+  .official-header-subtitle { font-size: 0.72rem; }
+  .official-header-divider { width: 160px; }
+
+  .app-header-nav {
+    padding: 10px 12px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  #main-nav { justify-content: center; order: 2; }
+  .user-box { justify-content: center; order: 1; }
+}
+
+@media (max-width: 480px) {
+  .official-emblem { width: 42px; height: 42px; padding: 3px; }
+  .official-emblem.institute { width: 38px; height: 38px; }
+  .official-header-republic { font-size: 0.78rem; }
+  .official-header-title { font-size: 0.92rem; }
+  .official-header-subtitle { font-size: 0.68rem; }
+  .nav-link { font-size: 0.75rem; padding: 6px 8px; }
+}
+</style>
+</head>
+
+<body class="dashboard-body">
+
+<a href="#main-content" class="skip-link">تخطَّ إلى المحتوى الرئيسي</a>
+
+<!-- ==================== الهيدر الرسمي المركزي ==================== -->
+<header class="app-header-centered" role="banner">
+  <div class="official-header-top">
+    <div class="official-header-content">
+      <img src="images/logo-yemen.png" alt="شعار الجمهورية اليمنية"
+           class="official-emblem" loading="eager" data-fallback="🇾🇪" width="62" height="62">
+
+      <span class="official-header-republic">الجمهورية اليمنية</span>
+      <div class="official-header-divider" aria-hidden="true"></div>
+
+      <img src="images/logo-health.png" alt="شعار وزارة الصحة والبيئة"
+           class="official-emblem institute" loading="eager" data-fallback="⚕️" width="54" height="54">
+
+      <h1 class="official-header-title">وزارة الصحة والبيئة</h1>
+      <p class="official-header-subtitle">النظام الوطني الذكي للوصفات الطبية — سجل التدقيق</p>
+    </div>
+  </div>
+
+  <div class="app-header-nav">
+    <nav id="main-nav" role="navigation" aria-label="التنقل الرئيسي">
+      <a class="nav-link" href="dashboard.html">
+        <i class="fas fa-prescription" aria-hidden="true"></i>
+        وصفة جديدة
+      </a>
+      <a class="nav-link" href="dashboard.html#records-section">
+        <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+        السجلات
+      </a>
+      <a class="nav-link" href="users.html" id="nav-users">
+        <i class="fas fa-users" aria-hidden="true"></i>
+        المستخدمون
+      </a>
+      <a class="nav-link active" href="audit-log.html" aria-current="page">
+        <i class="fas fa-chart-line" aria-hidden="true"></i>
+        سجل التدقيق
+      </a>
+      <a class="nav-link" href="index.html">
+        <i class="fas fa-globe" aria-hidden="true"></i>
+        الموقع
+      </a>
+    </nav>
+
+    <div class="user-box">
+      <button id="theme-toggle-btn" class="btn btn-ghost btn-sm" type="button"
+              title="تبديل الوضع الليلي/النهاري" aria-label="تبديل الوضع الليلي/النهاري">
+        <i class="fas fa-moon" aria-hidden="true"></i>
+      </button>
+      <span class="user-badge gold" id="user-badge" aria-live="polite">—</span>
+      <button id="logout-btn" class="btn btn-danger btn-sm" type="button" aria-label="تسجيل الخروج">
+        <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+        خروج
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ==================== المحتوى الرئيسي ==================== -->
+<main class="users-container" id="main-content" role="main">
+
+  <!-- تنبيه الصلاحيات -->
+  <div id="permission-alert" class="alert alert-warning hidden" role="alert" aria-live="assertive">
+    ⚠️ <strong>صلاحيات محدودة</strong> — عرض سجل التدقيق متاح للمدير فقط.
+  </div>
+
+  <!-- إخلاء المسؤولية -->
+  <div class="disclaimer dark" role="note">
+    🔍 <strong>سجل التدقيق (Audit Log)</strong> — يحتوي على سجل كامل لجميع الأحداث الحساسة في النظام.
+    يُحفظ محلياً عبر IndexedDB ويمكن تصديره بصيغة CSV لأغراض المراجعة.
+  </div>
+
+  <!-- ==================== الإحصائيات ==================== -->
+  <section class="stats-grid" aria-label="إحصائيات سجل التدقيق">
+    <div class="stat-card">
+      <span class="stat-icon" aria-hidden="true">📊</span>
+      <div>
+        <div class="stat-num" id="stat-total" aria-live="polite">0</div>
+        <div class="stat-label">إجمالي الأحداث</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-icon" aria-hidden="true">📅</span>
+      <div>
+        <div class="stat-num" id="stat-today" aria-live="polite">0</div>
+        <div class="stat-label">أحداث اليوم</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-icon" aria-hidden="true">🔐</span>
+      <div>
+        <div class="stat-num" id="stat-logins" aria-live="polite">0</div>
+        <div class="stat-label">عمليات دخول</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-icon" aria-hidden="true">👥</span>
+      <div>
+        <div class="stat-num" id="stat-users-count" aria-live="polite">0</div>
+        <div class="stat-label">مستخدمون فريدون</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== شريط الأدوات ==================== -->
+  <section class="users-toolbar" role="search" aria-label="أدوات البحث والفلترة">
+    <input type="search" id="audit-search"
+           class="search-input"
+           placeholder="🔍 بحث بالحدث، المستخدم، التفاصيل..."
+           autocomplete="off"
+           aria-label="بحث في سجل التدقيق">
+
+    <div class="filter-group">
+      <select id="filter-action" aria-label="فلترة بنوع الحدث">
+        <option value="">— كل الأحداث —</option>
+        <option value="login">🔐 تسجيل دخول</option>
+        <option value="logout">🚪 تسجيل خروج</option>
+        <option value="failed">❌ محاولات فاشلة</option>
+        <option value="prescription">📝 وصفات</option>
+        <option value="user">👥 مستخدمون</option>
+        <option value="delete">🗑️ حذف</option>
+        <option value="export">📤 تصدير</option>
+      </select>
+
+      <select id="filter-user" aria-label="فلترة بالمستخدم">
+        <option value="">— كل المستخدمين —</option>
+      </select>
+
+      <select id="filter-period" aria-label="فلترة بالفترة الزمنية">
+        <option value="all">كل الفترات</option>
+        <option value="today">اليوم</option>
+        <option value="week">آخر 7 أيام</option>
+        <option value="month">آخر 30 يوماً</option>
+      </select>
+    </div>
+
+    <div class="view-toggle" id="view-toggle" role="group" aria-label="طريقة العرض">
+      <button data-view="table" class="active" type="button" title="عرض جدول" aria-pressed="true">
+        <i class="fas fa-list" aria-hidden="true"></i> جدول
+      </button>
+      <button data-view="grid" type="button" title="عرض بطاقات" aria-pressed="false">
+        <i class="fas fa-th-large" aria-hidden="true"></i> بطاقات
+      </button>
+    </div>
+
+    <button class="btn btn-ghost" id="export-btn" type="button" aria-label="تصدير السجل بصيغة CSV">
+      <i class="fas fa-file-export" aria-hidden="true"></i>
+      تصدير CSV
+    </button>
+
+    <button class="btn btn-danger" id="clear-btn" type="button" aria-label="حذف السجلات الأقدم من 90 يوماً">
+      <i class="fas fa-trash" aria-hidden="true"></i>
+      حذف الأقدم من 90 يوماً
+    </button>
+  </section>
+
+  <!-- ==================== الجدول ==================== -->
+  <div class="table-wrap" id="audit-table-view">
+    <table class="users-table" aria-label="جدول سجل التدقيق">
+      <thead>
+        <tr>
+          <th scope="col" style="width:60px;">#</th>
+          <th scope="col">الحدث</th>
+          <th scope="col">التفاصيل</th>
+          <th scope="col">بواسطة</th>
+          <th scope="col">التاريخ</th>
+          <th scope="col">الوقت</th>
+        </tr>
+      </thead>
+      <tbody id="audit-tbody">
+        <!-- تُملأ ديناميكياً -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ==================== Grid ==================== -->
+  <div class="users-grid hidden" id="audit-grid-view" role="list">
+    <!-- تُملأ ديناميكياً -->
+  </div>
+
+</main>
+
+<!-- ==================== الفوتر الرسمي ==================== -->
+<footer class="dashboard-footer" role="contentinfo">
+  <b>MediPrescribe ⚕️</b> — وحدة التخطيط والتطوير وضمان الجودة · سجل التدقيق (Audit Trail)
+  <br>
+  <small style="opacity:.7;">جميع الأحداث مسجّلة بدقة زمنية (ms) · البيانات محفوظة محلياً عبر IndexedDB</small>
+</footer>
+
+<!-- ==================== التوقيع الإلكتروني ==================== -->
+<div class="e-signature" role="contentinfo" aria-label="التوقيع الإلكتروني">
+  <span class="sig-label">هندسة وتطوير</span>
+  <span class="sig-name">Dr.Salah Al-Ahdal</span>
+  <span class="sig-role">Design &amp; Development</span>
+  <span class="sig-underline"></span>
+</div>
+
+<!-- ==================== Modal تأكيد الحذف ==================== -->
+<div class="modal hidden" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+  <div class="modal-content dark" style="max-width:480px;">
+    <h3 class="modal-title mb-md" id="confirm-title" style="text-align:center;">
+      ⚠️ تأكيد حذف السجلات القديمة
+    </h3>
+    <p id="confirm-text" class="mb-lg"
+       style="text-align:center;color:#c7d2de;line-height:1.8;">
+      سيتم حذف جميع السجلات الأقدم من 90 يوماً. لا يمكن التراجع.
+    </p>
+    <div class="action-row" style="justify-content:center;">
+      <button class="btn btn-danger-solid" id="confirm-yes" type="button">
+        <i class="fas fa-trash" aria-hidden="true"></i>
+        نعم، احذف
+      </button>
+      <button class="btn btn-ghost" id="confirm-no" type="button">
+        إلغاء
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== Toast ==================== -->
+<div id="toast-box" role="log" aria-live="polite" aria-atomic="true"></div>
+
+<noscript>
+  <div style="position:fixed;inset:0;background:#0a1628;color:#f1d878;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:Tajawal,sans-serif;text-align:center;padding:20px;">
+    ⚠️ هذا النظام يتطلب تفعيل JavaScript في المتصفح.
+  </div>
+</noscript>
+
+<!-- ==================== السكربتات ==================== -->
+<script src="js/data.js" defer></script>
+<script src="js/db.js" defer></script>
+<script src="js/audit.js" defer></script>
+
+<!-- ==========================================================
+     تحسينات Audit Log — إصلاحات احترافية (نسخة محسّنة v2)
+     ========================================================== -->
+<script>
+(function initAuditLogEnhancements() {
+  'use strict';
+
+  /* ── أدوات مساعدة آمنة ─────────────────────────────── */
+  function $(id) { return document.getElementById(id); }
+
+  function safeRun(name, fn) {
+    try { fn(); }
+    catch (e) { console.error('\u274c \u0641\u0634\u0644 \u062A\u0647\u064A\u0626\u0629 (' + name + '):', e); }
+  }
+
+  /* تخزين آمن — لا يتعطل في وضع التصفح الخاص */
+  var storage = {
+    get: function (key) {
+      try { return window.localStorage.getItem(key); } catch (_) { return null; }
+    },
+    set: function (key, val) {
+      try { window.localStorage.setItem(key, val); } catch (_) { /* تجاهل */ }
+    }
+  };
+
+  function toast(msg, type, ms) {
+    if (typeof window.showToast === 'function') {
+      try { window.showToast(msg, type, ms); } catch (_) { /* تجاهل */ }
+    }
+  }
+
+  function getSession() {
+    try {
+      if (typeof window.getCurrentUser === 'function') return window.getCurrentUser();
+      var raw = storage.get('mp_session');
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) { return null; }
+  }
+
+  /* هل المستخدم حاليًا يكتب في حقل إدخال؟ */
+  function isTyping(target) {
+    return target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName || '');
+  }
+
+
+  /* ═══════════════════════════════════════════════════════
+     0. حارس أمني: إزالة أي <base target="_blank">
+        🔴 ثغرة أمنية (reverse tabnabbing) إن أُضيفت للـ head
+        ديناميكياً من سكربتات خارجية. نزيلها فوراً ونراقب head.
+     ═══════════════════════════════════════════════════════ */
+  function stripDangerousBase() {
+    var bases = document.querySelectorAll('base[target="_blank"]');
+    for (var i = 0; i < bases.length; i++) bases[i].remove();
+    /* لا نسمح بأي base جديد بـ target */
+    if (document.head) {
+      var mo = new MutationObserver(function (muts) {
+        muts.forEach(function (m) {
+          m.addedNodes.forEach(function (n) {
+            if (n.nodeType === 1 && n.tagName === 'BASE' &&
+                (n.getAttribute('target') === '_blank' || !n.hasAttribute('target'))) {
+              n.remove();
+            }
+          });
+        });
+      });
+      mo.observe(document.head, { childList: true });
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     1. بدائل الشعارات (بدون inline onerror)
+     ═══════════════════════════════════════════════════════ */
+  function initEmblemFallbacks() {
+    document.querySelectorAll('img.official-emblem[data-fallback]').forEach(function (img) {
+      var applied = false;
+      var applyFallback = function () {
+        if (applied) return;
+        applied = true;
+        var div = document.createElement('div');
+        div.className = img.className + ' fallback';
+        div.textContent = img.dataset.fallback || '\u{1F3E5}';
+        div.setAttribute('role', 'img');
+        div.setAttribute('aria-label', img.alt || '');
+        if (img.parentNode) img.replaceWith(div);
+      };
+      img.addEventListener('error', applyFallback);
+      /* صورة فاشلة محمّلة مسبقًا (من الكاش) */
+      if (img.complete && img.naturalWidth === 0) applyFallback();
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     2. حارس الصلاحيات — إعادة محاولة حتى يجهز الجلسة
+        🔴 قد تتحمّل الجلسة من IndexedDB بشكل غير متزامن
+           بعد DOMContentLoaded، لذا نكرّر الفحص تدريجياً.
+     ═══════════════════════════════════════════════════════ */
+  var permState = { resolved: false, attempts: 0 };
+
+  function applyRestriction() {
+    /* إخفاء رابط إدارة المستخدمين */
+    var navUsers = $('nav-users');
+    if (navUsers && navUsers.parentNode) navUsers.remove();
+
+    /* إظهار التنبيه وإخفاء المحتوى الحساس */
+    var alertBox = $('permission-alert');
+    if (alertBox) alertBox.classList.remove('hidden');
+
+    var main = $('main-content');
+    if (main) main.classList.add('restricted');
+
+    /* تعطيل الأزرار الخطرة إن وُجدت */
+    ['export-btn', 'clear-btn'].forEach(function (id) {
+      var btn = $(id);
+      if (btn && !btn.disabled) { btn.disabled = true; btn.setAttribute('aria-disabled', 'true'); }
+    });
+  }
+
+  function liftRestriction() {
+    /* المدير: إعادة رابط المستخدمين إن حُذف (idempotent) */
+    var alertBox = $('permission-alert');
+    if (alertBox) alertBox.classList.add('hidden');
+    var main = $('main-content');
+    if (main) main.classList.remove('restricted');
+    ['export-btn', 'clear-btn'].forEach(function (id) {
+      var btn = $(id);
+      if (btn) { btn.disabled = false; btn.removeAttribute('aria-disabled'); }
+    });
+  }
+
+  function enforcePermissionsOnce() {
+    if (permState.resolved) return;
+    var session = getSession();
+
+    if (!session) {
+      /* الجلسة لم تجهز بعد — حاول لاحقاً */
+      return false;
+    }
+
+    permState.resolved = true;
+    if (session.role === 'admin') liftRestriction();
+    else applyRestriction();
+    return true;
+  }
+
+  function enforcePermissions() {
+    /* محاولة فورية */
+    if (enforcePermissionsOnce()) return;
+
+    /* إعادة محاولة تدريجية: 300ms ثم 800ms ثم 1500ms ثم كل ثانيتين */
+    var delays = [300, 800, 1500];
+    var timer = null;
+
+    function step() {
+      if (enforcePermissionsOnce()) { if (timer) clearInterval(timer); return; }
+      if (permState.attempts < delays.length) {
+        setTimeout(step, delays[permState.attempts++]);
+      } else if (!timer) {
+        /* فترة طويلة بدون جلسة → افترض غير مصرّح وقيّد العرض */
+        applyRestriction();
+        timer = setInterval(function () {
+          if (enforcePermissionsOnce()) clearInterval(timer);
+        }, 2000);
+      }
+    }
+    setTimeout(step, 300);
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     3. الوضع النهاري/الليلي
+     ═══════════════════════════════════════════════════════ */
+  function initThemeToggle() {
+    var btn = $('theme-toggle-btn');
+    if (!btn) return;
+
+    var icon = btn.querySelector('i');
+    var KEY = 'mp_theme';
+
+    function applyTheme(theme) {
+      var t = theme === 'light' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+      document.body.classList.toggle('light-mode', t === 'light');
+      if (icon) icon.className = t === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+      var label = t === 'light' ? 'الوضع الليلي' : 'الوضع النهاري';
+      btn.title = label;
+      btn.setAttribute('aria-label', label);
+    }
+
+    applyTheme(storage.get(KEY) || 'dark');
+
+    btn.addEventListener('click', function () {
+      var current = document.documentElement.getAttribute('data-theme');
+      var newTheme = current === 'light' ? 'dark' : 'light';
+      storage.set(KEY, newTheme);
+      applyTheme(newTheme);
+      toast('\u{1F313} \u062A\u0645 \u0627\u0644\u062A\u0628\u062F\u064A\u0644 \u0625\u0644\u0649 \u0627\u0644\u0648\u0636\u0639 ' +
+            (newTheme === 'light' ? '\u0627\u0644\u0646\u0647\u0627\u0631\u064A' : '\u0627\u0644\u0644\u064A\u0644\u064A'),
+            'info', 1500);
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     4. تفعيل/تبديل العرض (جدول ↔ بطاقات)
+     ═══════════════════════════════════════════════════════ */
+  function initViewToggle() {
+    var toggle    = $('view-toggle');
+    var tableView = $('audit-table-view');
+    var gridView  = $('audit-grid-view');
+    if (!toggle || !tableView || !gridView) return;
+
+    function setView(view, save) {
+      var isGrid = view === 'grid';
+      toggle.querySelectorAll('button[data-view]').forEach(function (b) {
+        var active = (b.dataset.view === view);
+        b.classList.toggle('active', active);
+        b.setAttribute('aria-pressed', String(active));
+      });
+      tableView.classList.toggle('hidden', isGrid);
+      gridView.classList.toggle('hidden', !isGrid);
+      if (save !== false) storage.set('audit_view', view);
+    }
+
+    toggle.querySelectorAll('button[data-view]').forEach(function (btn) {
+      btn.addEventListener('click', function () { setView(btn.dataset.view); });
+    });
+
+    /* استرجاع التفضيل دون حفظ مكرر */
+    var saved = storage.get('audit_view');
+    if (saved === 'grid') setView('grid', false);
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     5. تلوين شارات الحدث — دالة واحدة (إزالة التكرار)
+     ═══════════════════════════════════════════════════════ */
+  function classifyAction(text) {
+    var t = (text || '').toLowerCase();
+    if (t.indexOf('\u062F\u062E\u0648\u0644') !== -1 || t.indexOf('login') !== -1) return 'login';
+    if (t.indexOf('\u062E\u0631\u0648\u062C') !== -1 || t.indexOf('logout') !== -1) return 'logout';
+    if (t.indexOf('\u0641\u0627\u0634\u0644') !== -1 || t.indexOf('failed') !== -1) return 'failed';
+    if (t.indexOf('\u0648\u0635\u0641') !== -1 || t.indexOf('prescription') !== -1) return 'prescription';
+    if (t.indexOf('\u0645\u0633\u062A\u062E\u062F\u0645') !== -1 || t.indexOf('user') !== -1) return 'user';
+    if (t.indexOf('\u062D\u0630\u0641') !== -1 || t.indexOf('delete') !== -1) return 'delete';
+    if (t.indexOf('\u062A\u0635\u062F\u064A\u0631') !== -1 || t.indexOf('export') !== -1) return 'export';
+    return 'default';
+  }
+
+  function colorizeCell(cell) {
+    if (!cell || cell.dataset.processed) return;
+    cell.dataset.processed = '1';
+    cell.classList.add('audit-action-badge', classifyAction(cell.textContent));
+  }
+
+  function initActionBadges() {
+    var tbody = $('audit-tbody');
+    if (!tbody) return;
+
+    /* معالجة أولية للصفوف الموجودة أصلاً */
+    tbody.querySelectorAll('tr').forEach(function (tr) {
+      colorizeCell(tr.cells && tr.cells[1]);
+    });
+
+    /* مراقبة الصفوف المضافة ديناميكياً (فلترة/بحث/ترقيم) */
+    var observer = new MutationObserver(function (mutations) {
+      mutations.forEach(function (m) {
+        m.addedNodes.forEach(function (node) {
+          if (node.nodeType !== 1) return;
+          if (node.tagName === 'TR') {
+            colorizeCell(node.cells && node.cells[1]);
+          } else if (node.querySelectorAll) {
+            node.querySelectorAll('tr').forEach(function (tr) {
+              colorizeCell(tr.cells && tr.cells[1]);
+            });
+          }
+        });
+      });
+    });
+    observer.observe(tbody, { childList: true, subtree: true });
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     6. Modal — إغلاق بـ Escape وبالنقر على الخلفية + إدارة التركيز
+     ═══════════════════════════════════════════════════════ */
+  function initConfirmModal() {
+    var modal  = $('confirm-modal');
+    var yesBtn = $('confirm-yes');
+    var noBtn  = $('confirm-no');
+    if (!modal) return;
+
+    var lastFocused = null;
+
+    window.openAuditConfirm = function () {
+      lastFocused = document.activeElement;
+      modal.classList.remove('hidden');
+      if (noBtn) noBtn.focus();
+      document.addEventListener('keydown', onKeydown, true);
+    };
+
+    window.closeAuditConfirm = function () {
+      modal.classList.add('hidden');
+      document.removeEventListener('keydown', onKeydown, true);
+      if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
+    };
+
+    function onKeydown(e) {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        window.closeAuditConfirm();
+        return;
+      }
+      /* حبس التركيز داخل الـ Modal (Focus Trap بسيط) */
+      if (e.key === 'Tab') {
+        var focusables = modal.querySelectorAll('button, [href], input, select, [tabindex]:not([tabindex="-1"])');
+        if (!focusables.length) return;
+        var first = focusables[0];
+        var last  = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus();
+        }
+      }
+    }
+
+    /* النقر على الخلفية = إلغاء */
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) window.closeAuditConfirm();
+    });
+    if (noBtn) noBtn.addEventListener('click', function () { window.closeAuditConfirm(); });
+
+    /* زر "نعم، احذف": نفّذ الحذف عبر واجهة audit.js إن توفرت */
+    if (yesBtn) yesBtn.addEventListener('click', function () {
+      try {
+        if (typeof window.clearOldAuditLogs === 'function') {
+          window.clearOldAuditLogs(90);
+        } else {
+          /* حدث مخصص ليتعامل معه audit.js */
+          document.dispatchEvent(new CustomEvent('audit:clear-old', { detail: { days: 90 } }));
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        window.closeAuditConfirm();
+      }
+    });
+
+    /* 🟡 تحديث الواجهة بعد اكتمال الحذف — audit.js يبث 'audit:cleared' */
+    document.addEventListener('audit:cleared', function () {
+      refreshAuditUI();
+    });
+
+    /* قائمة دوال إعادة العرض المحتملة في audit.js بالترتيب */
+    function refreshAuditUI() {
+      var fns = ['refreshAuditLog', 'renderAuditLog', 'loadAuditLog', 'renderAudit', 'updateAuditUI'];
+      for (var i = 0; i < fns.length; i++) {
+        if (typeof window[fns[i]] === 'function') {
+          try { window[fns[i]](); return; } catch (e) { console.error(e); }
+        }
+      }
+      /* بديل: إعادة تشغيل الفلاتر لإجبار audit.js على إعادة الرسم */
+      var action = $('filter-action');
+      if (action) {
+        action.dispatchEvent(new Event('change', { bubbles: true }));
+        return;
+      }
+      /* ملاذ أخير: إعادة تحميل الصفحة */
+      window.location.reload();
+    }
+  }
+
+  /* ربط زر الحذف بفتح الـ Modal (إن لم يربطه audit.js بنفسه) */
+  function initClearButton() {
+    var clearBtn = $('clear-btn');
+    if (!clearBtn) return;
+    clearBtn.addEventListener('click', function () {
+      if (typeof window.openAuditConfirm === 'function') window.openAuditConfirm();
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     7. اختصارات لوحة المفاتيح
+        Ctrl+E  → تصدير CSV
+        Ctrl+/  → تركيز البحث
+     ═══════════════════════════════════════════════════════ */
+  function initKeyboardShortcuts() {
+    document.addEventListener('keydown', function (e) {
+      var ctrl = e.ctrlKey || e.metaKey;
+
+      if (ctrl && e.key.toLowerCase() === 'e') {
+        var exportBtn = $('export-btn');
+        if (exportBtn && !exportBtn.disabled) {
+          e.preventDefault();
+          exportBtn.click();
+        }
+        return;
+      }
+
+      if (ctrl && (e.key === '/' || e.key === '\u{066B}' || e.code === 'Slash')) {
+        e.preventDefault();
+        var searchInput = $('audit-search');
+        if (searchInput) searchInput.focus();
+        return;
+      }
+
+      /* تجاهل باقي الاختصارات أثناء الكتابة */
+      if (isTyping(e.target)) return;
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     التشغيل
+     ═══════════════════════════════════════════════════════ */
+  var modules = [
+    ['base-guard',        stripDangerousBase],
+    ['emblem-fallbacks',  initEmblemFallbacks],
+    ['permissions',       enforcePermissions],
+    ['theme-toggle',      initThemeToggle],
+    ['view-toggle',       initViewToggle],
+    ['action-badges',     initActionBadges],
+    ['confirm-modal',     initConfirmModal],
+    ['clear-button',      initClearButton],
+    ['keyboard',          initKeyboardShortcuts]
+  ];
+
+  function init() {
+    modules.forEach(function (m) { safeRun(m[0], m[1]); });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+<!-- ==========================================================
+     Service Worker Registration
+     ========================================================== -->
+<script>
+(function registerServiceWorker() {
+  'use strict';
+
+  if (!('serviceWorker' in navigator)) return;
+
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .then(function (registration) {
+        console.log('\u2705 SW \u0645\u0633\u062C\u0651\u0644:', registration.scope);
+      })
+      .catch(function (err) {
+        console.warn('SW registration skipped:', err && err.message);
+      });
+  });
+})();
+</script>
+
+</body>
+</html>

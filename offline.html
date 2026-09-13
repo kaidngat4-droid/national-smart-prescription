@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>غير متصل — MediPrescribe</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  body {
+    font-family: 'Tajawal', 'Cairo', system-ui, sans-serif;
+    background: linear-gradient(180deg, #0a1628, #0f2138);
+    color: #eef3f8;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    margin: 0;
+    text-align: center;
+  }
+
+  .offline-card {
+    background: rgba(14, 28, 55, 0.95);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 20px;
+    padding: 48px 32px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(12px);
+  }
+
+  .offline-icon {
+    font-size: 5rem;
+    margin-bottom: 20px;
+    filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.4));
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  h1 {
+    color: #f1d878;
+    font-size: 1.6rem;
+    margin-bottom: 12px;
+    font-weight: 800;
+  }
+
+  p {
+    color: rgba(200, 215, 255, 0.75);
+    font-size: 0.95rem;
+    line-height: 1.8;
+    margin-bottom: 24px;
+  }
+
+  .retry-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    background: linear-gradient(135deg, #d4af37, #f1d878);
+    color: #0a1628;
+    border: none;
+    border-radius: 12px;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: transform 0.2s;
+    box-shadow: 0 10px 24px rgba(212, 175, 55, 0.3);
+  }
+
+  .retry-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px rgba(212, 175, 55, 0.4);
+  }
+
+  .cached-links {
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .cached-links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #eef3f8;
+    text-decoration: none;
+    font-size: 0.82rem;
+    transition: all 0.15s;
+  }
+
+  .cached-links a:hover {
+    background: rgba(212, 175, 55, 0.1);
+    border-color: rgba(212, 175, 55, 0.3);
+    color: #f1d878;
+  }
+
+  .footer-note {
+    margin-top: 24px;
+    font-size: 0.75rem;
+    color: rgba(160, 185, 225, 0.4);
+    line-height: 1.8;
+  }
+</style>
+</head>
+<body>
+<div class="offline-card">
+
+  <div class="offline-icon">📴</div>
+
+  <h1>لا يوجد اتصال بالإنترنت</h1>
+  <p>تأكد من اتصالك بالإنترنت ثم أعد المحاولة</p>
+
+  <button class="retry-btn" onclick="location.reload()">
+    🔄 إعادة المحاولة
+  </button>
+
+  <div class="cached-links">
+    <a href="/login.html">🔐 دخول</a>
+    <a href="/dashboard.html">🩺 الوصفات</a>
+    <a href="/verify.html">✅ التحقق</a>
+  </div>
+
+  <div class="footer-note">
+    MediPrescribe © 2026<br>
+    وحدة التخطيط والتطوير وضمان الجودة
+  </div>
+
+</div>
+</body>
+</html>

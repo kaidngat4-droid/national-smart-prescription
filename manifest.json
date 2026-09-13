@@ -1,0 +1,15 @@
+{
+  "name": "MediPrescribe - نظام الوصفات الباطنية",
+  "short_name": "MediPrescribe",
+  "description": "نظام وصفات طبية ذكي للأمراض الباطنية مبني على بروتوكولات منظمة الصحة العالمية",
+  "start_url": "./login.html",
+  "display": "standalone",
+  "dir": "rtl",
+  "lang": "ar",
+  "background_color": "#0a1628",
+  "theme_color": "#d4af37",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
