@@ -5,66 +5,125 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-<!-- ==================== SEO ==================== -->
 <title>سجل التدقيق | النظام الوطني الذكي للوصفات الطبية</title>
-<meta name="description" content="سجل تدقيق كامل لجميع الأحداث الحساسة — وزارة الصحة والبيئة اليمنية. تسجيل دخول، وصفات، إدارة مستخدمين، محاولات فاشلة. حفظ محلي آمن عبر IndexedDB.">
+<meta name="description" content="سجل تدقيق للأحداث الحساسة في نظام MediPrescribe — تسجيل الدخول، الوصفات، المستخدمون، التصدير ومحاولات الوصول الفاشلة.">
 <meta name="keywords" content="سجل التدقيق, Audit Log, وزارة الصحة, اليمن, وصفات طبية, RBAC, أمان">
 <meta name="author" content="Dr.Salah Al-Ahdal">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#0a1628">
 <meta name="color-scheme" content="dark light">
 
-<!-- ==================== Open Graph ==================== -->
 <meta property="og:type" content="website">
 <meta property="og:locale" content="ar_YE">
 <meta property="og:site_name" content="MediPrescribe">
 <meta property="og:title" content="سجل التدقيق | النظام الوطني الذكي للوصفات الطبية">
-<meta property="og:description" content="Audit Trail — سجل كامل لجميع الأحداث الحساسة في النظام.">
+<meta property="og:description" content="Audit Trail — سجل الأحداث الحساسة في نظام MediPrescribe.">
 <meta property="og:image" content="images/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 
-<!-- ==================== Twitter Card ==================== -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="سجل التدقيق | MediPrescribe">
-<meta name="twitter:description" content="Audit Trail — سجل كامل لجميع الأحداث الحساسة.">
+<meta name="twitter:description" content="Audit Trail — سجل الأحداث الحساسة.">
 <meta name="twitter:image" content="images/twitter-card.jpg">
 
-<!-- ==================== PWA / Icons ==================== -->
 <link rel="manifest" href="manifest.json">
 
-<!-- Favicon (مطابق لـ dashboard.html) -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%230a1628'/%3E%3Ccircle cx='50' cy='50' r='42' fill='none' stroke='%23d4af37' stroke-width='2.5'/%3E%3Cpath d='M50 28v44M32 38h36M38 68h24' stroke='%23d4af37' stroke-width='3.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MediPrescribe">
 
-<!-- ==================== Preconnect / Preload ==================== -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-<!-- ==================== Fonts ==================== -->
 <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cairo:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 
-<!-- ==================== Font Awesome ==================== -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-<!-- ==================== Styles ==================== -->
 <link rel="stylesheet" href="css/style.css">
 
 <style>
 /* ==========================================================
-   الهيدر الرسمي المركزي (مطابق تماماً لـ dashboard.html)
+   MediPrescribe — Audit Log Enhanced
    ========================================================== */
+
+:root {
+  --audit-navy: #0a1628;
+  --audit-navy-2: #0f2037;
+  --audit-gold: #d4af37;
+  --audit-gold-light: #f1d878;
+  --audit-green: #43a047;
+  --audit-red: #dc3545;
+  --audit-blue: #0288d1;
+  --audit-orange: #ff9800;
+  --audit-purple: #9c27b0;
+  --audit-text: #eef3f8;
+  --audit-muted: #93a2b5;
+  --audit-border: rgba(255,255,255,.12);
+  --audit-surface: rgba(255,255,255,.045);
+  --audit-shadow: 0 18px 45px rgba(0,0,0,.20);
+}
+
+/* ---------- Global helpers ---------- */
+
+.hidden {
+  display: none !important;
+}
+
+[dir="rtl"] .mono,
+[dir="rtl"] code,
+[dir="rtl"] .audit-hash {
+  direction: ltr;
+  unicode-bidi: plaintext;
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+}
+
+button,
+a,
+select,
+input {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--audit-gold-light);
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed;
+  top: -60px;
+  right: 12px;
+  z-index: 99999;
+  background: var(--audit-gold);
+  color: var(--audit-navy);
+  padding: 10px 18px;
+  border-radius: 0 0 10px 10px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: top .2s ease;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* ---------- Official header ---------- */
+
 .app-header-centered {
   display: flex;
   flex-direction: column;
   padding: 0;
-  background: rgba(10, 22, 40, 0.85);
+  background: rgba(10,22,40,.90);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid rgba(212, 175, 55, 0.18);
+  border-bottom: 1px solid rgba(212,175,55,.18);
   position: sticky;
   top: 0;
   z-index: 50;
@@ -73,8 +132,11 @@
 .official-header-top {
   padding: 18px 20px 14px;
   text-align: center;
-  border-bottom: 1px solid rgba(212, 175, 55, 0.1);
-  background: radial-gradient(600px 100px at 50% 0%, rgba(212, 175, 55, 0.06), transparent 70%);
+  border-bottom: 1px solid rgba(212,175,55,.10);
+  background:
+    radial-gradient(600px 100px at 50% 0%,
+    rgba(212,175,55,.07),
+    transparent 70%);
 }
 
 .official-header-content {
@@ -91,24 +153,27 @@
   height: 62px;
   object-fit: contain;
   border-radius: 50%;
-  border: 2.5px solid rgba(212, 175, 55, 0.35);
+  border: 2.5px solid rgba(212,175,55,.35);
   padding: 5px;
-  background: rgba(255, 255, 255, 0.04);
-  box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
-  transition: transform 0.4s ease, box-shadow 0.4s ease;
+  background: rgba(255,255,255,.04);
+  box-shadow: 0 0 20px rgba(212,175,55,.20);
+  transition: transform .3s ease, box-shadow .3s ease;
   display: block;
   margin: 0 auto;
   flex-shrink: 0;
 }
+
 .official-emblem:hover {
-  transform: scale(1.08);
-  box-shadow: 0 0 30px rgba(212, 175, 55, 0.4);
+  transform: scale(1.06);
+  box-shadow: 0 0 28px rgba(212,175,55,.32);
 }
+
 .official-emblem.institute {
   width: 54px;
   height: 54px;
-  border-color: rgba(212, 175, 55, 0.4);
+  border-color: rgba(212,175,55,.40);
 }
+
 .official-emblem.fallback {
   display: flex !important;
   align-items: center;
@@ -118,41 +183,50 @@
 }
 
 .official-header-republic {
-  font-family: 'Tajawal', 'Cairo', sans-serif;
+  font-family: 'Tajawal','Cairo',sans-serif;
   font-weight: 800;
-  font-size: clamp(0.95rem, 2.5vw, 1.15rem);
+  font-size: clamp(.95rem,2.5vw,1.15rem);
   color: #fff;
   letter-spacing: 2px;
-  text-shadow: 0 2px 15px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 2px 15px rgba(0,0,0,.6);
   margin-top: 4px;
 }
 
 .official-header-divider {
   width: 220px;
   height: 2px;
-  background: linear-gradient(90deg, transparent, #d4af37, #f1d878, #d4af37, transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--audit-gold),
+    var(--audit-gold-light),
+    var(--audit-gold),
+    transparent
+  );
   margin: 6px auto;
   border-radius: 2px;
 }
 
 .official-header-title {
-  font-family: 'Cairo', 'Tajawal', sans-serif;
+  font-family: 'Cairo','Tajawal',sans-serif;
   font-weight: 800;
-  font-size: clamp(1.05rem, 2.8vw, 1.35rem);
-  color: #f1d878;
-  text-shadow: 0 3px 20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(212, 175, 55, 0.25);
+  font-size: clamp(1.05rem,2.8vw,1.35rem);
+  color: var(--audit-gold-light);
+  text-shadow:
+    0 3px 20px rgba(0,0,0,.5),
+    0 0 40px rgba(212,175,55,.25);
   letter-spacing: 1px;
   line-height: 1.5;
   margin: 4px 0 0;
 }
 
 .official-header-subtitle {
-  font-family: 'Tajawal', 'Cairo', sans-serif;
+  font-family: 'Tajawal','Cairo',sans-serif;
   font-weight: 600;
-  font-size: clamp(0.78rem, 1.8vw, 0.92rem);
+  font-size: clamp(.78rem,1.8vw,.92rem);
   color: #eef3f8;
-  opacity: 0.95;
-  letter-spacing: 0.5px;
+  opacity: .95;
+  letter-spacing: .5px;
   line-height: 1.5;
   margin: 2px 0 0;
 }
@@ -174,44 +248,30 @@
 }
 
 .nav-link {
+  min-height: 40px;
   padding: 8px 14px;
   border-radius: 10px;
   color: #93a2b5;
   font-weight: 600;
-  font-size: 0.88rem;
-  transition: all 0.15s ease;
+  font-size: .88rem;
+  transition: all .15s ease;
   border: 1px solid transparent;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   text-decoration: none;
-  position: relative;
-}
-.nav-link:hover {
-  color: #f1d878;
-  background: rgba(212, 175, 55, 0.08);
-}
-.nav-link.active {
-  color: #f1d878;
-  background: rgba(212, 175, 55, 0.12);
-  border-color: rgba(212, 175, 55, 0.18);
 }
 
-.nav-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  background: linear-gradient(135deg, #d4af37, #f1d878);
-  color: #0a1628;
-  font-size: 0.7rem;
-  font-weight: 800;
-  border-radius: 10px;
-  margin-right: 4px;
+.nav-link:hover {
+  color: var(--audit-gold-light);
+  background: rgba(212,175,55,.08);
 }
-.nav-badge.hidden { display: none; }
+
+.nav-link.active {
+  color: var(--audit-gold-light);
+  background: rgba(212,175,55,.12);
+  border-color: rgba(212,175,55,.18);
+}
 
 .user-box {
   display: flex;
@@ -223,128 +283,108 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.84rem;
+  font-size: .84rem;
   font-weight: 600;
   padding: 7px 14px;
   border-radius: 999px;
   white-space: nowrap;
 }
+
 .user-badge.gold {
-  background: rgba(212, 175, 55, 0.1);
-  border: 1px solid rgba(212, 175, 55, 0.18);
-  color: #f1d878;
+  background: rgba(212,175,55,.10);
+  border: 1px solid rgba(212,175,55,.18);
+  color: var(--audit-gold-light);
 }
 
+/* ---------- Buttons ---------- */
+
 .btn {
+  min-height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 7px;
   padding: 10px 20px;
   border: none;
   border-radius: 10px;
   font-family: inherit;
   font-weight: 700;
-  font-size: 0.92rem;
+  font-size: .92rem;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
   white-space: nowrap;
   text-align: center;
   user-select: none;
 }
-.btn:focus-visible {
-  outline: 2px solid #f1d878;
-  outline-offset: 2px;
+
+.btn-sm {
+  min-height: 36px;
+  padding: 7px 14px;
+  font-size: .82rem;
 }
-.btn-sm { padding: 6px 14px; font-size: 0.82rem; }
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
 .btn-danger {
-  background: rgba(220, 53, 69, 0.1);
+  background: rgba(220,53,69,.10);
   color: #ff9aa5;
-  border: 1px solid rgba(220, 53, 69, 0.35);
+  border: 1px solid rgba(220,53,69,.35);
 }
-.btn-danger:hover {
-  background: rgba(220, 53, 69, 0.22);
-  transform: translateY(-2px);
+
+.btn-danger:hover:not(:disabled) {
+  background: rgba(220,53,69,.20);
 }
+
 .btn-danger-solid {
-  background: linear-gradient(135deg, #dc3545, #c82333);
+  background: linear-gradient(135deg,#dc3545,#c82333);
   color: #fff;
   border: none;
 }
-.btn-danger-solid:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 22px rgba(220, 53, 69, 0.35);
+
+.btn-danger-solid:hover:not(:disabled) {
+  box-shadow: 0 10px 22px rgba(220,53,69,.30);
 }
+
 .btn-ghost {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255,255,255,.06);
   color: #eef3f8;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255,255,255,.16);
 }
-.btn-ghost:hover {
-  background: rgba(255, 255, 255, 0.12);
-  transform: translateY(-2px);
+
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(255,255,255,.11);
 }
+
 .btn-secondary {
-  background: linear-gradient(135deg, #0288d1, #0277bd);
+  background: linear-gradient(135deg,#0288d1,#0277bd);
   color: #fff;
   border: none;
 }
-.btn-secondary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 22px rgba(2, 136, 209, 0.3);
+
+.btn-secondary:hover:not(:disabled) {
+  box-shadow: 0 10px 22px rgba(2,136,209,.30);
 }
+
 .btn-gold {
-  background: linear-gradient(135deg, #d4af37, #f1d878);
-  color: #0a1628;
-  box-shadow: 0 10px 24px rgba(212, 175, 55, 0.28);
+  background: linear-gradient(135deg,var(--audit-gold),var(--audit-gold-light));
+  color: var(--audit-navy);
+  box-shadow: 0 10px 24px rgba(212,175,55,.22);
 }
+
 .btn-gold:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 30px rgba(212, 175, 55, 0.4);
+  box-shadow: 0 14px 30px rgba(212,175,55,.35);
 }
+
 .btn:disabled {
-  opacity: 0.55;
+  opacity: .55;
   cursor: not-allowed;
   transform: none !important;
 }
 
-/* ═══ skip link (a11y) ═══ */
-.skip-link {
-  position: absolute;
-  top: -50px;
-  right: 10px;
-  background: #d4af37;
-  color: #0a1628;
-  padding: 8px 16px;
-  border-radius: 0 0 10px 10px;
-  font-weight: 800;
-  z-index: 9999;
-  transition: top 0.2s;
-  text-decoration: none;
-}
-.skip-link:focus { top: 0; }
+/* ---------- Permission ---------- */
 
-/* ═══ Badges لأنواع الأحداث ═══ */
-.audit-action-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-.audit-action-badge.login       { background: rgba(67, 160, 71, 0.15); color: #81c784; border: 1px solid rgba(67, 160, 71, 0.35); }
-.audit-action-badge.logout      { background: rgba(117, 117, 117, 0.15); color: #b0bec5; border: 1px solid rgba(117, 117, 117, 0.35); }
-.audit-action-badge.failed      { background: rgba(229, 57, 53, 0.15); color: #ef9a9a; border: 1px solid rgba(229, 57, 53, 0.35); }
-.audit-action-badge.prescription{ background: rgba(2, 136, 209, 0.15); color: #64b5f6; border: 1px solid rgba(2, 136, 209, 0.35); }
-.audit-action-badge.user        { background: rgba(156, 39, 176, 0.15); color: #ce93d8; border: 1px solid rgba(156, 39, 176, 0.35); }
-.audit-action-badge.delete      { background: rgba(244, 67, 54, 0.15); color: #ef9a9a; border: 1px solid rgba(244, 67, 54, 0.35); }
-.audit-action-badge.export      { background: rgba(255, 152, 0, 0.15); color: #ffb74d; border: 1px solid rgba(255, 152, 0, 0.35); }
-.audit-action-badge.default     { background: rgba(255, 255, 255, 0.08); color: #cfd8dc; border: 1px solid rgba(255, 255, 255, 0.15); }
-
-/* ═══ حالة عدم وجود صلاحية: إخفاء المحتوى الحساس ═══ */
 main.restricted .stats-grid,
 main.restricted .users-toolbar,
 main.restricted .table-wrap,
@@ -352,15 +392,253 @@ main.restricted .users-grid {
   display: none !important;
 }
 
-/* ═══ حالة فارغة للجدول ═══ */
+#permission-alert {
+  margin-bottom: 16px;
+}
+
+/* ---------- Audit action badges ---------- */
+
+.audit-action-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: .72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.audit-action-badge.login {
+  background: rgba(67,160,71,.15);
+  color: #81c784;
+  border: 1px solid rgba(67,160,71,.35);
+}
+
+.audit-action-badge.logout {
+  background: rgba(117,117,117,.15);
+  color: #b0bec5;
+  border: 1px solid rgba(117,117,117,.35);
+}
+
+.audit-action-badge.failed {
+  background: rgba(229,57,53,.15);
+  color: #ef9a9a;
+  border: 1px solid rgba(229,57,53,.35);
+}
+
+.audit-action-badge.prescription {
+  background: rgba(2,136,209,.15);
+  color: #64b5f6;
+  border: 1px solid rgba(2,136,209,.35);
+}
+
+.audit-action-badge.user {
+  background: rgba(156,39,176,.15);
+  color: #ce93d8;
+  border: 1px solid rgba(156,39,176,.35);
+}
+
+.audit-action-badge.delete {
+  background: rgba(244,67,54,.15);
+  color: #ef9a9a;
+  border: 1px solid rgba(244,67,54,.35);
+}
+
+.audit-action-badge.export {
+  background: rgba(255,152,0,.15);
+  color: #ffb74d;
+  border: 1px solid rgba(255,152,0,.35);
+}
+
+.audit-action-badge.default {
+  background: rgba(255,255,255,.08);
+  color: #cfd8dc;
+  border: 1px solid rgba(255,255,255,.15);
+}
+
+/* ---------- Toolbar ---------- */
+
+.users-toolbar {
+  align-items: center;
+}
+
+.users-toolbar input,
+.users-toolbar select {
+  min-height: 42px;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.10);
+}
+
+.view-toggle button {
+  min-height: 36px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--audit-muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.view-toggle button.active {
+  color: var(--audit-gold-light);
+  background: rgba(212,175,55,.13);
+}
+
+.view-toggle button:hover {
+  color: #fff;
+}
+
+/* ---------- Loading/error/empty ---------- */
+
+.audit-status {
+  padding: 28px 18px;
+  text-align: center;
+  color: var(--audit-muted);
+}
+
+.audit-status i {
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+}
+
+.audit-status.error {
+  color: #ff9aa5;
+}
+
+.audit-status.success {
+  color: #81c784;
+}
+
 .audit-empty {
   text-align: center;
-  padding: 40px 16px;
-  color: #93a2b5;
+  padding: 48px 16px;
+  color: var(--audit-muted);
   font-weight: 600;
 }
 
-/* ═══ Modal backdrop سلوك ═══ */
+.audit-empty i {
+  display: block;
+  font-size: 2rem;
+  margin-bottom: 12px;
+  opacity: .75;
+}
+
+/* ---------- Grid cards ---------- */
+
+.audit-card {
+  position: relative;
+  padding: 18px;
+  border-radius: 14px;
+  background: var(--audit-surface);
+  border: 1px solid var(--audit-border);
+  box-shadow: var(--audit-shadow);
+  transition: transform .18s ease, border-color .18s ease;
+}
+
+.audit-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(212,175,55,.28);
+}
+
+.audit-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.audit-card-index {
+  font-weight: 800;
+  color: var(--audit-gold-light);
+}
+
+.audit-card-details {
+  color: var(--audit-text);
+  line-height: 1.8;
+  word-break: break-word;
+}
+
+.audit-card-meta {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.audit-card-meta > div {
+  padding: 9px;
+  border-radius: 9px;
+  background: rgba(255,255,255,.035);
+}
+
+.audit-meta-label {
+  display: block;
+  color: var(--audit-muted);
+  font-size: .72rem;
+  margin-bottom: 3px;
+}
+
+.audit-meta-value {
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--audit-text);
+  word-break: break-word;
+}
+
+/* ---------- Table ---------- */
+
+.users-table tbody tr {
+  transition: background .12s ease;
+}
+
+.users-table tbody tr:hover {
+  background: rgba(212,175,55,.045);
+}
+
+.users-table td {
+  vertical-align: middle;
+}
+
+.audit-detail-cell {
+  max-width: 420px;
+  white-space: normal;
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+.audit-date {
+  white-space: nowrap;
+  direction: ltr;
+  unicode-bidi: plaintext;
+}
+
+.audit-time {
+  white-space: nowrap;
+  direction: ltr;
+  unicode-bidi: plaintext;
+}
+
+/* ---------- Modal ---------- */
+
 .modal {
   position: fixed;
   inset: 0;
@@ -368,28 +646,81 @@ main.restricted .users-grid {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(4px);
+  background: rgba(0,0,0,.68);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   padding: 16px;
 }
-.modal.hidden { display: none; }
 
-/* ═══ Responsive ═══ */
-@media (max-width: 1024px) {
-  .official-header-top { padding: 14px 16px 10px; }
-  .official-emblem { width: 52px; height: 52px; }
-  .official-emblem.institute { width: 46px; height: 46px; }
-  .app-header-nav { padding: 12px 16px; }
+.modal.hidden {
+  display: none !important;
 }
 
-@media (max-width: 768px) {
-  .official-header-top { padding: 12px 12px 8px; }
-  .official-emblem { width: 46px; height: 46px; padding: 4px; }
-  .official-emblem.institute { width: 42px; height: 42px; }
-  .official-header-republic { font-size: 0.85rem; letter-spacing: 1.5px; }
-  .official-header-title { font-size: 1rem; }
-  .official-header-subtitle { font-size: 0.72rem; }
-  .official-header-divider { width: 160px; }
+.modal-content {
+  width: min(100%, 520px);
+  max-height: min(90vh,700px);
+  overflow: auto;
+  border-radius: 16px;
+}
+
+.modal-title {
+  line-height: 1.5;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width:1024px) {
+  .official-header-top {
+    padding: 14px 16px 10px;
+  }
+
+  .official-emblem {
+    width: 52px;
+    height: 52px;
+  }
+
+  .official-emblem.institute {
+    width: 46px;
+    height: 46px;
+  }
+
+  .app-header-nav {
+    padding: 12px 16px;
+  }
+}
+
+@media (max-width:768px) {
+  .official-header-top {
+    padding: 12px 12px 8px;
+  }
+
+  .official-emblem {
+    width: 46px;
+    height: 46px;
+    padding: 4px;
+  }
+
+  .official-emblem.institute {
+    width: 42px;
+    height: 42px;
+  }
+
+  .official-header-republic {
+    font-size: .85rem;
+    letter-spacing: 1.5px;
+  }
+
+  .official-header-title {
+    font-size: 1rem;
+  }
+
+  .official-header-subtitle {
+    font-size: .72rem;
+  }
+
+  .official-header-divider {
+    width: 160px;
+  }
 
   .app-header-nav {
     padding: 10px 12px;
@@ -398,17 +729,139 @@ main.restricted .users-grid {
     gap: 10px;
   }
 
-  #main-nav { justify-content: center; order: 2; }
-  .user-box { justify-content: center; order: 1; }
+  #main-nav {
+    justify-content: center;
+    order: 2;
+  }
+
+  .user-box {
+    justify-content: center;
+    order: 1;
+  }
+
+  .users-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-group select,
+  .users-toolbar .search-input,
+  .users-toolbar .btn {
+    width: 100%;
+  }
+
+  .view-toggle {
+    width: 100%;
+  }
+
+  .view-toggle button {
+    flex: 1;
+  }
+
+  .audit-card-meta {
+    grid-template-columns: 1fr;
+  }
 }
 
-@media (max-width: 480px) {
-  .official-emblem { width: 42px; height: 42px; padding: 3px; }
-  .official-emblem.institute { width: 38px; height: 38px; }
-  .official-header-republic { font-size: 0.78rem; }
-  .official-header-title { font-size: 0.92rem; }
-  .official-header-subtitle { font-size: 0.68rem; }
-  .nav-link { font-size: 0.75rem; padding: 6px 8px; }
+@media (max-width:480px) {
+  .official-emblem {
+    width: 42px;
+    height: 42px;
+    padding: 3px;
+  }
+
+  .official-emblem.institute {
+    width: 38px;
+    height: 38px;
+  }
+
+  .official-header-republic {
+    font-size: .78rem;
+  }
+
+  .official-header-title {
+    font-size: .92rem;
+  }
+
+  .official-header-subtitle {
+    font-size: .68rem;
+  }
+
+  .nav-link {
+    font-size: .75rem;
+    padding: 6px 8px;
+    min-height: 34px;
+  }
+
+  .user-badge {
+    max-width: 190px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* ---------- Print ---------- */
+
+@media print {
+  .app-header-centered,
+  .users-toolbar,
+  #permission-alert,
+  .skip-link,
+  .e-signature,
+  .modal,
+  #toast-box {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+
+  main {
+    display: block !important;
+    max-width: none !important;
+  }
+
+  .users-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .users-table th,
+  .users-table td {
+    border: 1px solid #999 !important;
+    color: #111 !important;
+    background: #fff !important;
+  }
+
+  .audit-action-badge {
+    color: #111 !important;
+    background: #fff !important;
+    border: 1px solid #999 !important;
+  }
+
+  .audit-detail-cell {
+    max-width: none;
+  }
 }
 </style>
 </head>
@@ -417,78 +870,157 @@ main.restricted .users-grid {
 
 <a href="#main-content" class="skip-link">تخطَّ إلى المحتوى الرئيسي</a>
 
-<!-- ==================== الهيدر الرسمي المركزي ==================== -->
+<!-- ==================== Header ==================== -->
+
 <header class="app-header-centered" role="banner">
+
   <div class="official-header-top">
     <div class="official-header-content">
-      <img src="images/logo-yemen.png" alt="شعار الجمهورية اليمنية"
-           class="official-emblem" loading="eager" data-fallback="🇾🇪" width="62" height="62">
 
-      <span class="official-header-republic">الجمهورية اليمنية</span>
+      <img
+        src="images/logo-yemen.png"
+        alt="شعار الجمهورية اليمنية"
+        class="official-emblem"
+        loading="eager"
+        data-fallback="🇾🇪"
+        width="62"
+        height="62">
+
+      <span class="official-header-republic">
+        الجمهورية اليمنية
+      </span>
+
       <div class="official-header-divider" aria-hidden="true"></div>
 
-      <img src="images/logo-health.png" alt="شعار وزارة الصحة والبيئة"
-           class="official-emblem institute" loading="eager" data-fallback="⚕️" width="54" height="54">
+      <img
+        src="images/logo-health.png"
+        alt="شعار وزارة الصحة والبيئة"
+        class="official-emblem institute"
+        loading="eager"
+        data-fallback="⚕️"
+        width="54"
+        height="54">
 
-      <h1 class="official-header-title">وزارة الصحة والبيئة</h1>
-      <p class="official-header-subtitle">النظام الوطني الذكي للوصفات الطبية — سجل التدقيق</p>
+      <h1 class="official-header-title">
+        وزارة الصحة والبيئة
+      </h1>
+
+      <p class="official-header-subtitle">
+        النظام الوطني الذكي للوصفات الطبية — سجل التدقيق
+      </p>
+
     </div>
   </div>
 
   <div class="app-header-nav">
+
     <nav id="main-nav" role="navigation" aria-label="التنقل الرئيسي">
+
       <a class="nav-link" href="dashboard.html">
         <i class="fas fa-prescription" aria-hidden="true"></i>
         وصفة جديدة
       </a>
+
       <a class="nav-link" href="dashboard.html#records-section">
         <i class="fas fa-clipboard-list" aria-hidden="true"></i>
         السجلات
       </a>
+
       <a class="nav-link" href="users.html" id="nav-users">
         <i class="fas fa-users" aria-hidden="true"></i>
         المستخدمون
       </a>
+
       <a class="nav-link active" href="audit-log.html" aria-current="page">
         <i class="fas fa-chart-line" aria-hidden="true"></i>
         سجل التدقيق
       </a>
+
       <a class="nav-link" href="index.html">
         <i class="fas fa-globe" aria-hidden="true"></i>
         الموقع
       </a>
+
     </nav>
 
     <div class="user-box">
-      <button id="theme-toggle-btn" class="btn btn-ghost btn-sm" type="button"
-              title="تبديل الوضع الليلي/النهاري" aria-label="تبديل الوضع الليلي/النهاري">
+
+      <button
+        id="theme-toggle-btn"
+        class="btn btn-ghost btn-sm"
+        type="button"
+        title="تبديل الوضع"
+        aria-label="تبديل الوضع">
+
         <i class="fas fa-moon" aria-hidden="true"></i>
+
       </button>
-      <span class="user-badge gold" id="user-badge" aria-live="polite">—</span>
-      <button id="logout-btn" class="btn btn-danger btn-sm" type="button" aria-label="تسجيل الخروج">
+
+      <span
+        class="user-badge gold"
+        id="user-badge"
+        aria-live="polite">
+        —
+      </span>
+
+      <button
+        id="logout-btn"
+        class="btn btn-danger btn-sm"
+        type="button"
+        aria-label="تسجيل الخروج">
+
         <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
         خروج
+
       </button>
+
     </div>
+
   </div>
+
 </header>
 
-<!-- ==================== المحتوى الرئيسي ==================== -->
-<main class="users-container" id="main-content" role="main">
+<!-- ==================== Main ==================== -->
 
-  <!-- تنبيه الصلاحيات -->
-  <div id="permission-alert" class="alert alert-warning hidden" role="alert" aria-live="assertive">
-    ⚠️ <strong>صلاحيات محدودة</strong> — عرض سجل التدقيق متاح للمدير فقط.
+<main
+  class="users-container"
+  id="main-content"
+  role="main"
+  aria-busy="false">
+
+  <!-- Permission -->
+
+  <div
+    id="permission-alert"
+    class="alert alert-warning hidden"
+    role="alert"
+    aria-live="assertive">
+
+    ⚠️
+    <strong>صلاحيات محدودة</strong>
+    — عرض سجل التدقيق متاح للمدير فقط.
+
   </div>
 
-  <!-- إخلاء المسؤولية -->
+  <!-- Disclaimer -->
+
   <div class="disclaimer dark" role="note">
-    🔍 <strong>سجل التدقيق (Audit Log)</strong> — يحتوي على سجل كامل لجميع الأحداث الحساسة في النظام.
-    يُحفظ محلياً عبر IndexedDB ويمكن تصديره بصيغة CSV لأغراض المراجعة.
+
+    🔍
+    <strong>سجل التدقيق (Audit Log)</strong>
+    —
+    يسجل الأحداث الحساسة التي تقوم بها مكونات النظام وفق ما يوفره
+    <code>audit.js</code> وطبقة التخزين المحلية.
+    البيانات محفوظة محلياً عبر IndexedDB ويمكن تصديرها لأغراض المراجعة.
+
   </div>
 
-  <!-- ==================== الإحصائيات ==================== -->
-  <section class="stats-grid" aria-label="إحصائيات سجل التدقيق">
+  <!-- Statistics -->
+
+  <section
+    class="stats-grid"
+    aria-label="إحصائيات سجل التدقيق">
+
     <div class="stat-card">
       <span class="stat-icon" aria-hidden="true">📊</span>
       <div>
@@ -496,6 +1028,7 @@ main.restricted .users-grid {
         <div class="stat-label">إجمالي الأحداث</div>
       </div>
     </div>
+
     <div class="stat-card">
       <span class="stat-icon" aria-hidden="true">📅</span>
       <div>
@@ -503,6 +1036,7 @@ main.restricted .users-grid {
         <div class="stat-label">أحداث اليوم</div>
       </div>
     </div>
+
     <div class="stat-card">
       <span class="stat-icon" aria-hidden="true">🔐</span>
       <div>
@@ -510,6 +1044,7 @@ main.restricted .users-grid {
         <div class="stat-label">عمليات دخول</div>
       </div>
     </div>
+
     <div class="stat-card">
       <span class="stat-icon" aria-hidden="true">👥</span>
       <div>
@@ -517,18 +1052,29 @@ main.restricted .users-grid {
         <div class="stat-label">مستخدمون فريدون</div>
       </div>
     </div>
+
   </section>
 
-  <!-- ==================== شريط الأدوات ==================== -->
-  <section class="users-toolbar" role="search" aria-label="أدوات البحث والفلترة">
-    <input type="search" id="audit-search"
-           class="search-input"
-           placeholder="🔍 بحث بالحدث، المستخدم، التفاصيل..."
-           autocomplete="off"
-           aria-label="بحث في سجل التدقيق">
+  <!-- Toolbar -->
+
+  <section
+    class="users-toolbar"
+    role="search"
+    aria-label="أدوات البحث والفلترة">
+
+    <input
+      type="search"
+      id="audit-search"
+      class="search-input"
+      placeholder="🔍 بحث بالحدث، المستخدم، التفاصيل..."
+      autocomplete="off"
+      spellcheck="false"
+      aria-label="بحث في سجل التدقيق">
 
     <div class="filter-group">
+
       <select id="filter-action" aria-label="فلترة بنوع الحدث">
+
         <option value="">— كل الأحداث —</option>
         <option value="login">🔐 تسجيل دخول</option>
         <option value="logout">🚪 تسجيل خروج</option>
@@ -537,6 +1083,7 @@ main.restricted .users-grid {
         <option value="user">👥 مستخدمون</option>
         <option value="delete">🗑️ حذف</option>
         <option value="export">📤 تصدير</option>
+
       </select>
 
       <select id="filter-user" aria-label="فلترة بالمستخدم">
@@ -544,37 +1091,114 @@ main.restricted .users-grid {
       </select>
 
       <select id="filter-period" aria-label="فلترة بالفترة الزمنية">
+
         <option value="all">كل الفترات</option>
         <option value="today">اليوم</option>
         <option value="week">آخر 7 أيام</option>
         <option value="month">آخر 30 يوماً</option>
+
       </select>
+
     </div>
 
-    <div class="view-toggle" id="view-toggle" role="group" aria-label="طريقة العرض">
-      <button data-view="table" class="active" type="button" title="عرض جدول" aria-pressed="true">
-        <i class="fas fa-list" aria-hidden="true"></i> جدول
+    <div
+      class="view-toggle"
+      id="view-toggle"
+      role="group"
+      aria-label="طريقة العرض">
+
+      <button
+        data-view="table"
+        class="active"
+        type="button"
+        title="عرض جدول"
+        aria-label="عرض جدول"
+        aria-pressed="true">
+
+        <i class="fas fa-list" aria-hidden="true"></i>
+        جدول
+
       </button>
-      <button data-view="grid" type="button" title="عرض بطاقات" aria-pressed="false">
-        <i class="fas fa-th-large" aria-hidden="true"></i> بطاقات
+
+      <button
+        data-view="grid"
+        type="button"
+        title="عرض بطاقات"
+        aria-label="عرض بطاقات"
+        aria-pressed="false">
+
+        <i class="fas fa-th-large" aria-hidden="true"></i>
+        بطاقات
+
       </button>
+
     </div>
 
-    <button class="btn btn-ghost" id="export-btn" type="button" aria-label="تصدير السجل بصيغة CSV">
+    <button
+      class="btn btn-ghost"
+      id="export-btn"
+      type="button"
+      aria-label="تصدير السجل بصيغة CSV">
+
       <i class="fas fa-file-export" aria-hidden="true"></i>
       تصدير CSV
+
     </button>
 
-    <button class="btn btn-danger" id="clear-btn" type="button" aria-label="حذف السجلات الأقدم من 90 يوماً">
+    <button
+      class="btn btn-danger"
+      id="clear-btn"
+      type="button"
+      aria-label="حذف السجلات الأقدم من 90 يوماً">
+
       <i class="fas fa-trash" aria-hidden="true"></i>
       حذف الأقدم من 90 يوماً
+
     </button>
+
   </section>
 
-  <!-- ==================== الجدول ==================== -->
-  <div class="table-wrap" id="audit-table-view">
-    <table class="users-table" aria-label="جدول سجل التدقيق">
+  <!-- Loading status -->
+
+  <div
+    id="audit-loading"
+    class="audit-status"
+    role="status"
+    aria-live="polite">
+
+    <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
+    <div>جاري تحميل سجل التدقيق...</div>
+
+  </div>
+
+  <!-- Error status -->
+
+  <div
+    id="audit-error"
+    class="audit-status error hidden"
+    role="alert"
+    aria-live="assertive">
+
+    <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+    <div id="audit-error-text">
+      تعذر تحميل سجل التدقيق.
+    </div>
+
+  </div>
+
+  <!-- Table -->
+
+  <div
+    class="table-wrap"
+    id="audit-table-view"
+    aria-live="polite">
+
+    <table
+      class="users-table"
+      aria-label="جدول سجل التدقيق">
+
       <thead>
+
         <tr>
           <th scope="col" style="width:60px;">#</th>
           <th scope="col">الحدث</th>
@@ -583,525 +1207,1731 @@ main.restricted .users-grid {
           <th scope="col">التاريخ</th>
           <th scope="col">الوقت</th>
         </tr>
+
       </thead>
+
       <tbody id="audit-tbody">
-        <!-- تُملأ ديناميكياً -->
+        <!-- تُملأ ديناميكياً بواسطة audit.js -->
       </tbody>
+
     </table>
+
   </div>
 
-  <!-- ==================== Grid ==================== -->
-  <div class="users-grid hidden" id="audit-grid-view" role="list">
+  <!-- Grid -->
+
+  <div
+    class="users-grid hidden"
+    id="audit-grid-view"
+    role="list"
+    aria-label="بطاقات سجل التدقيق">
+
     <!-- تُملأ ديناميكياً -->
+
   </div>
 
 </main>
 
-<!-- ==================== الفوتر الرسمي ==================== -->
+<!-- ==================== Footer ==================== -->
+
 <footer class="dashboard-footer" role="contentinfo">
-  <b>MediPrescribe ⚕️</b> — وحدة التخطيط والتطوير وضمان الجودة · سجل التدقيق (Audit Trail)
+
+  <b>MediPrescribe ⚕️</b>
+  —
+  وحدة التخطيط والتطوير وضمان الجودة · سجل التدقيق (Audit Trail)
+
   <br>
-  <small style="opacity:.7;">جميع الأحداث مسجّلة بدقة زمنية (ms) · البيانات محفوظة محلياً عبر IndexedDB</small>
+
+  <small style="opacity:.7;">
+    جميع الأحداث مسجلة وفق التوقيت المتاح للنظام · البيانات محفوظة محلياً عبر IndexedDB
+  </small>
+
 </footer>
 
-<!-- ==================== التوقيع الإلكتروني ==================== -->
-<div class="e-signature" role="contentinfo" aria-label="التوقيع الإلكتروني">
+<!-- ==================== Electronic Signature ==================== -->
+
+<div
+  class="e-signature"
+  role="contentinfo"
+  aria-label="التوقيع الإلكتروني">
+
   <span class="sig-label">هندسة وتطوير</span>
   <span class="sig-name">Dr.Salah Al-Ahdal</span>
   <span class="sig-role">Design &amp; Development</span>
   <span class="sig-underline"></span>
+
 </div>
 
-<!-- ==================== Modal تأكيد الحذف ==================== -->
-<div class="modal hidden" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
-  <div class="modal-content dark" style="max-width:480px;">
-    <h3 class="modal-title mb-md" id="confirm-title" style="text-align:center;">
+<!-- ==================== Confirm Modal ==================== -->
+
+<div
+  class="modal hidden"
+  id="confirm-modal"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="confirm-title"
+  aria-describedby="confirm-text">
+
+  <div
+    class="modal-content dark"
+    style="max-width:480px;">
+
+    <h3
+      class="modal-title mb-md"
+      id="confirm-title"
+      style="text-align:center;">
+
       ⚠️ تأكيد حذف السجلات القديمة
+
     </h3>
-    <p id="confirm-text" class="mb-lg"
-       style="text-align:center;color:#c7d2de;line-height:1.8;">
-      سيتم حذف جميع السجلات الأقدم من 90 يوماً. لا يمكن التراجع.
+
+    <p
+      id="confirm-text"
+      class="mb-lg"
+      style="text-align:center;color:#c7d2de;line-height:1.8;">
+
+      سيتم طلب حذف السجلات الأقدم من 90 يوماً من طبقة سجل التدقيق.
+      لا يمكن افتراض إمكانية التراجع عن العملية.
+
     </p>
-    <div class="action-row" style="justify-content:center;">
-      <button class="btn btn-danger-solid" id="confirm-yes" type="button">
+
+    <div
+      class="action-row"
+      style="justify-content:center;">
+
+      <button
+        class="btn btn-danger-solid"
+        id="confirm-yes"
+        type="button">
+
         <i class="fas fa-trash" aria-hidden="true"></i>
         نعم، احذف
+
       </button>
-      <button class="btn btn-ghost" id="confirm-no" type="button">
+
+      <button
+        class="btn btn-ghost"
+        id="confirm-no"
+        type="button">
+
         إلغاء
+
       </button>
+
     </div>
+
   </div>
+
 </div>
 
 <!-- ==================== Toast ==================== -->
-<div id="toast-box" role="log" aria-live="polite" aria-atomic="true"></div>
+
+<div
+  id="toast-box"
+  role="log"
+  aria-live="polite"
+  aria-atomic="true">
+</div>
 
 <noscript>
-  <div style="position:fixed;inset:0;background:#0a1628;color:#f1d878;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:Tajawal,sans-serif;text-align:center;padding:20px;">
+
+  <div style="
+    position:fixed;
+    inset:0;
+    background:#0a1628;
+    color:#f1d878;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:99999;
+    font-family:Tajawal,sans-serif;
+    text-align:center;
+    padding:20px;">
+
     ⚠️ هذا النظام يتطلب تفعيل JavaScript في المتصفح.
+
   </div>
+
 </noscript>
 
-<!-- ==================== السكربتات ==================== -->
+<!-- ==================== Core scripts ==================== -->
+
 <script src="js/data.js" defer></script>
 <script src="js/db.js" defer></script>
 <script src="js/audit.js" defer></script>
 
 <!-- ==========================================================
-     تحسينات Audit Log — إصلاحات احترافية (نسخة محسّنة v2)
+     Enhanced Audit Log UI
      ========================================================== -->
+
 <script>
 (function initAuditLogEnhancements() {
+
   'use strict';
 
-  /* ── أدوات مساعدة آمنة ─────────────────────────────── */
-  function $(id) { return document.getElementById(id); }
+  var initialized = false;
+
+  /* ========================================================
+     Helpers
+     ======================================================== */
+
+  function $(id) {
+    return document.getElementById(id);
+  }
 
   function safeRun(name, fn) {
-    try { fn(); }
-    catch (e) { console.error('\u274c \u0641\u0634\u0644 \u062A\u0647\u064A\u0626\u0629 (' + name + '):', e); }
+    try {
+      fn();
+    } catch (err) {
+      console.error('❌ Audit UI [' + name + ']:', err);
+    }
   }
 
-  /* تخزين آمن — لا يتعطل في وضع التصفح الخاص */
   var storage = {
-    get: function (key) {
-      try { return window.localStorage.getItem(key); } catch (_) { return null; }
+
+    get: function(key) {
+      try {
+        return window.localStorage.getItem(key);
+      } catch (_) {
+        return null;
+      }
     },
-    set: function (key, val) {
-      try { window.localStorage.setItem(key, val); } catch (_) { /* تجاهل */ }
+
+    set: function(key, value) {
+      try {
+        window.localStorage.setItem(key, value);
+      } catch (_) {}
     }
+
   };
 
-  function toast(msg, type, ms) {
-    if (typeof window.showToast === 'function') {
-      try { window.showToast(msg, type, ms); } catch (_) { /* تجاهل */ }
-    }
-  }
-
   function getSession() {
+
     try {
-      if (typeof window.getCurrentUser === 'function') return window.getCurrentUser();
+
+      if (typeof window.getCurrentUser === 'function') {
+        var current = window.getCurrentUser();
+
+        if (current && typeof current === 'object') {
+          return current;
+        }
+      }
+
       var raw = storage.get('mp_session');
-      return raw ? JSON.parse(raw) : null;
-    } catch (_) { return null; }
-  }
 
-  /* هل المستخدم حاليًا يكتب في حقل إدخال؟ */
-  function isTyping(target) {
-    return target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName || '');
-  }
+      if (!raw) return null;
 
+      var parsed = JSON.parse(raw);
 
-  /* ═══════════════════════════════════════════════════════
-     0. حارس أمني: إزالة أي <base target="_blank">
-        🔴 ثغرة أمنية (reverse tabnabbing) إن أُضيفت للـ head
-        ديناميكياً من سكربتات خارجية. نزيلها فوراً ونراقب head.
-     ═══════════════════════════════════════════════════════ */
-  function stripDangerousBase() {
-    var bases = document.querySelectorAll('base[target="_blank"]');
-    for (var i = 0; i < bases.length; i++) bases[i].remove();
-    /* لا نسمح بأي base جديد بـ target */
-    if (document.head) {
-      var mo = new MutationObserver(function (muts) {
-        muts.forEach(function (m) {
-          m.addedNodes.forEach(function (n) {
-            if (n.nodeType === 1 && n.tagName === 'BASE' &&
-                (n.getAttribute('target') === '_blank' || !n.hasAttribute('target'))) {
-              n.remove();
-            }
-          });
-        });
-      });
-      mo.observe(document.head, { childList: true });
+      return parsed && typeof parsed === 'object'
+        ? parsed
+        : null;
+
+    } catch (err) {
+
+      console.warn('تعذر قراءة جلسة المستخدم:', err);
+      return null;
+
     }
+
   }
 
-  /* ═══════════════════════════════════════════════════════
-     1. بدائل الشعارات (بدون inline onerror)
-     ═══════════════════════════════════════════════════════ */
-  function initEmblemFallbacks() {
-    document.querySelectorAll('img.official-emblem[data-fallback]').forEach(function (img) {
-      var applied = false;
-      var applyFallback = function () {
-        if (applied) return;
-        applied = true;
-        var div = document.createElement('div');
-        div.className = img.className + ' fallback';
-        div.textContent = img.dataset.fallback || '\u{1F3E5}';
-        div.setAttribute('role', 'img');
-        div.setAttribute('aria-label', img.alt || '');
-        if (img.parentNode) img.replaceWith(div);
-      };
-      img.addEventListener('error', applyFallback);
-      /* صورة فاشلة محمّلة مسبقًا (من الكاش) */
-      if (img.complete && img.naturalWidth === 0) applyFallback();
+  function toast(message, type, duration) {
+
+    try {
+
+      if (typeof window.showToast === 'function') {
+        window.showToast(
+          message,
+          type || 'info',
+          duration || 2500
+        );
+        return;
+      }
+
+      var box = $('toast-box');
+
+      if (!box) return;
+
+      box.textContent = message;
+
+      window.clearTimeout(box.__toastTimer);
+
+      box.__toastTimer = window.setTimeout(function() {
+        box.textContent = '';
+      }, duration || 2500);
+
+    } catch (_) {}
+
+  }
+
+  function isTyping(target) {
+
+    if (!target) return false;
+
+    return /^(INPUT|TEXTAREA|SELECT)$/.test(
+      target.tagName || ''
+    );
+
+  }
+
+  /* ========================================================
+     1. Remove unsafe base target
+     ======================================================== */
+
+  function stripDangerousBase() {
+
+    function removeBases() {
+
+      document
+        .querySelectorAll('base[target="_blank"]')
+        .forEach(function(base) {
+          base.remove();
+        });
+
+    }
+
+    removeBases();
+
+    if (!document.head || typeof MutationObserver === 'undefined') {
+      return;
+    }
+
+    var observer = new MutationObserver(function(mutations) {
+
+      mutations.forEach(function(mutation) {
+
+        mutation.addedNodes.forEach(function(node) {
+
+          if (
+            node.nodeType === 1 &&
+            node.tagName === 'BASE'
+          ) {
+
+            var target = node.getAttribute('target');
+
+            if (target) {
+              node.remove();
+            }
+
+          }
+
+        });
+
+      });
+
     });
+
+    observer.observe(document.head, {
+      childList: true
+    });
+
   }
 
-  /* ═══════════════════════════════════════════════════════
-     2. حارس الصلاحيات — إعادة محاولة حتى يجهز الجلسة
-        🔴 قد تتحمّل الجلسة من IndexedDB بشكل غير متزامن
-           بعد DOMContentLoaded، لذا نكرّر الفحص تدريجياً.
-     ═══════════════════════════════════════════════════════ */
-  var permState = { resolved: false, attempts: 0 };
+  /* ========================================================
+     2. Emblem fallbacks
+     ======================================================== */
+
+  function initEmblemFallbacks() {
+
+    document
+      .querySelectorAll('img.official-emblem[data-fallback]')
+      .forEach(function(img) {
+
+        var applied = false;
+
+        function applyFallback() {
+
+          if (applied) return;
+
+          applied = true;
+
+          var fallback = document.createElement('div');
+
+          fallback.className =
+            img.className + ' fallback';
+
+          fallback.textContent =
+            img.getAttribute('data-fallback') || '🏥';
+
+          fallback.setAttribute('role','img');
+
+          fallback.setAttribute(
+            'aria-label',
+            img.alt || ''
+          );
+
+          if (img.parentNode) {
+            img.replaceWith(fallback);
+          }
+
+        }
+
+        img.addEventListener(
+          'error',
+          applyFallback,
+          { once: true }
+        );
+
+        if (
+          img.complete &&
+          img.naturalWidth === 0
+        ) {
+          applyFallback();
+        }
+
+      });
+
+  }
+
+  /* ========================================================
+     3. Permissions
+     ======================================================== */
+
+  var permissionState = {
+    resolved: false,
+    timer: null
+  };
 
   function applyRestriction() {
-    /* إخفاء رابط إدارة المستخدمين */
-    var navUsers = $('nav-users');
-    if (navUsers && navUsers.parentNode) navUsers.remove();
 
-    /* إظهار التنبيه وإخفاء المحتوى الحساس */
+    var navUsers = $('nav-users');
+
+    if (navUsers) {
+      navUsers.remove();
+    }
+
     var alertBox = $('permission-alert');
-    if (alertBox) alertBox.classList.remove('hidden');
+
+    if (alertBox) {
+      alertBox.classList.remove('hidden');
+    }
 
     var main = $('main-content');
-    if (main) main.classList.add('restricted');
 
-    /* تعطيل الأزرار الخطرة إن وُجدت */
-    ['export-btn', 'clear-btn'].forEach(function (id) {
-      var btn = $(id);
-      if (btn && !btn.disabled) { btn.disabled = true; btn.setAttribute('aria-disabled', 'true'); }
+    if (main) {
+      main.classList.add('restricted');
+    }
+
+    ['export-btn','clear-btn'].forEach(function(id) {
+
+      var button = $(id);
+
+      if (!button) return;
+
+      button.disabled = true;
+      button.setAttribute(
+        'aria-disabled',
+        'true'
+      );
+
     });
+
   }
 
   function liftRestriction() {
-    /* المدير: إعادة رابط المستخدمين إن حُذف (idempotent) */
+
     var alertBox = $('permission-alert');
-    if (alertBox) alertBox.classList.add('hidden');
+
+    if (alertBox) {
+      alertBox.classList.add('hidden');
+    }
+
     var main = $('main-content');
-    if (main) main.classList.remove('restricted');
-    ['export-btn', 'clear-btn'].forEach(function (id) {
-      var btn = $(id);
-      if (btn) { btn.disabled = false; btn.removeAttribute('aria-disabled'); }
+
+    if (main) {
+      main.classList.remove('restricted');
+    }
+
+    ['export-btn','clear-btn'].forEach(function(id) {
+
+      var button = $(id);
+
+      if (!button) return;
+
+      button.disabled = false;
+      button.removeAttribute('aria-disabled');
+
     });
+
   }
 
   function enforcePermissionsOnce() {
-    if (permState.resolved) return;
+
+    if (permissionState.resolved) {
+      return true;
+    }
+
     var session = getSession();
 
     if (!session) {
-      /* الجلسة لم تجهز بعد — حاول لاحقاً */
       return false;
     }
 
-    permState.resolved = true;
-    if (session.role === 'admin') liftRestriction();
-    else applyRestriction();
+    permissionState.resolved = true;
+
+    if (
+      String(session.role || '').toLowerCase() === 'admin'
+    ) {
+
+      liftRestriction();
+
+    } else {
+
+      applyRestriction();
+
+    }
+
     return true;
+
   }
 
   function enforcePermissions() {
-    /* محاولة فورية */
-    if (enforcePermissionsOnce()) return;
 
-    /* إعادة محاولة تدريجية: 300ms ثم 800ms ثم 1500ms ثم كل ثانيتين */
-    var delays = [300, 800, 1500];
-    var timer = null;
-
-    function step() {
-      if (enforcePermissionsOnce()) { if (timer) clearInterval(timer); return; }
-      if (permState.attempts < delays.length) {
-        setTimeout(step, delays[permState.attempts++]);
-      } else if (!timer) {
-        /* فترة طويلة بدون جلسة → افترض غير مصرّح وقيّد العرض */
-        applyRestriction();
-        timer = setInterval(function () {
-          if (enforcePermissionsOnce()) clearInterval(timer);
-        }, 2000);
-      }
+    if (enforcePermissionsOnce()) {
+      return;
     }
-    setTimeout(step, 300);
+
+    var attempts = 0;
+
+    function retry() {
+
+      if (enforcePermissionsOnce()) {
+        if (permissionState.timer) {
+          clearInterval(permissionState.timer);
+        }
+        return;
+      }
+
+      attempts++;
+
+      if (attempts < 4) {
+
+        var delays = [
+          300,
+          800,
+          1500,
+          2500
+        ];
+
+        setTimeout(
+          retry,
+          delays[attempts - 1]
+        );
+
+      } else if (!permissionState.timer) {
+
+        applyRestriction();
+
+        permissionState.timer =
+          setInterval(function() {
+
+            if (enforcePermissionsOnce()) {
+              clearInterval(
+                permissionState.timer
+              );
+              permissionState.timer = null;
+            }
+
+          }, 3000);
+
+      }
+
+    }
+
+    setTimeout(retry, 300);
+
   }
 
-  /* ═══════════════════════════════════════════════════════
-     3. الوضع النهاري/الليلي
-     ═══════════════════════════════════════════════════════ */
-  function initThemeToggle() {
-    var btn = $('theme-toggle-btn');
-    if (!btn) return;
+  /* ========================================================
+     4. Theme
+     ======================================================== */
 
-    var icon = btn.querySelector('i');
+  function initThemeToggle() {
+
+    var button = $('theme-toggle-btn');
+
+    if (!button) return;
+
+    var icon = button.querySelector('i');
+
     var KEY = 'mp_theme';
 
     function applyTheme(theme) {
-      var t = theme === 'light' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', t);
-      document.body.classList.toggle('light-mode', t === 'light');
-      if (icon) icon.className = t === 'light' ? 'fas fa-sun' : 'fas fa-moon';
-      var label = t === 'light' ? 'الوضع الليلي' : 'الوضع النهاري';
-      btn.title = label;
-      btn.setAttribute('aria-label', label);
+
+      var normalized =
+        theme === 'light'
+          ? 'light'
+          : 'dark';
+
+      document.documentElement
+        .setAttribute(
+          'data-theme',
+          normalized
+        );
+
+      document.body.classList.toggle(
+        'light-mode',
+        normalized === 'light'
+      );
+
+      if (icon) {
+
+        icon.className =
+          normalized === 'light'
+            ? 'fas fa-sun'
+            : 'fas fa-moon';
+
+      }
+
+      var label =
+        normalized === 'light'
+          ? 'تفعيل الوضع الليلي'
+          : 'تفعيل الوضع النهاري';
+
+      button.title = label;
+      button.setAttribute(
+        'aria-label',
+        label
+      );
+
     }
 
-    applyTheme(storage.get(KEY) || 'dark');
+    applyTheme(
+      storage.get(KEY) || 'dark'
+    );
 
-    btn.addEventListener('click', function () {
-      var current = document.documentElement.getAttribute('data-theme');
-      var newTheme = current === 'light' ? 'dark' : 'light';
-      storage.set(KEY, newTheme);
-      applyTheme(newTheme);
-      toast('\u{1F313} \u062A\u0645 \u0627\u0644\u062A\u0628\u062F\u064A\u0644 \u0625\u0644\u0649 \u0627\u0644\u0648\u0636\u0639 ' +
-            (newTheme === 'light' ? '\u0627\u0644\u0646\u0647\u0627\u0631\u064A' : '\u0627\u0644\u0644\u064A\u0644\u064A'),
-            'info', 1500);
-    });
+    button.addEventListener(
+      'click',
+      function() {
+
+        var current =
+          document.documentElement
+            .getAttribute('data-theme');
+
+        var next =
+          current === 'light'
+            ? 'dark'
+            : 'light';
+
+        storage.set(KEY,next);
+
+        applyTheme(next);
+
+        toast(
+          next === 'light'
+            ? '☀️ تم تفعيل الوضع النهاري'
+            : '🌙 تم تفعيل الوضع الليلي',
+          'info',
+          1500
+        );
+
+      }
+    );
+
   }
 
-  /* ═══════════════════════════════════════════════════════
-     4. تفعيل/تبديل العرض (جدول ↔ بطاقات)
-     ═══════════════════════════════════════════════════════ */
+  /* ========================================================
+     5. View toggle
+     ======================================================== */
+
   function initViewToggle() {
-    var toggle    = $('view-toggle');
-    var tableView = $('audit-table-view');
-    var gridView  = $('audit-grid-view');
-    if (!toggle || !tableView || !gridView) return;
 
-    function setView(view, save) {
-      var isGrid = view === 'grid';
-      toggle.querySelectorAll('button[data-view]').forEach(function (b) {
-        var active = (b.dataset.view === view);
-        b.classList.toggle('active', active);
-        b.setAttribute('aria-pressed', String(active));
-      });
-      tableView.classList.toggle('hidden', isGrid);
-      gridView.classList.toggle('hidden', !isGrid);
-      if (save !== false) storage.set('audit_view', view);
+    var toggle = $('view-toggle');
+    var table = $('audit-table-view');
+    var grid = $('audit-grid-view');
+
+    if (!toggle || !table || !grid) {
+      return;
     }
 
-    toggle.querySelectorAll('button[data-view]').forEach(function (btn) {
-      btn.addEventListener('click', function () { setView(btn.dataset.view); });
-    });
+    function setView(view, persist) {
 
-    /* استرجاع التفضيل دون حفظ مكرر */
-    var saved = storage.get('audit_view');
-    if (saved === 'grid') setView('grid', false);
+      var isGrid = view === 'grid';
+
+      toggle
+        .querySelectorAll('button[data-view]')
+        .forEach(function(button) {
+
+          var active =
+            button.dataset.view === view;
+
+          button.classList.toggle(
+            'active',
+            active
+          );
+
+          button.setAttribute(
+            'aria-pressed',
+            String(active)
+          );
+
+        });
+
+      table.classList.toggle(
+        'hidden',
+        isGrid
+      );
+
+      grid.classList.toggle(
+        'hidden',
+        !isGrid
+      );
+
+      if (persist !== false) {
+        storage.set(
+          'audit_view',
+          isGrid ? 'grid' : 'table'
+        );
+      }
+
+    }
+
+    toggle
+      .querySelectorAll('button[data-view]')
+      .forEach(function(button) {
+
+        button.addEventListener(
+          'click',
+          function() {
+            setView(
+              button.dataset.view,
+              true
+            );
+          }
+        );
+
+      });
+
+    var saved =
+      storage.get('audit_view');
+
+    setView(
+      saved === 'grid'
+        ? 'grid'
+        : 'table',
+      false
+    );
+
   }
 
-  /* ═══════════════════════════════════════════════════════
-     5. تلوين شارات الحدث — دالة واحدة (إزالة التكرار)
-     ═══════════════════════════════════════════════════════ */
+  /* ========================================================
+     6. Action classification
+     ======================================================== */
+
   function classifyAction(text) {
-    var t = (text || '').toLowerCase();
-    if (t.indexOf('\u062F\u062E\u0648\u0644') !== -1 || t.indexOf('login') !== -1) return 'login';
-    if (t.indexOf('\u062E\u0631\u0648\u062C') !== -1 || t.indexOf('logout') !== -1) return 'logout';
-    if (t.indexOf('\u0641\u0627\u0634\u0644') !== -1 || t.indexOf('failed') !== -1) return 'failed';
-    if (t.indexOf('\u0648\u0635\u0641') !== -1 || t.indexOf('prescription') !== -1) return 'prescription';
-    if (t.indexOf('\u0645\u0633\u062A\u062E\u062F\u0645') !== -1 || t.indexOf('user') !== -1) return 'user';
-    if (t.indexOf('\u062D\u0630\u0641') !== -1 || t.indexOf('delete') !== -1) return 'delete';
-    if (t.indexOf('\u062A\u0635\u062F\u064A\u0631') !== -1 || t.indexOf('export') !== -1) return 'export';
+
+    var value =
+      String(text || '').toLowerCase();
+
+    if (
+      value.includes('دخول') ||
+      value.includes('login') ||
+      value.includes('sign in')
+    ) {
+      return 'login';
+    }
+
+    if (
+      value.includes('خروج') ||
+      value.includes('logout') ||
+      value.includes('sign out')
+    ) {
+      return 'logout';
+    }
+
+    if (
+      value.includes('فاشل') ||
+      value.includes('failed') ||
+      value.includes('failure')
+    ) {
+      return 'failed';
+    }
+
+    if (
+      value.includes('وصف') ||
+      value.includes('prescription') ||
+      value.includes('prescribe')
+    ) {
+      return 'prescription';
+    }
+
+    if (
+      value.includes('مستخدم') ||
+      value.includes('user') ||
+      value.includes('role')
+    ) {
+      return 'user';
+    }
+
+    if (
+      value.includes('حذف') ||
+      value.includes('delete') ||
+      value.includes('remove')
+    ) {
+      return 'delete';
+    }
+
+    if (
+      value.includes('تصدير') ||
+      value.includes('export')
+    ) {
+      return 'export';
+    }
+
     return 'default';
+
   }
 
   function colorizeCell(cell) {
-    if (!cell || cell.dataset.processed) return;
-    cell.dataset.processed = '1';
-    cell.classList.add('audit-action-badge', classifyAction(cell.textContent));
+
+    if (!cell) return;
+
+    var type =
+      classifyAction(
+        cell.textContent
+      );
+
+    cell.classList.add(
+      'audit-action-badge',
+      type
+    );
+
+  }
+
+  function processAuditRows(root) {
+
+    if (!root) return;
+
+    root.querySelectorAll('tr').forEach(function(row) {
+
+      if (row.cells && row.cells[1]) {
+        colorizeCell(
+          row.cells[1]
+        );
+      }
+
+    });
+
   }
 
   function initActionBadges() {
+
     var tbody = $('audit-tbody');
+
     if (!tbody) return;
 
-    /* معالجة أولية للصفوف الموجودة أصلاً */
-    tbody.querySelectorAll('tr').forEach(function (tr) {
-      colorizeCell(tr.cells && tr.cells[1]);
+    processAuditRows(tbody);
+
+    if (
+      typeof MutationObserver === 'undefined'
+    ) {
+      return;
+    }
+
+    var observer =
+      new MutationObserver(function() {
+        processAuditRows(tbody);
+      });
+
+    observer.observe(tbody,{
+      childList:true,
+      subtree:true
     });
 
-    /* مراقبة الصفوف المضافة ديناميكياً (فلترة/بحث/ترقيم) */
-    var observer = new MutationObserver(function (mutations) {
-      mutations.forEach(function (m) {
-        m.addedNodes.forEach(function (node) {
-          if (node.nodeType !== 1) return;
-          if (node.tagName === 'TR') {
-            colorizeCell(node.cells && node.cells[1]);
-          } else if (node.querySelectorAll) {
-            node.querySelectorAll('tr').forEach(function (tr) {
-              colorizeCell(tr.cells && tr.cells[1]);
-            });
-          }
-        });
-      });
-    });
-    observer.observe(tbody, { childList: true, subtree: true });
   }
 
-  /* ═══════════════════════════════════════════════════════
-     6. Modal — إغلاق بـ Escape وبالنقر على الخلفية + إدارة التركيز
-     ═══════════════════════════════════════════════════════ */
+  /* ========================================================
+     7. Permission-aware export
+     ======================================================== */
+
+  function initExportGuard() {
+
+    var button = $('export-btn');
+
+    if (!button) return;
+
+    var busy = false;
+
+    button.addEventListener(
+      'click',
+      function(event) {
+
+        if (busy) {
+          event.preventDefault();
+          return;
+        }
+
+        var session = getSession();
+
+        if (
+          !session ||
+          String(session.role || '').toLowerCase() !== 'admin'
+        ) {
+
+          event.preventDefault();
+
+          toast(
+            '⛔ لا تملك صلاحية تصدير سجل التدقيق.',
+            'error',
+            2500
+          );
+
+          return;
+
+        }
+
+        busy = true;
+
+        button.disabled = true;
+        button.setAttribute(
+          'aria-busy',
+          'true'
+        );
+
+        var oldHTML =
+          button.innerHTML;
+
+        button.innerHTML =
+          '<i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i> جارٍ التصدير...';
+
+        window.setTimeout(function() {
+
+          busy = false;
+
+          button.disabled = false;
+          button.removeAttribute(
+            'aria-busy'
+          );
+
+          button.innerHTML = oldHTML;
+
+        }, 1500);
+
+      },
+      true
+    );
+
+  }
+
+  /* ========================================================
+     8. Confirm modal
+     ======================================================== */
+
   function initConfirmModal() {
-    var modal  = $('confirm-modal');
-    var yesBtn = $('confirm-yes');
-    var noBtn  = $('confirm-no');
+
+    var modal = $('confirm-modal');
+    var yes = $('confirm-yes');
+    var no = $('confirm-no');
+
     if (!modal) return;
 
     var lastFocused = null;
+    var busy = false;
 
-    window.openAuditConfirm = function () {
-      lastFocused = document.activeElement;
-      modal.classList.remove('hidden');
-      if (noBtn) noBtn.focus();
-      document.addEventListener('keydown', onKeydown, true);
-    };
+    function getFocusables() {
 
-    window.closeAuditConfirm = function () {
+      return Array.prototype.slice.call(
+        modal.querySelectorAll(
+          'button:not([disabled]),' +
+          '[href],' +
+          'input:not([disabled]),' +
+          'select:not([disabled]),' +
+          'textarea:not([disabled]),' +
+          '[tabindex]:not([tabindex="-1"])'
+        )
+      );
+
+    }
+
+    function closeModal() {
+
       modal.classList.add('hidden');
-      document.removeEventListener('keydown', onKeydown, true);
-      if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
+
+      document.removeEventListener(
+        'keydown',
+        onKeydown,
+        true
+      );
+
+      if (
+        lastFocused &&
+        typeof lastFocused.focus === 'function'
+      ) {
+
+        try {
+          lastFocused.focus();
+        } catch (_) {}
+
+      }
+
+    }
+
+    function onKeydown(event) {
+
+      if (event.key === 'Escape') {
+
+        event.preventDefault();
+        closeModal();
+
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+
+      var focusables =
+        getFocusables();
+
+      if (!focusables.length) return;
+
+      var first =
+        focusables[0];
+
+      var last =
+        focusables[focusables.length - 1];
+
+      if (
+        event.shiftKey &&
+        document.activeElement === first
+      ) {
+
+        event.preventDefault();
+        last.focus();
+
+      } else if (
+        !event.shiftKey &&
+        document.activeElement === last
+      ) {
+
+        event.preventDefault();
+        first.focus();
+
+      }
+
+    }
+
+    window.openAuditConfirm = function() {
+
+      if (busy) return;
+
+      var session = getSession();
+
+      if (
+        !session ||
+        String(session.role || '').toLowerCase() !== 'admin'
+      ) {
+
+        toast(
+          '⛔ لا تملك صلاحية حذف سجلات التدقيق.',
+          'error',
+          2500
+        );
+
+        return;
+
+      }
+
+      lastFocused =
+        document.activeElement;
+
+      modal.classList.remove(
+        'hidden'
+      );
+
+      document.addEventListener(
+        'keydown',
+        onKeydown,
+        true
+      );
+
+      if (no) {
+        no.focus();
+      }
+
     };
 
-    function onKeydown(e) {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        window.closeAuditConfirm();
-        return;
-      }
-      /* حبس التركيز داخل الـ Modal (Focus Trap بسيط) */
-      if (e.key === 'Tab') {
-        var focusables = modal.querySelectorAll('button, [href], input, select, [tabindex]:not([tabindex="-1"])');
-        if (!focusables.length) return;
-        var first = focusables[0];
-        var last  = focusables[focusables.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault(); last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault(); first.focus();
+    window.closeAuditConfirm =
+      closeModal;
+
+    modal.addEventListener(
+      'click',
+      function(event) {
+
+        if (event.target === modal) {
+          closeModal();
         }
+
       }
+    );
+
+    if (no) {
+
+      no.addEventListener(
+        'click',
+        closeModal
+      );
+
     }
 
-    /* النقر على الخلفية = إلغاء */
-    modal.addEventListener('click', function (e) {
-      if (e.target === modal) window.closeAuditConfirm();
-    });
-    if (noBtn) noBtn.addEventListener('click', function () { window.closeAuditConfirm(); });
+    if (yes) {
 
-    /* زر "نعم، احذف": نفّذ الحذف عبر واجهة audit.js إن توفرت */
-    if (yesBtn) yesBtn.addEventListener('click', function () {
-      try {
-        if (typeof window.clearOldAuditLogs === 'function') {
-          window.clearOldAuditLogs(90);
-        } else {
-          /* حدث مخصص ليتعامل معه audit.js */
-          document.dispatchEvent(new CustomEvent('audit:clear-old', { detail: { days: 90 } }));
+      yes.addEventListener(
+        'click',
+        function() {
+
+          if (busy) return;
+
+          busy = true;
+
+          yes.disabled = true;
+          no.disabled = true;
+
+          yes.innerHTML =
+            '<i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i> جارٍ التنفيذ...';
+
+          try {
+
+            if (
+              typeof window.clearOldAuditLogs === 'function'
+            ) {
+
+              var result =
+                window.clearOldAuditLogs(90);
+
+              if (
+                result &&
+                typeof result.then === 'function'
+              ) {
+
+                result
+                  .then(function() {
+
+                    document.dispatchEvent(
+                      new CustomEvent(
+                        'audit:cleared'
+                      )
+                    );
+
+                  })
+                  .catch(function(err) {
+
+                    console.error(err);
+
+                    toast(
+                      '❌ تعذر حذف السجلات القديمة.',
+                      'error',
+                      3000
+                    );
+
+                  })
+                  .finally(function() {
+
+                    reset();
+
+                  });
+
+                return;
+
+              }
+
+            } else {
+
+              document.dispatchEvent(
+                new CustomEvent(
+                  'audit:clear-old',
+                  {
+                    detail: {
+                      days: 90
+                    }
+                  }
+                )
+              );
+
+            }
+
+            toast(
+              'تم إرسال طلب حذف السجلات القديمة.',
+              'success',
+              2500
+            );
+
+          } catch (err) {
+
+            console.error(
+              'Audit clear failed:',
+              err
+            );
+
+            toast(
+              '❌ حدث خطأ أثناء تنفيذ الحذف.',
+              'error',
+              3000
+            );
+
+          }
+
+          reset();
+
+          function reset() {
+
+            busy = false;
+
+            yes.disabled = false;
+            no.disabled = false;
+
+            yes.innerHTML =
+              '<i class="fas fa-trash" aria-hidden="true"></i> نعم، احذف';
+
+            closeModal();
+
+          }
+
         }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        window.closeAuditConfirm();
+      );
+
+    }
+
+    document.addEventListener(
+      'audit:cleared',
+      function() {
+
+        refreshAuditUI();
+
+        toast(
+          '✓ تم تحديث سجل التدقيق.',
+          'success',
+          2200
+        );
+
       }
-    });
+    );
 
-    /* 🟡 تحديث الواجهة بعد اكتمال الحذف — audit.js يبث 'audit:cleared' */
-    document.addEventListener('audit:cleared', function () {
-      refreshAuditUI();
-    });
-
-    /* قائمة دوال إعادة العرض المحتملة في audit.js بالترتيب */
     function refreshAuditUI() {
-      var fns = ['refreshAuditLog', 'renderAuditLog', 'loadAuditLog', 'renderAudit', 'updateAuditUI'];
-      for (var i = 0; i < fns.length; i++) {
-        if (typeof window[fns[i]] === 'function') {
-          try { window[fns[i]](); return; } catch (e) { console.error(e); }
+
+      var functions = [
+        'refreshAuditLog',
+        'renderAuditLog',
+        'loadAuditLog',
+        'renderAudit',
+        'updateAuditUI'
+      ];
+
+      for (
+        var i = 0;
+        i < functions.length;
+        i++
+      ) {
+
+        var fn =
+          window[functions[i]];
+
+        if (
+          typeof fn === 'function'
+        ) {
+
+          try {
+
+            var result = fn();
+
+            if (
+              result &&
+              typeof result.then === 'function'
+            ) {
+              result.catch(
+                function(err) {
+                  console.error(err);
+                }
+              );
+            }
+
+            return;
+
+          } catch (err) {
+
+            console.error(
+              functions[i],
+              err
+            );
+
+          }
+
         }
+
       }
-      /* بديل: إعادة تشغيل الفلاتر لإجبار audit.js على إعادة الرسم */
-      var action = $('filter-action');
-      if (action) {
-        action.dispatchEvent(new Event('change', { bubbles: true }));
+
+      var filter =
+        $('filter-action');
+
+      if (filter) {
+
+        filter.dispatchEvent(
+          new Event(
+            'change',
+            {
+              bubbles:true
+            }
+          )
+        );
+
         return;
+
       }
-      /* ملاذ أخير: إعادة تحميل الصفحة */
+
       window.location.reload();
+
     }
+
   }
 
-  /* ربط زر الحذف بفتح الـ Modal (إن لم يربطه audit.js بنفسه) */
+  /* ========================================================
+     9. Clear button
+     ======================================================== */
+
   function initClearButton() {
-    var clearBtn = $('clear-btn');
-    if (!clearBtn) return;
-    clearBtn.addEventListener('click', function () {
-      if (typeof window.openAuditConfirm === 'function') window.openAuditConfirm();
-    });
-  }
 
-  /* ═══════════════════════════════════════════════════════
-     7. اختصارات لوحة المفاتيح
-        Ctrl+E  → تصدير CSV
-        Ctrl+/  → تركيز البحث
-     ═══════════════════════════════════════════════════════ */
-  function initKeyboardShortcuts() {
-    document.addEventListener('keydown', function (e) {
-      var ctrl = e.ctrlKey || e.metaKey;
+    var button = $('clear-btn');
 
-      if (ctrl && e.key.toLowerCase() === 'e') {
-        var exportBtn = $('export-btn');
-        if (exportBtn && !exportBtn.disabled) {
-          e.preventDefault();
-          exportBtn.click();
+    if (!button) return;
+
+    button.addEventListener(
+      'click',
+      function() {
+
+        if (
+          typeof window.openAuditConfirm ===
+          'function'
+        ) {
+
+          window.openAuditConfirm();
+
         }
-        return;
-      }
 
-      if (ctrl && (e.key === '/' || e.key === '\u{066B}' || e.code === 'Slash')) {
-        e.preventDefault();
-        var searchInput = $('audit-search');
-        if (searchInput) searchInput.focus();
-        return;
       }
+    );
 
-      /* تجاهل باقي الاختصارات أثناء الكتابة */
-      if (isTyping(e.target)) return;
-    });
   }
 
-  /* ═══════════════════════════════════════════════════════
-     التشغيل
-     ═══════════════════════════════════════════════════════ */
+  /* ========================================================
+     10. Logout
+     ======================================================== */
+
+  function initLogout() {
+
+    var button = $('logout-btn');
+
+    if (!button) return;
+
+    button.addEventListener(
+      'click',
+      function() {
+
+        try {
+
+          if (
+            typeof window.logout ===
+            'function'
+          ) {
+
+            window.logout();
+            return;
+
+          }
+
+          if (
+            typeof window.handleLogout ===
+            'function'
+          ) {
+
+            window.handleLogout();
+            return;
+
+          }
+
+          try {
+            localStorage.removeItem(
+              'mp_session'
+            );
+          } catch (_) {}
+
+          window.location.href =
+            'login.html';
+
+        } catch (err) {
+
+          console.error(
+            'Logout error:',
+            err
+          );
+
+          window.location.href =
+            'login.html';
+
+        }
+
+      }
+    );
+
+  }
+
+  /* ========================================================
+     11. User badge
+     ======================================================== */
+
+  function initUserBadge() {
+
+    var badge = $('user-badge');
+
+    if (!badge) return;
+
+    var session =
+      getSession();
+
+    if (!session) return;
+
+    var name =
+      session.name ||
+      session.fullName ||
+      session.username ||
+      session.email ||
+      'مستخدم';
+
+    var role =
+      session.role ||
+      '';
+
+    badge.textContent =
+      role
+        ? name + ' · ' + role
+        : name;
+
+  }
+
+  /* ========================================================
+     12. Keyboard shortcuts
+     ======================================================== */
+
+  function initKeyboardShortcuts() {
+
+    document.addEventListener(
+      'keydown',
+      function(event) {
+
+        var modifier =
+          event.ctrlKey ||
+          event.metaKey;
+
+        if (
+          modifier &&
+          String(event.key).toLowerCase() === 'e'
+        ) {
+
+          var exportButton =
+            $('export-btn');
+
+          if (
+            exportButton &&
+            !exportButton.disabled
+          ) {
+
+            event.preventDefault();
+            exportButton.click();
+
+          }
+
+          return;
+
+        }
+
+        if (
+          modifier &&
+          (
+            event.key === '/' ||
+            event.code === 'Slash'
+          )
+        ) {
+
+          var search =
+            $('audit-search');
+
+          if (search) {
+
+            event.preventDefault();
+            search.focus();
+
+          }
+
+          return;
+
+        }
+
+        if (isTyping(event.target)) {
+          return;
+        }
+
+      }
+    );
+
+  }
+
+  /* ========================================================
+     13. Auth guard
+     ======================================================== */
+
+  function initAuthGuard() {
+
+    var session =
+      getSession();
+
+    if (!session) {
+
+      /*
+       * لا نستخدم throw هنا حتى لا تتسبب
+       * إعادة التوجيه في إظهار خطأ JavaScript
+       * غير ضروري للمستخدم.
+       */
+
+      window.setTimeout(
+        function() {
+          if (!getSession()) {
+            window.location.href =
+              'login.html';
+          }
+        },
+        50
+      );
+
+      return false;
+
+    }
+
+    return true;
+
+  }
+
+  /* ========================================================
+     14. Page state
+     ======================================================== */
+
+  function initPageState() {
+
+    var main =
+      $('main-content');
+
+    var loading =
+      $('audit-loading');
+
+    var error =
+      $('audit-error');
+
+    if (main) {
+      main.setAttribute(
+        'aria-busy',
+        'false'
+      );
+    }
+
+    if (loading) {
+      loading.classList.add(
+        'hidden'
+      );
+    }
+
+    if (error) {
+      error.classList.add(
+        'hidden'
+      );
+    }
+
+  }
+
+  /* ========================================================
+     15. Observe dynamic audit table
+     ======================================================== */
+
+  function initDynamicTableEnhancement() {
+
+    var tbody =
+      $('audit-tbody');
+
+    if (!tbody) return;
+
+    /*
+     * يضيف تحسينات للصفوف التي يرسمها audit.js
+     * دون تعديل طريقة عمل audit.js.
+     */
+
+    function enhance() {
+
+      tbody
+        .querySelectorAll('tr')
+        .forEach(function(row) {
+
+          if (
+            row.cells &&
+            row.cells.length >= 6
+          ) {
+
+            colorizeCell(
+              row.cells[1]
+            );
+
+            row.cells[2]
+              .classList.add(
+                'audit-detail-cell'
+              );
+
+            row.cells[4]
+              .classList.add(
+                'audit-date'
+              );
+
+            row.cells[5]
+              .classList.add(
+                'audit-time'
+              );
+
+          }
+
+        });
+
+    }
+
+    if (
+      typeof MutationObserver !==
+      'undefined'
+    ) {
+
+      var observer =
+        new MutationObserver(
+          enhance
+        );
+
+      observer.observe(
+        tbody,
+        {
+          childList:true,
+          subtree:true
+        }
+      );
+
+    }
+
+    enhance();
+
+  }
+
+  /* ========================================================
+     Initialization
+     ======================================================== */
+
   var modules = [
-    ['base-guard',        stripDangerousBase],
-    ['emblem-fallbacks',  initEmblemFallbacks],
-    ['permissions',       enforcePermissions],
-    ['theme-toggle',      initThemeToggle],
-    ['view-toggle',       initViewToggle],
-    ['action-badges',     initActionBadges],
-    ['confirm-modal',     initConfirmModal],
-    ['clear-button',      initClearButton],
-    ['keyboard',          initKeyboardShortcuts]
+
+    ['auth-guard', initAuthGuard],
+    ['base-guard', stripDangerousBase],
+    ['emblem-fallbacks', initEmblemFallbacks],
+    ['permissions', enforcePermissions],
+    ['theme-toggle', initThemeToggle],
+    ['view-toggle', initViewToggle],
+    ['action-badges', initActionBadges],
+    ['dynamic-table', initDynamicTableEnhancement],
+    ['confirm-modal', initConfirmModal],
+    ['clear-button', initClearButton],
+    ['export-guard', initExportGuard],
+    ['logout', initLogout],
+    ['user-badge', initUserBadge],
+    ['keyboard', initKeyboardShortcuts],
+    ['page-state', initPageState]
+
   ];
 
   function init() {
-    modules.forEach(function (m) { safeRun(m[0], m[1]); });
+
+    if (initialized) return;
+
+    initialized = true;
+
+    modules.forEach(function(module) {
+
+      safeRun(
+        module[0],
+        module[1]
+      );
+
+    });
+
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+  if (
+    document.readyState ===
+    'loading'
+  ) {
+
+    document.addEventListener(
+      'DOMContentLoaded',
+      init,
+      { once:true }
+    );
+
   } else {
+
     init();
+
   }
+
 })();
 </script>
 
 <!-- ==========================================================
-     Service Worker Registration
+     Service Worker
      ========================================================== -->
+
 <script>
 (function registerServiceWorker() {
+
   'use strict';
 
-  if (!('serviceWorker' in navigator)) return;
+  if (
+    !('serviceWorker' in navigator)
+  ) {
+    return;
+  }
 
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js', { scope: '/' })
-      .then(function (registration) {
-        console.log('\u2705 SW \u0645\u0633\u062C\u0651\u0644:', registration.scope);
-      })
-      .catch(function (err) {
-        console.warn('SW registration skipped:', err && err.message);
-      });
-  });
+  window.addEventListener(
+    'load',
+    function() {
+
+      navigator.serviceWorker
+        .register(
+          '/sw.js',
+          {
+            scope: '/'
+          }
+        )
+        .then(function(registration) {
+
+          console.log(
+            '✅ Service Worker مسجّل:',
+            registration.scope
+          );
+
+        })
+        .catch(function(error) {
+
+          console.warn(
+            'SW registration skipped:',
+            error && error.message
+              ? error.message
+              : error
+          );
+
+        });
+
+    },
+    { once:true }
+  );
+
 })();
 </script>
 
 </body>
-</html>
+   </html>
