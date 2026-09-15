@@ -1,687 +1,3757 @@
-/* =========================================
-   db.js — طبقة IndexedDB الاحترافية
-   قواعد: users / patients / prescriptions / audit
-   (نسخة مدمجة نهائية — v2.1)
+/* =========================================================
+ * MediPrescribe - Database Layer
+ * db.js v2.0.0
+ *
+ * Local database:
+ *     IndexedDB
+ *
+ * Stores:
+ *     patients
+ *     prescriptions
+ *     bookings
+ *     audit
+ *     medications
+ *     settings
+ *     meta
+ *
+ * Features:
+ *     - IndexedDB
+ *     - Transactions
+ *     - Indexes
+ *     - CRUD
+ *     - Search
+ *     - Audit
+ *     - Backup / Restore
+ *     - Migration
+ *     - localStorage fallback
+ *     - Safe IDs
+ *     - Timestamps
+ *     - Compatibility with existing MediPrescribe modules
+ *
+ * IMPORTANT:
+ * This is a local client-side database layer.
+ * It is NOT a replacement for a secure central server/database
+ * for multi-device clinical production systems.
+ * ========================================================= */
 
-   التحسينات في هذه النسخة (v2.1):
-   ✅ v2.1-01: _initPromise يُعاد ضبطه عند الفشل (إعادة محاولة تلقائية)
-   ✅ v2.1-02: hashPassword مع fallback عند غياب crypto.subtle (HTTP)
-   ✅ v2.1-03: openDB مع 5 محاولات تلقائية عند onblocked
-   ✅ v2.1-04: _seedDefaultUsers زرع تدريجي (لا توقف جزئي)
-   ✅ v2.1-05: hasPermission بحماية الحروف الكبيرة + دور عربي
-   ✅ v2.1-06: logAudit مع مخزن مؤقت للأحداث عند إغلاق القاعدة
-   ✅ v2.1-07: getUserByUsername بـ getByIndex بدل getAll
-   ✅ v2.1-08: updateLastLogin داخل transaction (منع سباق)
-   ✅ v2.1-09: getRoleLabel يدعم الأدوار العربية
-   ✅ v2.1-10: resetDatabase آمنة مع تنظيف شامل
-   ✅ إضافة mustChangePassword للحسابات الافتراضية
-========================================= */
-
-const DB_NAME = 'mediprescribe_db';
-const DB_VERSION = 1;
-let _db = null;
-let _initPromise = null;
-
-/* ==========================================================
-   1. الأدوار والصلاحيات الافتراضية
-   ========================================================== */
-const ROLES = {
-  ADMIN:        'admin',
-  DOCTOR:       'doctor',
-  PHARMACIST:   'pharmacist',
-  NURSE:        'nurse',
-  RECEPTIONIST: 'receptionist'
-};
-
-const ROLE_LABELS_AR = {
-  admin:        'مدير النظام',
-  doctor:       'طبيب باطنية',
-  pharmacist:   'صيدلي',
-  nurse:        'ممرض',
-  receptionist: 'استقبال'
-};
-
-/* خريطة عكسية: عربي → إنجليزي (تُستخدم في getRoleLabel و hasPermission) */
-const ROLE_AR_TO_EN = {
-  'مدير النظام': 'admin',
-  'مدير':        'admin',
-  'طبيب باطنية': 'doctor',
-  'طبيب':        'doctor',
-  'صيدلي':       'pharmacist',
-  'ممرض':        'nurse',
-  'ممرضة':       'nurse',
-  'استقبال':     'receptionist',
-  'موظف استقبال': 'receptionist'
-};
-
-const ALL_PERMISSIONS = [
-  'create_prescription',
-  'view_records',
-  'print_prescription',
-  'delete_records',
-  'manage_users',
-  'export_data',
-  'view_audit_log',
-  'system_settings'
-];
-
-const ROLE_DEFAULT_PERMISSIONS = {
-  admin:        [...ALL_PERMISSIONS],
-  doctor:       ['create_prescription', 'view_records', 'print_prescription', 'export_data'],
-  pharmacist:   ['view_records', 'print_prescription'],
-  nurse:        ['view_records'],
-  receptionist: ['view_records', 'print_prescription']
-};
-
-window.ROLES = ROLES;
-window.ROLE_LABELS_AR = ROLE_LABELS_AR;
-window.ROLE_AR_TO_EN = ROLE_AR_TO_EN;
-window.ALL_PERMISSIONS = ALL_PERMISSIONS;
-window.ROLE_DEFAULT_PERMISSIONS = ROLE_DEFAULT_PERMISSIONS;
+(() => {
+  'use strict';
 
 
-/* ==========================================================
-   2. فتح قاعدة البيانات
-   ✅ v2.1-03: إعادة محاولة تلقائية (5 محاولات) عند onblocked
-   ========================================================== */
-function openDB(retryCount = 0) {
-  return new Promise((resolve, reject) => {
-    if (!window.indexedDB) {
-      reject(new Error('المتصفح لا يدعم IndexedDB (جرّب متصفحاً آخر أو أغلق وضع التصفح الخاص)'));
+  /* =========================================================
+   * 1. CONFIG
+   * ========================================================= */
+
+  const CONFIG = Object.freeze({
+
+    version: '2.0.0',
+
+    dbName: 'MediPrescribeDB',
+
+    dbVersion: 2,
+
+    fallbackPrefix:
+      'MediPrescribeDB_Fallback_',
+
+    maxAuditRecords: 10000,
+
+    maxLocalRecordsPerStore: 5000,
+
+    requestTimeoutMs: 15000,
+
+    debug: false
+
+  });
+
+
+  /* =========================================================
+   * 2. STORE DEFINITIONS
+   * ========================================================= */
+
+  const STORES = Object.freeze({
+
+    patients: {
+
+      keyPath: 'id',
+
+      autoIncrement: false,
+
+      indexes: {
+
+        nationalId: {
+          keyPath: 'nationalId',
+          unique: false
+        },
+
+        phone: {
+          keyPath: 'phone',
+          unique: false
+        },
+
+        name: {
+          keyPath: 'name',
+          unique: false
+        },
+
+        createdAt: {
+          keyPath: 'createdAt',
+          unique: false
+        },
+
+        updatedAt: {
+          keyPath: 'updatedAt',
+          unique: false
+        }
+
+      }
+
+    },
+
+
+    prescriptions: {
+
+      keyPath: 'id',
+
+      autoIncrement: false,
+
+      indexes: {
+
+        rxNumber: {
+          keyPath: 'rxNumber',
+          unique: false
+        },
+
+        patientId: {
+          keyPath: 'patientId',
+          unique: false
+        },
+
+        doctorId: {
+          keyPath: 'doctorId',
+          unique: false
+        },
+
+        status: {
+          keyPath: 'status',
+          unique: false
+        },
+
+        createdAt: {
+          keyPath: 'createdAt',
+          unique: false
+        },
+
+        updatedAt: {
+          keyPath: 'updatedAt',
+          unique: false
+        }
+
+      }
+
+    },
+
+
+    bookings: {
+
+      keyPath: 'id',
+
+      autoIncrement: false,
+
+      indexes: {
+
+        bookingNumber: {
+          keyPath: 'bookingNumber',
+          unique: false
+        },
+
+        phone: {
+          keyPath: 'phone',
+          unique: false
+        },
+
+        department: {
+          keyPath: 'department',
+          unique: false
+        },
+
+        date: {
+          keyPath: 'date',
+          unique: false
+        },
+
+        status: {
+          keyPath: 'status',
+          unique: false
+        },
+
+        createdAt: {
+          keyPath: 'createdAt',
+          unique: false
+        }
+
+      }
+
+    },
+
+
+    audit: {
+
+      keyPath: 'id',
+
+      autoIncrement: false,
+
+      indexes: {
+
+        action: {
+          keyPath: 'action',
+          unique: false
+        },
+
+        userId: {
+          keyPath: 'userId',
+          unique: false
+        },
+
+        entityType: {
+          keyPath: 'entityType',
+          unique: false
+        },
+
+        entityId: {
+          keyPath: 'entityId',
+          unique: false
+        },
+
+        timestamp: {
+          keyPath: 'timestamp',
+          unique: false
+        }
+
+      }
+
+    },
+
+
+    medications: {
+
+      keyPath: 'id',
+
+      autoIncrement: false,
+
+      indexes: {
+
+        genericName: {
+          keyPath: 'genericName',
+          unique: false
+        },
+
+        brandName: {
+          keyPath: 'brandName',
+          unique: false
+        },
+
+        active: {
+          keyPath: 'active',
+          unique: false
+        },
+
+        updatedAt: {
+          keyPath: 'updatedAt',
+          unique: false
+        }
+
+      }
+
+    },
+
+
+    settings: {
+
+      keyPath: 'key',
+
+      autoIncrement: false,
+
+      indexes: {
+
+        updatedAt: {
+          keyPath: 'updatedAt',
+          unique: false
+        }
+
+      }
+
+    },
+
+
+    meta: {
+
+      keyPath: 'key',
+
+      autoIncrement: false,
+
+      indexes: {}
+
+    }
+
+  });
+
+
+  const STORE_NAMES =
+    Object.freeze(
+      Object.keys(STORES)
+    );
+
+
+  /* =========================================================
+   * 3. STATE
+   * ========================================================= */
+
+  let db = null;
+
+  let openingPromise = null;
+
+  let initialized = false;
+
+  let usingFallback = false;
+
+
+  /* =========================================================
+   * 4. LOGGING
+   * ========================================================= */
+
+  function debugLog(...args) {
+
+    if (!CONFIG.debug) {
       return;
     }
 
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    let settled = false;
-
-    req.onupgradeneeded = e => {
-      const d = e.target.result;
-
-      if (!d.objectStoreNames.contains('users')) {
-        const s = d.createObjectStore('users', { keyPath: 'id', autoIncrement: true });
-        s.createIndex('username', 'username', { unique: true });
-        s.createIndex('role', 'role', { unique: false });
-      }
-
-      if (!d.objectStoreNames.contains('patients')) {
-        const s = d.createObjectStore('patients', { keyPath: 'id', autoIncrement: true });
-        s.createIndex('name', 'name', { unique: false });
-        s.createIndex('createdAt', 'createdAt', { unique: false });
-      }
-
-      if (!d.objectStoreNames.contains('prescriptions')) {
-        const s = d.createObjectStore('prescriptions', { keyPath: 'id', autoIncrement: true });
-        s.createIndex('patientId', 'patientId', { unique: false });
-        s.createIndex('createdAt', 'createdAt', { unique: false });
-        s.createIndex('doctorId', 'doctorId', { unique: false });
-      }
-
-      if (!d.objectStoreNames.contains('audit')) {
-        const s = d.createObjectStore('audit', { keyPath: 'id', autoIncrement: true });
-        s.createIndex('time', 'time', { unique: false });
-        s.createIndex('by', 'by', { unique: false });
-      }
-    };
-
-    req.onsuccess = e => {
-      if (settled) return;
-      settled = true;
-
-      _db = e.target.result;
-
-      /* إغلاق تلقائي عند تغيير النسخة */
-      _db.onversionchange = () => {
-        try { _db.close(); } catch (_) {}
-        _db = null;
-        _initPromise = null;   /* ✅ اسمح بإعادة الفتح */
-        console.warn('⚠️ تم إغلاق قاعدة البيانات — يرجى إعادة تحميل الصفحة');
-      };
-
-      resolve(_db);
-    };
-
-    req.onerror = e => {
-      if (settled) return;
-      settled = true;
-      reject(e.target.error || new Error('تعذّر فتح قاعدة البيانات'));
-    };
-
-    /* ✅ v2.1-03: إعادة محاولة عند القفل */
-    req.onblocked = () => {
-      if (settled) return;
-      settled = true;
-
-      console.warn(`⏳ قاعدة البيانات مقفلة (محاولة ${retryCount + 1}/5) — إعادة المحاولة بعد 1.5 ثانية`);
-
-      if (retryCount < 5) {
-        setTimeout(() => {
-          resolve(openDB(retryCount + 1));
-        }, 1500);
-      } else {
-        reject(new Error(
-          'قاعدة البيانات مقفلة بعد 5 محاولات — ' +
-          'أغلق كل التبويبات المفتوحة للتطبيق ثم أعد تحميل الصفحة'
-        ));
-      }
-    };
-  });
-}
-
-
-/* ==========================================================
-   3. عمليات عامة (DB wrapper)
-   ✅ v2.1-07: إضافة getByIndex
-   ========================================================== */
-function _req(request) {
-  return new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error || new Error('فشلت عملية قاعدة البيانات'));
-  });
-}
-
-function _ensureOpen() {
-  if (!_db) throw new Error('قاعدة البيانات غير مفتوحة — استدعِ initDB() أولاً');
-}
-
-const DB = {
-  add(store, obj) {
-    _ensureOpen();
-    return _req(_db.transaction(store, 'readwrite').objectStore(store).add(obj));
-  },
-  put(store, obj) {
-    _ensureOpen();
-    return _req(_db.transaction(store, 'readwrite').objectStore(store).put(obj));
-  },
-  get(store, key) {
-    _ensureOpen();
-    return _req(_db.transaction(store, 'readonly').objectStore(store).get(key));
-  },
-  del(store, key) {
-    _ensureOpen();
-    return _req(_db.transaction(store, 'readwrite').objectStore(store).delete(key));
-  },
-  all(store) {
-    _ensureOpen();
-    return _req(_db.transaction(store, 'readonly').objectStore(store).getAll());
-  },
-  clear(store) {
-    _ensureOpen();
-    return _req(_db.transaction(store, 'readwrite').objectStore(store).clear());
-  },
-  count(store) {
-    _ensureOpen();
-    return _req(_db.transaction(store, 'readonly').objectStore(store).count());
-  },
-  /* إرجاع كل السجلات بمؤشر معين */
-  byIndex(store, idx, val) {
-    _ensureOpen();
-    return _req(
-      _db.transaction(store, 'readonly').objectStore(store).index(idx).getAll(val)
-    );
-  },
-  /* ✅ v2.1-07: إرجاع سجل واحد بمؤشر فريد */
-  getByIndex(store, idx, val) {
-    _ensureOpen();
-    return _req(
-      _db.transaction(store, 'readonly').objectStore(store).index(idx).get(val)
-    );
-  }
-};
-
-window.DB = DB;
-
-
-/* ==========================================================
-   4. تجزئة كلمات المرور (SHA-256)
-   ✅ v2.1-02: fallback عند غياب crypto.subtle (HTTP بدون HTTPS)
-   ========================================================== */
-async function hashPassword(password) {
-  const enc = new TextEncoder().encode(String(password));
-
-  /* ── المسار المفضّل: SHA-256 عبر Web Crypto ── */
-  if (window.crypto?.subtle?.digest) {
     try {
-      const buf = await crypto.subtle.digest('SHA-256', enc);
-      return Array.from(new Uint8Array(buf))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-    } catch (err) {
-      console.warn('crypto.subtle فشل — يتم التحويل إلى البديل:', err);
-    }
-  }
 
-  /* ── Fallback: DJB2 (ليس آمناً بالكامل، لكن يمنع الانهيار) ── */
-  console.warn(
-    '⚠️ SHA-256 غير متاح (يتطلب HTTPS) — يُستخدم hash بديل. ' +
-    'استخدم HTTPS للإنتاج للحصول على أمان كامل.'
-  );
-  let hash = 5381;
-  const str = String(password);
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) + hash) + str.charCodeAt(i);
-    hash |= 0;
-  }
-  return 'fb_' + Math.abs(hash).toString(16).padStart(16, '0');
-}
-window.hashPassword = hashPassword;
+      console.log(
+        '[MediPrescribe DB]',
+        ...args
+      );
 
-
-/* ==========================================================
-   5. التحقق من كلمة المرور
-   ========================================================== */
-async function verifyPassword(inputPassword, storedPassword) {
-  if (!inputPassword || !storedPassword) return false;
-
-  /* توافق مع نُسخ قديمة فيها كلمة المرور نصاً صريحاً */
-  if (inputPassword === storedPassword) return true;
-
-  /* المقارنة مع المُجزّأ */
-  const hashedInput = await hashPassword(inputPassword);
-  return hashedInput === storedPassword;
-}
-window.verifyPassword = verifyPassword;
-
-
-/* ==========================================================
-   6. تحديث وقت آخر دخول
-   ✅ v2.1-08: داخل transaction لمنع السباق
-   ========================================================== */
-async function updateLastLogin(userId) {
-  try {
-    _ensureOpen();
-    const tx = _db.transaction('users', 'readwrite');
-    const store = tx.objectStore('users');
-    const user = await _req(store.get(userId));
-    if (!user) return;
-    user.lastLogin = Date.now();
-    await _req(store.put(user));
-  } catch (err) {
-    console.error('updateLastLogin error:', err);
-  }
-}
-window.updateLastLogin = updateLastLogin;
-
-
-/* ==========================================================
-   7. بيانات الحسابات الافتراضية
-   ✅ v2.1: إضافة mustChangePassword
-   ========================================================== */
-function buildDefaultUsers() {
-  const H = (typeof HOSPITALS !== 'undefined' && HOSPITALS.length)
-    ? HOSPITALS
-    : [
-        'هيئة مستشفى الثورة العام',
-        'مستشفى جبله الجامعي',
-        'مستشفى البدر الدولي'
-      ];
-
-  return [
-    {
-      username: 'admin',
-      password: 'admin123',
-      role: ROLES.ADMIN,
-      fullName: 'المدير العام',
-      email: 'admin@mediprescribe.gov',
-      hospital: H[0] || '',
-      phone: '770000001'
-    },
-    {
-      username: 'dr.salem',
-      password: 'salam123',
-      role: ROLES.DOCTOR,
-      fullName: 'د. سالم الحميري',
-      email: 'dr.salem@mediprescribe.gov',
-      hospital: H[1] || H[0] || '',
-      phone: '770000002'
-    },
-    {
-      username: 'pharma.ali',
-      password: 'ali123',
-      role: ROLES.PHARMACIST,
-      fullName: 'علي المطري',
-      email: 'pharma.ali@mediprescribe.gov',
-      hospital: H[2] || H[0] || '',
-      phone: '770000003'
-    }
-  ];
-}
-
-
-/* ==========================================================
-   8. زرع الحسابات الافتراضية
-   ✅ v2.1-04: زرع تدريجي (لا توقف جزئي)
-   ========================================================== */
-async function _seedDefaultUsers() {
-  const users = await DB.all('users');
-  const existing = new Set(users.map(u => u.username));
-  const seed = buildDefaultUsers();
-
-  /* ── الحالة 1: قاعدة فارغة → ازرع الجميع ── */
-  if (!users.length) {
-    for (const u of seed) {
-      const hashed = await hashPassword(u.password);
-      await DB.add('users', {
-        username: u.username,
-        password: hashed,
-        role: u.role,
-        roleLabel: ROLE_LABELS_AR[u.role] || u.role,
-        fullName: u.fullName,
-        email: u.email,
-        phone: u.phone,
-        hospital: u.hospital,
-        status: 'active',
-        permissions: [...(ROLE_DEFAULT_PERMISSIONS[u.role] || [])],
-        createdAt: Date.now(),
-        lastLogin: null,
-        mustChangePassword: true   /* ✅ v2.1: إلزام بتغيير كلمة المرور */
-      });
-    }
-
-    await DB.add('audit', {
-      action: 'تهيئة النظام — زرع الحسابات الافتراضية',
-      detail: `تم إنشاء ${seed.length} حسابات`,
-      by: 'النظام',
-      time: Date.now()
-    });
-    return;
-  }
-
-  /* ── الحالة 2: زرع الحسابات الناقصة (فردياً) ── */
-  const missing = seed.filter(u => !existing.has(u.username));
-
-  for (const u of missing) {
-    try {
-      const hashed = await hashPassword(u.password);
-      await DB.add('users', {
-        username: u.username,
-        password: hashed,
-        role: u.role,
-        roleLabel: ROLE_LABELS_AR[u.role] || u.role,
-        fullName: u.fullName,
-        email: u.email,
-        phone: u.phone,
-        hospital: u.hospital,
-        status: 'active',
-        permissions: [...(ROLE_DEFAULT_PERMISSIONS[u.role] || [])],
-        createdAt: Date.now(),
-        lastLogin: null,
-        mustChangePassword: true
-      });
-      console.log('🔧 [seeding] أنشأ حساباً مفقوداً:', u.username);
-    } catch (err) {
-      /* مستخدم موجود مسبقاً (سباق نادر) أو فشل — تابع */
-      console.warn('🔧 [seeding] فشل إنشاء', u.username, '—', err.message);
-    }
-  }
-
-  if (missing.length) {
-    await DB.add('audit', {
-      action: 'إعادة زرع حسابات مفقودة',
-      detail: missing.map(u => u.username).join(', '),
-      by: 'النظام',
-      time: Date.now()
-    });
-  }
-}
-
-
-/* ==========================================================
-   9. تهيئة قاعدة البيانات
-   ✅ v2.1-01: _initPromise يُعاد ضبطه عند الفشل
-   ✅ v2.1-06: تفريغ الأحداث المعلّقة
-   ========================================================== */
-async function initDB() {
-  /* ── إن كان هناك وعد سابق، أعِد استخدامه ── */
-  if (_initPromise) {
-    try {
-      return await _initPromise;
     } catch (_) {
-      /* فشل سابق → أعِد المحاولة */
-      _initPromise = null;
+      /* ignore */
     }
+
   }
 
-  _initPromise = (async () => {
-    await openDB();
+
+  function errorLog(...args) {
 
     try {
-      await _seedDefaultUsers();
-    } catch (err) {
-      console.error('initDB seed error:', err);
-      /* فشل الزرع لا يمنع فتح التطبيق */
+
+      console.error(
+        '[MediPrescribe DB]',
+        ...args
+      );
+
+    } catch (_) {
+      /* ignore */
     }
 
-    /* ✅ v2.1-06: تفريغ الأحداث المعلّقة */
-    try {
-      await _flushPendingAudit();
-    } catch (err) {
-      console.warn('flushPendingAudit failed:', err);
-    }
-
-    return _db;
-  })();
-
-  try {
-    return await _initPromise;
-  } catch (err) {
-    _initPromise = null;   /* ✅ اسمح بإعادة المحاولة في المستقبل */
-    throw err;
   }
-}
-window.initDB = initDB;
 
 
-/* ==========================================================
-   10. سجل التدقيق (Audit Log)
-   ✅ v2.1-06: مخزن مؤقت للأحداث عند إغلاق القاعدة
-   ========================================================== */
-window.__pendingAudit = window.__pendingAudit || [];
+  /* =========================================================
+   * 5. SECURITY / UTILITY
+   * ========================================================= */
 
-async function logAudit(action, detail) {
-  const entry = {
+  function cleanText(
+    value,
+    maxLength = 1000
+  ) {
+
+    let text =
+      String(value ?? '')
+        .replace(
+          /[\u0000-\u001F\u007F]/g,
+          ' '
+        )
+        .replace(
+          /\s+/g,
+          ' '
+        )
+        .trim();
+
+    if (
+      text.length > maxLength
+    ) {
+
+      text =
+        text.slice(
+          0,
+          maxLength
+        );
+
+    }
+
+    return text;
+
+  }
+
+
+  function createId(
+    prefix = 'ID'
+  ) {
+
+    let random =
+      Math.random()
+        .toString(36)
+        .slice(2, 12);
+
+    try {
+
+      if (
+        window.crypto &&
+        window.crypto.getRandomValues
+      ) {
+
+        const bytes =
+          new Uint8Array(8);
+
+        window.crypto.getRandomValues(
+          bytes
+        );
+
+        random =
+          Array.from(bytes)
+            .map(
+              byte =>
+                byte
+                  .toString(16)
+                  .padStart(2, '0')
+            )
+            .join('');
+
+      }
+
+    } catch (_) {
+      /* fallback */
+    }
+
+    return (
+      `${prefix}-${Date.now()}-${random}`
+    );
+
+  }
+
+
+  function nowISO() {
+
+    return new Date().toISOString();
+
+  }
+
+
+  function clone(value) {
+
+    if (
+      value === undefined
+    ) {
+
+      return undefined;
+
+    }
+
+    try {
+
+      if (
+        typeof structuredClone ===
+        'function'
+      ) {
+
+        return structuredClone(
+          value
+        );
+
+      }
+
+    } catch (_) {
+      /* fallback */
+    }
+
+    try {
+
+      return JSON.parse(
+        JSON.stringify(value)
+      );
+
+    } catch (_) {
+
+      return value;
+
+    }
+
+  }
+
+
+  function normalizeStoreName(
+    store
+  ) {
+
+    const name =
+      cleanText(
+        store,
+        100
+      );
+
+    if (
+      !STORE_NAMES.includes(name)
+    ) {
+
+      throw new Error(
+        `Unknown database store: ${name}`
+      );
+
+    }
+
+    return name;
+
+  }
+
+
+  /* =========================================================
+   * 6. RECORD NORMALIZATION
+   * ========================================================= */
+
+  function normalizeRecord(
+    store,
+    data,
+    options = {}
+  ) {
+
+    const current =
+      nowISO();
+
+    const input =
+      clone(data) || {};
+
+    const isUpdate =
+      Boolean(
+        options.isUpdate
+      );
+
+    const existingId =
+      cleanText(
+        input.id,
+        200
+      );
+
+    const record = {
+      ...input
+    };
+
+
+    if (!record.id) {
+
+      record.id =
+        createId(
+          store.toUpperCase()
+        );
+
+    }
+
+
+    if (
+      isUpdate &&
+      existingId
+    ) {
+
+      record.id =
+        existingId;
+
+    }
+
+
+    if (!record.createdAt) {
+
+      record.createdAt =
+        current;
+
+    }
+
+
+    record.updatedAt =
+      current;
+
+
+    /*
+     * Normalize common fields.
+     */
+    if (
+      typeof record.name ===
+      'string'
+    ) {
+
+      record.name =
+        cleanText(
+          record.name,
+          200
+        );
+
+    }
+
+
+    if (
+      typeof record.phone ===
+      'string'
+    ) {
+
+      record.phone =
+        cleanText(
+          record.phone,
+          50
+        );
+
+    }
+
+
+    if (
+      typeof record.status ===
+      'string'
+    ) {
+
+      record.status =
+        cleanText(
+          record.status,
+          50
+        );
+
+    }
+
+
+    return record;
+
+  }
+
+
+  /* =========================================================
+   * 7. FALLBACK STORAGE
+   * ========================================================= */
+
+  function fallbackKey(
+    store
+  ) {
+
+    return (
+      CONFIG.fallbackPrefix +
+      store
+    );
+
+  }
+
+
+  function fallbackRead(
+    store
+  ) {
+
+    try {
+
+      const raw =
+        localStorage.getItem(
+          fallbackKey(store)
+        );
+
+      if (!raw) {
+        return [];
+      }
+
+      const data =
+        JSON.parse(raw);
+
+      return Array.isArray(data)
+        ? data
+        : [];
+
+    } catch (error) {
+
+      errorLog(
+        'Fallback read failed',
+        error
+      );
+
+      return [];
+
+    }
+
+  }
+
+
+  function fallbackWrite(
+    store,
+    records
+  ) {
+
+    try {
+
+      const safe =
+        Array.isArray(records)
+          ? records.slice(
+              -CONFIG.maxLocalRecordsPerStore
+            )
+          : [];
+
+      localStorage.setItem(
+        fallbackKey(store),
+        JSON.stringify(safe)
+      );
+
+      return true;
+
+    } catch (error) {
+
+      errorLog(
+        'Fallback write failed',
+        error
+      );
+
+      return false;
+
+    }
+
+  }
+
+
+  function fallbackFindIndex(
+    records,
+    id
+  ) {
+
+    return records.findIndex(
+      record =>
+        String(record.id) ===
+        String(id)
+    );
+
+  }
+
+
+  /* =========================================================
+   * 8. OPEN DATABASE
+   * ========================================================= */
+
+  function open() {
+
+    if (db) {
+
+      return Promise.resolve(db);
+
+    }
+
+
+    if (openingPromise) {
+
+      return openingPromise;
+
+    }
+
+
+    if (
+      !window.indexedDB
+    ) {
+
+      usingFallback = true;
+
+      initialized = true;
+
+      return Promise.resolve(null);
+
+    }
+
+
+    openingPromise =
+      new Promise(
+        (resolve, reject) => {
+
+          let request;
+
+          try {
+
+            request =
+              indexedDB.open(
+                CONFIG.dbName,
+                CONFIG.dbVersion
+              );
+
+          } catch (error) {
+
+            openingPromise = null;
+
+            reject(error);
+
+            return;
+
+          }
+
+
+          request.onupgradeneeded =
+            event => {
+
+              const database =
+                event.target.result;
+
+              createSchema(
+                database
+              );
+
+            };
+
+
+          request.onsuccess =
+            event => {
+
+              db =
+                event.target.result;
+
+              usingFallback = false;
+
+              initialized = true;
+
+              /*
+               * If another tab upgrades/deletes
+               * the database, close gracefully.
+               */
+              db.onversionchange =
+                () => {
+
+                  try {
+                    db.close();
+                  } catch (_) {
+                    /* ignore */
+                  }
+
+                  db = null;
+
+                };
+
+
+              debugLog(
+                'Database opened'
+              );
+
+              openingPromise = null;
+
+              resolve(db);
+
+            };
+
+
+          request.onerror =
+            event => {
+
+              const error =
+                event.target.error;
+
+              openingPromise = null;
+
+              errorLog(
+                'IndexedDB open failed',
+                error
+              );
+
+              /*
+               * We do not silently lose data.
+               * Fallback is only used when IDB is
+               * unavailable.
+               */
+              usingFallback = true;
+
+              initialized = true;
+
+              resolve(null);
+
+            };
+
+
+          request.onblocked =
+            () => {
+
+              debugLog(
+                'IndexedDB open blocked'
+              );
+
+            };
+
+        }
+      );
+
+
+    return openingPromise;
+
+  }
+
+
+  /* =========================================================
+   * 9. CREATE SCHEMA
+   * ========================================================= */
+
+  function createSchema(
+    database
+  ) {
+
+    STORE_NAMES.forEach(
+      storeName => {
+
+        const definition =
+          STORES[storeName];
+
+        let objectStore;
+
+
+        if (
+          database.objectStoreNames
+            .contains(storeName)
+        ) {
+
+          /*
+           * Existing stores are handled
+           * during upgrade.
+           */
+          objectStore =
+            null;
+
+        } else {
+
+          objectStore =
+            database.createObjectStore(
+              storeName,
+              {
+
+                keyPath:
+                  definition.keyPath,
+
+                autoIncrement:
+                  definition.autoIncrement
+
+              }
+            );
+
+        }
+
+
+        /*
+         * Indexes can only be created when
+         * we have the object store instance.
+         *
+         * For existing stores we attempt to
+         * obtain it from the upgrade transaction.
+         */
+        if (!objectStore) {
+
+          try {
+
+            objectStore =
+              database
+                .transaction
+                ? null
+                : null;
+
+          } catch (_) {
+            /* ignore */
+          }
+
+        }
+
+
+        if (
+          objectStore &&
+          definition.indexes
+        ) {
+
+          Object.entries(
+            definition.indexes
+          ).forEach(
+            ([indexName, indexConfig]) => {
+
+              try {
+
+                objectStore.createIndex(
+                  indexName,
+                  indexConfig.keyPath,
+                  {
+                    unique:
+                      Boolean(
+                        indexConfig.unique
+                      )
+                  }
+                );
+
+              } catch (error) {
+
+                debugLog(
+                  `Index ${indexName} creation skipped`,
+                  error
+                );
+
+              }
+
+            }
+          );
+
+        }
+
+      }
+    );
+
+
+    /*
+     * The browser supplies the upgrade transaction
+     * through the currently executing upgrade event.
+     *
+     * Existing stores need their missing indexes
+     * added separately.
+     */
+    try {
+
+      const transaction =
+        database.transaction;
+
+      if (
+        transaction &&
+        typeof transaction.objectStore ===
+        'function'
+      ) {
+
+        STORE_NAMES.forEach(
+          storeName => {
+
+            try {
+
+              const definition =
+                STORES[storeName];
+
+              const objectStore =
+                transaction.objectStore(
+                  storeName
+                );
+
+              Object.entries(
+                definition.indexes || {}
+              ).forEach(
+                ([indexName, config]) => {
+
+                  if (
+                    !objectStore.indexNames
+                      .contains(indexName)
+                  ) {
+
+                    objectStore.createIndex(
+                      indexName,
+                      config.keyPath,
+                      {
+                        unique:
+                          Boolean(
+                            config.unique
+                          )
+                      }
+                    );
+
+                  }
+
+                }
+              );
+
+            } catch (error) {
+
+              debugLog(
+                `Schema migration skipped for ${storeName}`,
+                error
+              );
+
+            }
+
+          }
+        );
+
+      }
+
+    } catch (_) {
+      /* ignore */
+    }
+
+  }
+
+
+  /* =========================================================
+   * 10. ENSURE READY
+   * ========================================================= */
+
+  async function ensureReady() {
+
+    await open();
+
+    return {
+
+      initialized,
+
+      usingFallback,
+
+      indexedDB:
+        !usingFallback && Boolean(db)
+
+    };
+
+  }
+
+
+  /* =========================================================
+   * 11. TRANSACTION
+   * ========================================================= */
+
+  async function transaction(
+    storeNames,
+    mode,
+    callback
+  ) {
+
+    const names =
+      Array.isArray(storeNames)
+        ? storeNames
+        : [storeNames];
+
+    names.forEach(
+      normalizeStoreName
+    );
+
+
+    await ensureReady();
+
+
+    /*
+     * Fallback mode.
+     */
+    if (
+      usingFallback ||
+      !db
+    ) {
+
+      return callback(null);
+
+    }
+
+
+    return new Promise(
+      (resolve, reject) => {
+
+        let tx;
+
+        try {
+
+          tx =
+            db.transaction(
+              names,
+              mode
+            );
+
+        } catch (error) {
+
+          reject(error);
+
+          return;
+
+        }
+
+
+        let callbackResult;
+
+        try {
+
+          callbackResult =
+            callback(tx);
+
+        } catch (error) {
+
+          try {
+            tx.abort();
+          } catch (_) {
+            /* ignore */
+          }
+
+          reject(error);
+
+          return;
+
+        }
+
+
+        tx.oncomplete =
+          () => {
+
+            resolve(
+              callbackResult
+            );
+
+          };
+
+
+        tx.onerror =
+          event => {
+
+            reject(
+              event.target.error ||
+              new Error(
+                'IndexedDB transaction failed'
+              )
+            );
+
+          };
+
+
+        tx.onabort =
+          event => {
+
+            reject(
+              event.target.error ||
+              new Error(
+                'IndexedDB transaction aborted'
+              )
+            );
+
+          };
+
+      }
+    );
+
+  }
+
+
+  /* =========================================================
+   * 12. ADD
+   * ========================================================= */
+
+  async function add(
+    store,
+    data
+  ) {
+
+    const storeName =
+      normalizeStoreName(store);
+
+    const record =
+      normalizeRecord(
+        storeName,
+        data,
+        {
+          isUpdate: false
+        }
+      );
+
+
+    await ensureReady();
+
+
+    /*
+     * FALLBACK
+     */
+    if (
+      usingFallback ||
+      !db
+    ) {
+
+      const records =
+        fallbackRead(
+          storeName
+        );
+
+      if (
+        fallbackFindIndex(
+          records,
+          record.id
+        ) !== -1
+      ) {
+
+        throw new Error(
+          `Record already exists: ${record.id}`
+        );
+
+      }
+
+      records.push(record);
+
+      fallbackWrite(
+        storeName,
+        records
+      );
+
+      return clone(record);
+
+    }
+
+
+    /*
+     * INDEXEDDB
+     */
+    return new Promise(
+      (resolve, reject) => {
+
+        try {
+
+          const tx =
+            db.transaction(
+              storeName,
+              'readwrite'
+            );
+
+          const objectStore =
+            tx.objectStore(
+              storeName
+            );
+
+          const request =
+            objectStore.add(
+              record
+            );
+
+
+          request.onsuccess =
+            () => {
+
+              resolve(
+                clone(record)
+              );
+
+            };
+
+
+          request.onerror =
+            event => {
+
+              reject(
+                event.target.error ||
+                new Error(
+                  'Unable to add record'
+                )
+              );
+
+            };
+
+        } catch (error) {
+
+          reject(error);
+
+        }
+
+      }
+    );
+
+  }
+
+
+  /* =========================================================
+   * 13. PUT / UPSERT
+   * ========================================================= */
+
+  async function put(
+    store,
+    data
+  ) {
+
+    const storeName =
+      normalizeStoreName(store);
+
+    const record =
+      normalizeRecord(
+        storeName,
+        data,
+        {
+          isUpdate: true
+        }
+      );
+
+
+    await ensureReady();
+
+
+    if (
+      usingFallback ||
+      !db
+    ) {
+
+      const records =
+        fallbackRead(
+          storeName
+        );
+
+      const index =
+        fallbackFindIndex(
+          records,
+          record.id
+        );
+
+      if (index >= 0) {
+
+        /*
+         * Preserve original creation time.
+         */
+        if (
+          records[index].createdAt
+        ) {
+
+          record.createdAt =
+            records[index].createdAt;
+
+        }
+
+        records[index] =
+          record;
+
+      } else {
+
+        records.push(
+          record
+        );
+
+      }
+
+      fallbackWrite(
+        storeName,
+        records
+      );
+
+      return clone(record);
+
+    }
+
+
+    return new Promise(
+      (resolve, reject) => {
+
+        try {
+
+          const tx =
+            db.transaction(
+              storeName,
+              'readwrite'
+            );
+
+          const objectStore =
+            tx.objectStore(
+              storeName
+            );
+
+          const request =
+            objectStore.put(
+              record
+            );
+
+          request.onsuccess =
+            () => {
+
+              resolve(
+                clone(record)
+              );
+
+            };
+
+          request.onerror =
+            event => {
+
+              reject(
+                event.target.error ||
+                new Error(
+                  'Unable to save record'
+                )
+              );
+
+            };
+
+        } catch (error) {
+
+          reject(error);
+
+        }
+
+      }
+    );
+
+  }
+
+
+  /* =========================================================
+   * 14. GET
+   * ========================================================= */
+
+  async function get(
+    store,
+    id
+  ) {
+
+    const storeName =
+      normalizeStoreName(store);
+
+    const key =
+      cleanText(
+        id,
+        300
+      );
+
+
+    await ensureReady();
+
+
+    if (
+      usingFallback ||
+      !db
+    ) {
+
+      const records =
+        fallbackRead(
+          storeName
+        );
+
+      const record =
+        records.find(
+          item =>
+            String(item.id) ===
+            String(key)
+        );
+
+      return record
+        ? clone(record)
+        : null;
+
+    }
+
+
+    return new Promise(
+      (resolve, reject) => {
+
+        try {
+
+          const tx =
+            db.transaction(
+              storeName,
+              'readonly'
+            );
+
+          const objectStore =
+            tx.objectStore(
+              storeName
+            );
+
+          const request =
+            objectStore.get(
+              key
+            );
+
+          request.onsuccess =
+            () => {
+
+              resolve(
+                request.result
+                  ? clone(
+                      request.result
+                    )
+                  : null
+              );
+
+            };
+
+          request.onerror =
+            event => {
+
+              reject(
+                event.target.error
+              );
+
+            };
+
+        } catch (error) {
+
+          reject(error);
+
+        }
+
+      }
+    );
+
+  }
+
+
+  /* =========================================================
+   * 15. GET BY INDEX
+   * ========================================================= */
+
+  async function getByIndex(
+    store,
+    indexName,
+    value
+  ) {
+
+    const storeName =
+      normalizeStoreName(store);
+
+    const index =
+      cleanText(
+        indexName,
+        100
+      );
+
+
+    await ensureReady();
+
+
+    if (
+      usingFallback ||
+      !db
+    ) {
+
+      const records =
+        fallbackRead(
+          storeName
+        );
+
+      return records
+        .filter(
+          record =>
+            record[index] === value
+        )
+        .map(clone);
+
+    }
+
+
+    return new Promise(
+      (resolve, reject) => {
+
+        try {
+
+          const tx =
+            db.transaction(
+              storeName,
+              'readonly'
+            );
+
+          const objectStore =
+            tx.objectStore(
+              storeName
+            );
+
+          if (
+            !objectStore.indexNames
+              .contains(index)
+          ) {
+
+            reject(
+              new Error(
+                `Index not found: ${index}`
+              )
+            );
+
+            return;
+
+          }
+
+          const idx =
+            objectStore.index(
+              index
+            );
+
+          const request =
+            idx.getAll(
+              value
+            );
+
+          request.onsuccess =
+            () => {
+
+              resolve(
+                (request.result || [])
+                  .map(clone)
+              );
+
+            };
+
+          request.onerror =
+            event => {
+
+              reject(
+                event.target.error
+              );
+
+            };
+
+        } catch (error) {
+
+          reject(error);
+
+        }
+
+      }
+    );
+
+  }
+
+
+  /* =========================================================
+   * 16. ALL
+   * ========================================================= */
+
+  async function all(
+    store
+  ) {
+
+    const storeName =
+      normalizeStoreName(store);
+
+
+    await ensureReady();
+
+
+    if (
+      usingFallback ||
+      !db
+    ) {
+
+      return fallbackRead(
+        storeName
+      ).map(clone);
+
+    }
+
+
+    return new Promise(
+      (resolve, reject) => {
+
+        try {
+
+          const tx =
+            db.transaction(
+              storeName,
+              'readonly'
+            );
+
+          const objectStore =
+            tx.objectStore(
+              storeName
+            );
+
+          const request =
+            objectStore.getAll();
+
+
+          request.onsuccess =
+            () => {
+
+              resolve(
+                (request.result || [])
+                  .map(clone)
+              );
+
+            };
+
+
+          request.onerror =
+            event => {
+
+              reject(
+                event.target.error
+              );
+
+            };
+
+        } catch (error) {
+
+          reject(error);
+
+        }
+
+      }
+    );
+
+  }
+
+
+  /* =========================================================
+   * 17. DELETE
+   * ========================================================= */
+
+  async function remove(
+    store,
+    id
+  ) {
+
+    const storeName =
+      normalizeStoreName(store);
+
+    const key =
+      cleanText(
+        id,
+        300
+      );
+
+
+    await ensureReady();
+
+
+    if (
+      usingFallback ||
+      !db
+    ) {
+
+      const records =
+        fallbackRead(
+          storeName
+        );
+
+      const filtered =
+        records.filter(
+          record =>
+            String(record.id) !==
+            String(key)
+        );
+
+      const changed =
+        filtered.length !==
+        records.length;
+
+      fallbackWrite(
+        storeName,
+        filtered
+      );
+
+      return changed;
+
+    }
+
+
+    return new Promise(
+      (resolve, reject) => {
+
+        try {
+
+          const tx =
+            db.transaction(
+              storeName,
+              'readwrite'
+            );
+
+          const objectStore =
+            tx.objectStore(
+              storeName
+            );
+
+          const request =
+            objectStore.delete(
+              key
+            );
+
+          request.onsuccess =
+            () => {
+
+              resolve(true);
+
+            };
+
+          request.onerror =
+            event => {
+
+              reject(
+                event.target.error
+              );
+
+            };
+
+        } catch (error) {
+
+          reject(error);
+
+        }
+
+      }
+    );
+
+  }
+
+
+  /* =========================================================
+   * 18. CLEAR
+   * ========================================================= */
+
+  async function clear(
+    store
+  ) {
+
+    const storeName =
+      normalizeStoreName(store);
+
+
+    await ensureReady();
+
+
+    if (
+      usingFallback ||
+      !db
+    ) {
+
+      return fallbackWrite(
+        storeName,
+        []
+      );
+
+    }
+
+
+    return new Promise(
+      (resolve, reject) => {
+
+        try {
+
+          const tx =
+            db.transaction(
+              storeName,
+              'readwrite'
+            );
+
+          const objectStore =
+            tx.objectStore(
+              storeName
+            );
+
+          const request =
+            objectStore.clear();
+
+
+          request.onsuccess =
+            () => {
+
+              resolve(true);
+
+            };
+
+
+          request.onerror =
+            event => {
+
+              reject(
+                event.target.error
+              );
+
+            };
+
+        } catch (error) {
+
+          reject(error);
+
+        }
+
+      }
+    );
+
+  }
+
+
+  /* =========================================================
+   * 19. COUNT
+   * ========================================================= */
+
+  async function count(
+    store
+  ) {
+
+    const storeName =
+      normalizeStoreName(store);
+
+
+    await ensureReady();
+
+
+    if (
+      usingFallback ||
+      !db
+    ) {
+
+      return fallbackRead(
+        storeName
+      ).length;
+
+    }
+
+
+    return new Promise(
+      (resolve, reject) => {
+
+        try {
+
+          const tx =
+            db.transaction(
+              storeName,
+              'readonly'
+            );
+
+          const objectStore =
+            tx.objectStore(
+              storeName
+            );
+
+          const request =
+            objectStore.count();
+
+
+          request.onsuccess =
+            () => {
+
+              resolve(
+                request.result || 0
+              );
+
+            };
+
+
+          request.onerror =
+            event => {
+
+              reject(
+                event.target.error
+              );
+
+            };
+
+        } catch (error) {
+
+          reject(error);
+
+        }
+
+      }
+    );
+
+  }
+
+
+  /* =========================================================
+   * 20. UPDATE
+   * ========================================================= */
+
+  async function update(
+    store,
+    id,
+    changes
+  ) {
+
+    const existing =
+      await get(
+        store,
+        id
+      );
+
+    if (!existing) {
+
+      throw new Error(
+        `Record not found: ${id}`
+      );
+
+    }
+
+    const merged = {
+
+      ...existing,
+
+      ...(clone(changes) || {}),
+
+      id:
+        existing.id,
+
+      createdAt:
+        existing.createdAt
+
+    };
+
+    return put(
+      store,
+      merged
+    );
+
+  }
+
+
+  /* =========================================================
+   * 21. FIND
+   * ========================================================= */
+
+  async function find(
+    store,
+    predicate
+  ) {
+
+    if (
+      typeof predicate !==
+      'function'
+    ) {
+
+      throw new TypeError(
+        'predicate must be a function'
+      );
+
+    }
+
+    const records =
+      await all(store);
+
+    return records.find(
+      predicate
+    ) || null;
+
+  }
+
+
+  /* =========================================================
+   * 22. FILTER
+   * ========================================================= */
+
+  async function filter(
+    store,
+    predicate
+  ) {
+
+    if (
+      typeof predicate !==
+      'function'
+    ) {
+
+      throw new TypeError(
+        'predicate must be a function'
+      );
+
+    }
+
+    const records =
+      await all(store);
+
+    return records.filter(
+      predicate
+    );
+
+  }
+
+
+  /* =========================================================
+   * 23. SEARCH
+   * ========================================================= */
+
+  async function search(
+    store,
+    query,
+    fields = []
+  ) {
+
+    const storeName =
+      normalizeStoreName(store);
+
+    const q =
+      String(query ?? '')
+        .trim()
+        .toLowerCase();
+
+    if (!q) {
+
+      return all(storeName);
+
+    }
+
+
+    const records =
+      await all(storeName);
+
+
+    const selectedFields =
+      Array.isArray(fields) &&
+      fields.length
+        ? fields
+        : [
+            'name',
+            'phone',
+            'genericName',
+            'brandName',
+            'rxNumber',
+            'bookingNumber',
+            'department',
+            'diagnosis'
+          ];
+
+
+    return records.filter(
+      record => {
+
+        return selectedFields.some(
+          field => {
+
+            const value =
+              record[field];
+
+            if (
+              value === undefined ||
+              value === null
+            ) {
+
+              return false;
+
+            }
+
+            return String(value)
+              .toLowerCase()
+              .includes(q);
+
+          }
+        );
+
+      }
+    );
+
+  }
+
+
+  /* =========================================================
+   * 24. PATIENT HELPERS
+   * ========================================================= */
+
+  async function savePatient(
+    patient
+  ) {
+
+    return put(
+      'patients',
+      patient
+    );
+
+  }
+
+
+  async function getPatient(
+    patientId
+  ) {
+
+    return get(
+      'patients',
+      patientId
+    );
+
+  }
+
+
+  async function findPatientByPhone(
+    phone
+  ) {
+
+    const result =
+      await getByIndex(
+        'patients',
+        'phone',
+        phone
+      );
+
+    return result[0] || null;
+
+  }
+
+
+  async function findPatientsByName(
+    name
+  ) {
+
+    return search(
+      'patients',
+      name,
+      ['name']
+    );
+
+  }
+
+
+  /* =========================================================
+   * 25. PRESCRIPTION HELPERS
+   * ========================================================= */
+
+  async function savePrescription(
+    prescription
+  ) {
+
+    return put(
+      'prescriptions',
+      prescription
+    );
+
+  }
+
+
+  async function getPrescription(
+    id
+  ) {
+
+    return get(
+      'prescriptions',
+      id
+    );
+
+  }
+
+
+  async function findPrescriptionByRxNumber(
+    rxNumber
+  ) {
+
+    const result =
+      await getByIndex(
+        'prescriptions',
+        'rxNumber',
+        rxNumber
+      );
+
+    return result[0] || null;
+
+  }
+
+
+  async function getPatientPrescriptions(
+    patientId
+  ) {
+
+    return getByIndex(
+      'prescriptions',
+      'patientId',
+      patientId
+    );
+
+  }
+
+
+  /* =========================================================
+   * 26. BOOKING HELPERS
+   * ========================================================= */
+
+  async function saveBooking(
+    booking
+  ) {
+
+    return put(
+      'bookings',
+      booking
+    );
+
+  }
+
+
+  async function getBooking(
+    id
+  ) {
+
+    return get(
+      'bookings',
+      id
+    );
+
+  }
+
+
+  async function findBookingByNumber(
+    bookingNumber
+  ) {
+
+    const result =
+      await getByIndex(
+        'bookings',
+        'bookingNumber',
+        bookingNumber
+      );
+
+    return result[0] || null;
+
+  }
+
+
+  async function getBookingsByDate(
+    date
+  ) {
+
+    return getByIndex(
+      'bookings',
+      'date',
+      date
+    );
+
+  }
+
+
+  async function getBookingsByStatus(
+    status
+  ) {
+
+    return getByIndex(
+      'bookings',
+      'status',
+      status
+    );
+
+  }
+
+
+  /* =========================================================
+   * 27. AUDIT LOG
+   * ========================================================= */
+
+  async function audit(
     action,
-    detail: detail || '',
-    by: (() => {
+    details = {},
+    options = {}
+  ) {
+
+    const record = {
+
+      id:
+        createId('AUDIT'),
+
+      action:
+        cleanText(
+          action,
+          200
+        ),
+
+      timestamp:
+        nowISO(),
+
+      userId:
+        cleanText(
+          options.userId || '',
+          200
+        ),
+
+      userName:
+        cleanText(
+          options.userName || '',
+          200
+        ),
+
+      entityType:
+        cleanText(
+          options.entityType || '',
+          100
+        ),
+
+      entityId:
+        cleanText(
+          options.entityId || '',
+          300
+        ),
+
+      source:
+        cleanText(
+          options.source ||
+          'client',
+          100
+        ),
+
+      details:
+        clone(details) || {},
+
+      version:
+        CONFIG.version
+
+    };
+
+
+    const result =
+      await add(
+        'audit',
+        record
+      );
+
+
+    /*
+     * Best-effort cleanup.
+     * لا نفشل العملية الأصلية إذا فشل التنظيف.
+     */
+    try {
+
+      const total =
+        await count(
+          'audit'
+        );
+
+      if (
+        total >
+        CONFIG.maxAuditRecords
+      ) {
+
+        await trimStore(
+          'audit',
+          CONFIG.maxAuditRecords
+        );
+
+      }
+
+    } catch (error) {
+
+      debugLog(
+        'Audit cleanup failed',
+        error
+      );
+
+    }
+
+
+    return result;
+
+  }
+
+
+  /* =========================================================
+   * 28. TRIM STORE
+   * ========================================================= */
+
+  async function trimStore(
+    store,
+    maxRecords
+  ) {
+
+    const storeName =
+      normalizeStoreName(store);
+
+    const limit =
+      Math.max(
+        0,
+        Number(maxRecords) || 0
+      );
+
+
+    const records =
+      await all(storeName);
+
+    if (
+      records.length <= limit
+    ) {
+
+      return 0;
+
+    }
+
+
+    records.sort(
+      (a, b) => {
+
+        const aTime =
+          Date.parse(
+            a.updatedAt ||
+            a.createdAt ||
+            a.timestamp ||
+            ''
+          ) || 0;
+
+        const bTime =
+          Date.parse(
+            b.updatedAt ||
+            b.createdAt ||
+            b.timestamp ||
+            ''
+          ) || 0;
+
+        return aTime - bTime;
+
+      }
+    );
+
+
+    const removeCount =
+      records.length - limit;
+
+    const toDelete =
+      records.slice(
+        0,
+        removeCount
+      );
+
+
+    for (
+      const record of toDelete
+    ) {
+
       try {
-        const u = JSON.parse(localStorage.getItem('mp_session') || 'null');
-        return u ? (u.fullName || u.username) : 'غير مسجل';
-      } catch (_) { return 'غير مسجل'; }
-    })(),
-    time: Date.now()
+
+        await remove(
+          storeName,
+          record.id
+        );
+
+      } catch (error) {
+
+        debugLog(
+          'trimStore delete failed',
+          error
+        );
+
+      }
+
+    }
+
+
+    return removeCount;
+
+  }
+
+
+  /* =========================================================
+   * 29. SETTINGS
+   * ========================================================= */
+
+  async function setSetting(
+    key,
+    value
+  ) {
+
+    const setting = {
+
+      key:
+        cleanText(
+          key,
+          300
+        ),
+
+      value:
+        clone(value),
+
+      updatedAt:
+        nowISO()
+
+    };
+
+
+    return put(
+      'settings',
+      setting
+    );
+
+  }
+
+
+  async function getSetting(
+    key,
+    defaultValue = null
+  ) {
+
+    const setting =
+      await get(
+        'settings',
+        cleanText(
+          key,
+          300
+        )
+      );
+
+    if (!setting) {
+
+      return defaultValue;
+
+    }
+
+    return clone(
+      setting.value
+    );
+
+  }
+
+
+  async function removeSetting(
+    key
+  ) {
+
+    return remove(
+      'settings',
+      cleanText(
+        key,
+        300
+      )
+    );
+
+  }
+
+
+  /* =========================================================
+   * 30. META
+   * ========================================================= */
+
+  async function setMeta(
+    key,
+    value
+  ) {
+
+    return put(
+      'meta',
+      {
+
+        key:
+          cleanText(
+            key,
+            300
+          ),
+
+        value:
+          clone(value),
+
+        updatedAt:
+          nowISO()
+
+      }
+    );
+
+  }
+
+
+  async function getMeta(
+    key,
+    defaultValue = null
+  ) {
+
+    const record =
+      await get(
+        'meta',
+        cleanText(
+          key,
+          300
+        )
+      );
+
+    return record
+      ? clone(record.value)
+      : defaultValue;
+
+  }
+
+
+  /* =========================================================
+   * 31. DATABASE INFO
+   * ========================================================= */
+
+  async function info() {
+
+    await ensureReady();
+
+    const result = {
+
+      name:
+        CONFIG.dbName,
+
+      version:
+        CONFIG.dbVersion,
+
+      apiVersion:
+        CONFIG.version,
+
+      initialized,
+
+      usingFallback,
+
+      indexedDB:
+        !usingFallback && Boolean(db),
+
+      stores: {}
+
+    };
+
+
+    for (
+      const store of STORE_NAMES
+    ) {
+
+      try {
+
+        result.stores[store] =
+          await count(store);
+
+      } catch (_) {
+
+        result.stores[store] =
+          null;
+
+      }
+
+    }
+
+
+    return result;
+
+  }
+
+
+  /* =========================================================
+   * 32. EXPORT ALL DATA
+   * ========================================================= */
+
+  async function exportData(
+    options = {}
+  ) {
+
+    const includeAudit =
+      options.includeAudit !== false;
+
+    const data = {
+
+      application:
+        'MediPrescribe',
+
+      dbName:
+        CONFIG.dbName,
+
+      dbVersion:
+        CONFIG.dbVersion,
+
+      exportedAt:
+        nowISO(),
+
+      version:
+        CONFIG.version,
+
+      stores: {}
+
+    };
+
+
+    for (
+      const store of STORE_NAMES
+    ) {
+
+      if (
+        !includeAudit &&
+        store === 'audit'
+      ) {
+
+        continue;
+
+      }
+
+      data.stores[store] =
+        await all(store);
+
+    }
+
+
+    return data;
+
+  }
+
+
+  /* =========================================================
+   * 33. EXPORT JSON STRING
+   * ========================================================= */
+
+  async function exportJSON(
+    options = {}
+  ) {
+
+    const data =
+      await exportData(
+        options
+      );
+
+    return JSON.stringify(
+      data,
+      null,
+      2
+    );
+
+  }
+
+
+  /* =========================================================
+   * 34. DOWNLOAD BACKUP
+   * ========================================================= */
+
+  async function downloadBackup(
+    options = {}
+  ) {
+
+    const json =
+      await exportJSON(
+        options
+      );
+
+    const blob =
+      new Blob(
+        [json],
+        {
+          type:
+            'application/json;charset=utf-8'
+        }
+      );
+
+    const url =
+      URL.createObjectURL(
+        blob
+      );
+
+    const link =
+      document.createElement(
+        'a'
+      );
+
+    const date =
+      new Date()
+        .toISOString()
+        .slice(
+          0,
+          10
+        );
+
+    link.href = url;
+
+    link.download =
+      `MediPrescribe_Backup_${date}.json`;
+
+    document.body.appendChild(
+      link
+    );
+
+    link.click();
+
+    link.remove();
+
+    setTimeout(
+      () => {
+
+        try {
+          URL.revokeObjectURL(url);
+        } catch (_) {
+          /* ignore */
+        }
+
+      },
+      1000
+    );
+
+    await audit(
+      'DATABASE_BACKUP_EXPORTED',
+      {
+        includeAudit:
+          options.includeAudit !== false
+      },
+      {
+        source: 'db'
+      }
+    ).catch(() => {});
+
+
+    return true;
+
+  }
+
+
+  /* =========================================================
+   * 35. VALIDATE IMPORT
+   * ========================================================= */
+
+  function validateImportData(
+    data
+  ) {
+
+    if (
+      !data ||
+      typeof data !== 'object'
+    ) {
+
+      throw new Error(
+        'Invalid backup data.'
+      );
+
+    }
+
+
+    if (
+      !data.stores ||
+      typeof data.stores !== 'object'
+    ) {
+
+      throw new Error(
+        'Backup does not contain stores.'
+      );
+
+    }
+
+
+    return true;
+
+  }
+
+
+  /* =========================================================
+   * 36. IMPORT DATA
+   *
+   * mode:
+   *   merge  = يضيف/يحدث السجلات
+   *   replace = يمسح المخازن الموجودة ثم يستورد
+   * ========================================================= */
+
+  async function importData(
+    data,
+    options = {}
+  ) {
+
+    validateImportData(
+      data
+    );
+
+
+    const mode =
+      options.mode === 'replace'
+        ? 'replace'
+        : 'merge';
+
+
+    const imported = {
+
+      stores: {},
+
+      mode,
+
+      importedAt:
+        nowISO()
+
+    };
+
+
+    /*
+     * Replace mode:
+     * clear selected stores first.
+     */
+    if (mode === 'replace') {
+
+      for (
+        const store of STORE_NAMES
+      ) {
+
+        if (
+          Array.isArray(
+            data.stores[store]
+          )
+        ) {
+
+          await clear(store);
+
+        }
+
+      }
+
+    }
+
+
+    /*
+     * Import records.
+     */
+    for (
+      const store of STORE_NAMES
+    ) {
+
+      const records =
+        data.stores[store];
+
+      if (
+        !Array.isArray(records)
+      ) {
+
+        continue;
+
+      }
+
+
+      imported.stores[store] =
+        0;
+
+
+      for (
+        const record of records
+      ) {
+
+        if (
+          !record ||
+          typeof record !== 'object'
+        ) {
+
+          continue;
+
+        }
+
+
+        try {
+
+          await put(
+            store,
+            record
+          );
+
+          imported.stores[store] += 1;
+
+        } catch (error) {
+
+          debugLog(
+            `Import failed for ${store}`,
+            error
+          );
+
+        }
+
+      }
+
+    }
+
+
+    await audit(
+      'DATABASE_BACKUP_IMPORTED',
+      {
+        mode,
+        stores:
+          imported.stores
+      },
+      {
+        source: 'db'
+      }
+    ).catch(() => {});
+
+
+    return imported;
+
+  }
+
+
+  /* =========================================================
+   * 37. IMPORT JSON
+   * ========================================================= */
+
+  async function importJSON(
+    json,
+    options = {}
+  ) {
+
+    let data;
+
+    try {
+
+      data =
+        typeof json === 'string'
+          ? JSON.parse(json)
+          : json;
+
+    } catch (error) {
+
+      throw new Error(
+        'Invalid JSON backup file.'
+      );
+
+    }
+
+
+    return importData(
+      data,
+      options
+    );
+
+  }
+
+
+  /* =========================================================
+   * 38. IMPORT FILE
+   * ========================================================= */
+
+  async function importFile(
+    file,
+    options = {}
+  ) {
+
+    if (!file) {
+
+      throw new Error(
+        'No backup file selected.'
+      );
+
+    }
+
+
+    const text =
+      await file.text();
+
+
+    return importJSON(
+      text,
+      options
+    );
+
+  }
+
+
+  /* =========================================================
+   * 39. DATABASE HEALTH CHECK
+   * ========================================================= */
+
+  async function healthCheck() {
+
+    const result = {
+
+      ok: true,
+
+      database:
+        CONFIG.dbName,
+
+      version:
+        CONFIG.dbVersion,
+
+      indexedDB:
+        Boolean(
+          window.indexedDB
+        ),
+
+      usingFallback,
+
+      stores: {},
+
+      errors: []
+
+    };
+
+
+    try {
+
+      await ensureReady();
+
+    } catch (error) {
+
+      result.ok = false;
+
+      result.errors.push(
+        String(
+          error.message ||
+          error
+        )
+      );
+
+      return result;
+
+    }
+
+
+    for (
+      const store of STORE_NAMES
+    ) {
+
+      try {
+
+        result.stores[store] =
+          await count(store);
+
+      } catch (error) {
+
+        result.ok = false;
+
+        result.errors.push(
+          `${store}: ${
+            error.message ||
+            error
+          }`
+        );
+
+      }
+
+    }
+
+
+    return result;
+
+  }
+
+
+  /* =========================================================
+   * 40. RESET DATABASE DATA
+   *
+   * خطير:
+   * يمسح جميع بيانات MediPrescribe المحلية.
+   * ========================================================= */
+
+  async function clearAll(
+    options = {}
+  ) {
+
+    if (
+      options.confirm !== true
+    ) {
+
+      throw new Error(
+        'clearAll requires { confirm: true }.'
+      );
+
+    }
+
+
+    for (
+      const store of STORE_NAMES
+    ) {
+
+      await clear(store);
+
+    }
+
+
+    return true;
+
+  }
+
+
+  /* =========================================================
+   * 41. CLOSE DATABASE
+   * ========================================================= */
+
+  function close() {
+
+    if (!db) {
+      return;
+    }
+
+    try {
+
+      db.close();
+
+    } catch (_) {
+      /* ignore */
+    }
+
+    db = null;
+
+    initialized = false;
+
+  }
+
+
+  /* =========================================================
+   * 42. DELETE DATABASE
+   *
+   * خطير جدًا.
+   * يستخدم فقط أثناء التطوير أو إعادة التهيئة.
+   * ========================================================= */
+
+  async function destroy(
+    options = {}
+  ) {
+
+    if (
+      options.confirm !== true
+    ) {
+
+      throw new Error(
+        'destroy requires { confirm: true }.'
+      );
+
+    }
+
+
+    close();
+
+
+    if (
+      !window.indexedDB
+    ) {
+
+      for (
+        const store of STORE_NAMES
+      ) {
+
+        try {
+
+          localStorage.removeItem(
+            fallbackKey(store)
+          );
+
+        } catch (_) {
+          /* ignore */
+        }
+
+      }
+
+      return true;
+
+    }
+
+
+    return new Promise(
+      (resolve, reject) => {
+
+        const request =
+          indexedDB.deleteDatabase(
+            CONFIG.dbName
+          );
+
+
+        request.onsuccess =
+          () => {
+
+            db = null;
+
+            initialized = false;
+
+            resolve(true);
+
+          };
+
+
+        request.onerror =
+          event => {
+
+            reject(
+              event.target.error
+            );
+
+          };
+
+
+        request.onblocked =
+          () => {
+
+            debugLog(
+              'Database deletion blocked'
+            );
+
+          };
+
+      }
+    );
+
+  }
+
+
+  /* =========================================================
+   * 43. DATABASE VERSION
+   * ========================================================= */
+
+  async function getVersion() {
+
+    await ensureReady();
+
+    return {
+
+      application:
+        CONFIG.version,
+
+      database:
+        CONFIG.dbVersion,
+
+      name:
+        CONFIG.dbName,
+
+      usingFallback
+
+    };
+
+  }
+
+
+  /* =========================================================
+   * 44. GENERIC UPSERT
+   * ========================================================= */
+
+  async function upsert(
+    store,
+    data
+  ) {
+
+    return put(
+      store,
+      data
+    );
+
+  }
+
+
+  /* =========================================================
+   * 45. GENERIC REMOVE ALIAS
+   * ========================================================= */
+
+  async function del(
+    store,
+    id
+  ) {
+
+    return remove(
+      store,
+      id
+    );
+
+  }
+
+
+  /* =========================================================
+   * 46. INITIALIZATION
+   * ========================================================= */
+
+  async function init() {
+
+    if (
+      initialized
+    ) {
+
+      return info();
+
+    }
+
+
+    try {
+
+      await ensureReady();
+
+      /*
+       * Store schema sanity.
+       */
+      await setMeta(
+        'lastInit',
+        nowISO()
+      );
+
+
+      debugLog(
+        `DB v${CONFIG.version} initialized`
+      );
+
+
+      return info();
+
+    } catch (error) {
+
+      errorLog(
+        'Database initialization failed',
+        error
+      );
+
+      throw error;
+
+    }
+
+  }
+
+
+  /* =========================================================
+   * 47. PUBLIC API
+   * ========================================================= */
+
+  const API = {
+
+    /*
+     * Version / configuration
+     */
+    VERSION:
+      CONFIG.version,
+
+    version:
+      CONFIG.version,
+
+    config:
+      CONFIG,
+
+    stores:
+      STORE_NAMES,
+
+    /*
+     * Initialization
+     */
+    init,
+
+    open,
+
+    close,
+
+    ensureReady,
+
+    info,
+
+    healthCheck,
+
+    getVersion,
+
+    /*
+     * CRUD
+     */
+    add,
+
+    put,
+
+    upsert,
+
+    get,
+
+    getByIndex,
+
+    all,
+
+    update,
+
+    remove,
+
+    del,
+
+    clear,
+
+    clearAll,
+
+    count,
+
+    find,
+
+    filter,
+
+    search,
+
+    /*
+     * Patients
+     */
+    savePatient,
+
+    getPatient,
+
+    findPatientByPhone,
+
+    findPatientsByName,
+
+    /*
+     * Prescriptions
+     */
+    savePrescription,
+
+    getPrescription,
+
+    findPrescriptionByRxNumber,
+
+    getPatientPrescriptions,
+
+    /*
+     * Bookings
+     */
+    saveBooking,
+
+    getBooking,
+
+    findBookingByNumber,
+
+    getBookingsByDate,
+
+    getBookingsByStatus,
+
+    /*
+     * Audit
+     */
+    audit,
+
+    logAudit:
+      audit,
+
+    /*
+     * Settings
+     */
+    setSetting,
+
+    getSetting,
+
+    removeSetting,
+
+    /*
+     * Meta
+     */
+    setMeta,
+
+    getMeta,
+
+    /*
+     * Backup
+     */
+    exportData,
+
+    exportJSON,
+
+    downloadBackup,
+
+    importData,
+
+    importJSON,
+
+    importFile,
+
+    /*
+     * Maintenance
+     */
+    trimStore,
+
+    destroy,
+
+    /*
+     * Utility
+     */
+    createId,
+
+    nowISO
+
   };
 
-  /* إن كانت القاعدة مغلقة، احتفظ بالحدث */
-  if (!_db) {
-    window.__pendingAudit.push(entry);
-    return;
-  }
 
-  try {
-    await DB.add('audit', entry);
-  } catch (e) {
-    console.error('logAudit error:', e);
-    window.__pendingAudit.push(entry);
-  }
-}
-window.logAudit = logAudit;
+  /* =========================================================
+   * 48. GLOBAL EXPORT
+   * ========================================================= */
 
-/* تفريغ الأحداث المعلّقة بعد فتح القاعدة */
-async function _flushPendingAudit() {
-  if (!window.__pendingAudit.length || !_db) return;
-  const pending = [...window.__pendingAudit];
-  window.__pendingAudit = [];
-
-  for (const entry of pending) {
-    try {
-      await DB.add('audit', entry);
-    } catch (err) {
-      console.warn('flush pending audit failed:', err);
-    }
-  }
-
-  if (pending.length) {
-    console.log(`🔁 تم تفريغ ${pending.length} حدث تدقيق معلّق`);
-  }
-}
+  window.DB = API;
 
 
-/* ==========================================================
-   11. أدوات مساعدة
-   ========================================================== */
+  /* =========================================================
+   * 49. BACKWARD COMPATIBILITY
+   * ========================================================= */
 
-/* ✅ v2.1-07: بـ getByIndex بدل byIndex+[0] */
-async function getUserByUsername(username) {
-  try {
-    return await DB.getByIndex('users', 'username', username);
-  } catch (e) {
-    console.error('getUserByUsername error:', e);
-    return null;
-  }
-}
-window.getUserByUsername = getUserByUsername;
-
-/* جلب المستخدم النشط من الجلسة */
-function getCurrentUser() {
-  try {
-    return JSON.parse(localStorage.getItem('mp_session') || 'null');
-  } catch (_) {
-    return null;
-  }
-}
-window.getCurrentUser = getCurrentUser;
+  /*
+   * بعض الأكواد القديمة قد تستخدم:
+   *
+   * DB.all('prescriptions')
+   * DB.add('audit', data)
+   * DB.get(...)
+   * DB.put(...)
+   *
+   * API الحالية تدعمها مباشرة.
+   */
 
 
-/* ==========================================================
-   hasPermission — نسخة محصّنة (v2.1)
-   ✅ v2.1-05: حماية الحروف الكبيرة + دور عربي + احتياطيات
-   ========================================================== */
-function hasPermission(permission) {
-  const user = getCurrentUser();
-  if (!user) return false;
+  /* =========================================================
+   * 50. AUTO INIT
+   * ========================================================= */
 
-  const roleRaw = String(user.role || '').trim();
-  const roleLow = roleRaw.toLowerCase();
+  if (
+    document.readyState ===
+    'loading'
+  ) {
 
-  /* ── 1) المدير: كل الصلاحيات دائماً ── */
-  const adminRoles = ['admin', 'مدير النظام', 'مدير'];
-  if (adminRoles.includes(roleRaw) || adminRoles.includes(roleLow)) return true;
+    document.addEventListener(
+      'DOMContentLoaded',
+      () => {
 
-  /* ── 2) صلاحيات المستخدم من الجلسة ── */
-  let perms = Array.isArray(user.permissions) ? [...user.permissions] : [];
+        init().catch(
+          error => {
 
-  /* ── 3) إن كانت فارغة → استخدم صلاحيات الدور الافتراضية ── */
-  if (!perms.length) {
-    /* بصيغة إنجليزية (المفتاح الأساسي) */
-    if (ROLE_DEFAULT_PERMISSIONS[roleRaw]) {
-      perms = [...ROLE_DEFAULT_PERMISSIONS[roleRaw]];
-    } else if (ROLE_DEFAULT_PERMISSIONS[roleLow]) {
-      perms = [...ROLE_DEFAULT_PERMISSIONS[roleLow]];
-    } else {
-      /* بصيغة عربية */
-      const key = ROLE_AR_TO_EN[roleRaw];
-      if (key) perms = [...(ROLE_DEFAULT_PERMISSIONS[key] || [])];
-    }
-  }
+            errorLog(
+              'Auto initialization failed',
+              error
+            );
 
-  /* ── 4) احتياطي: كل طبيب يستطيع إنشاء وصفات ── */
-  if (permission === 'create_prescription') {
-    const doctorRoles = ['doctor', 'طبيب باطنية', 'طبيب'];
-    if (doctorRoles.includes(roleRaw) || doctorRoles.includes(roleLow)) return true;
-  }
+          }
+        );
 
-  /* ── 5) احتياطي: كل طبيب/صيدلي/ممرض/استقبال يستطيع عرض السجلات ── */
-  if (permission === 'view_records') {
-    const viewerRoles = [
-      'doctor', 'pharmacist', 'nurse', 'receptionist',
-      'طبيب باطنية', 'طبيب', 'صيدلي', 'ممرض', 'ممرضة', 'استقبال'
-    ];
-    if (viewerRoles.includes(roleRaw) || viewerRoles.includes(roleLow)) return true;
-  }
-
-  /* ── 6) احتياطي: كل طبيب/صيدلي/استقبال يستطيع الطباعة ── */
-  if (permission === 'print_prescription') {
-    const printerRoles = [
-      'doctor', 'pharmacist', 'receptionist',
-      'طبيب باطنية', 'طبيب', 'صيدلي', 'استقبال'
-    ];
-    if (printerRoles.includes(roleRaw) || printerRoles.includes(roleLow)) return true;
-  }
-
-  /* ── 7) الفحص النهائي ── */
-  return perms.includes(permission);
-}
-window.hasPermission = hasPermission;
-
-
-/* ✅ v2.1-09: getRoleLabel يدعم الأدوار العربية */
-function getRoleLabel(role) {
-  if (!role) return '';
-  if (ROLE_LABELS_AR[role]) return ROLE_LABELS_AR[role];
-
-  /* احتياطي: تحويل من العربية إلى المفتاح الإنجليزي */
-  const key = ROLE_AR_TO_EN[role];
-  return key ? ROLE_LABELS_AR[key] : role;
-}
-window.getRoleLabel = getRoleLabel;
-
-/* هل المستخدم مدير؟ */
-function isAdmin() {
-  const user = getCurrentUser();
-  if (!user) return false;
-  const role = String(user.role || '').trim();
-  return ['admin', 'مدير النظام', 'مدير'].includes(role);
-}
-window.isAdmin = isAdmin;
-
-
-/* ==========================================================
-   12. إعادة تعيين قاعدة البيانات (للتطوير فقط)
-   ✅ v2.1-10: تنظيف شامل + معالجة أخطاء
-   ========================================================== */
-async function resetDatabase() {
-  /* ── إغلاق آمن ── */
-  try {
-    if (_db) { _db.close(); }
-  } catch (e) {
-    console.warn('close error:', e);
-  }
-
-  _db = null;
-  _initPromise = null;
-  window.__pendingAudit = [];
-
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.deleteDatabase(DB_NAME);
-
-    req.onsuccess = () => {
-      console.log('✅ تم حذف قاعدة البيانات — أعد تحميل الصفحة');
-      resolve(true);
-    };
-
-    req.onerror = () => {
-      reject(req.error || new Error('فشل حذف قاعدة البيانات'));
-    };
-
-    req.onblocked = () => {
-      console.warn('⚠️ قاعدة البيانات مقفلة — أغلق كل التبويبات المفتوحة');
-      reject(new Error('قاعدة البيانات مقفلة — أغلق التبويبات ثم أعد المحاولة'));
-    };
-  });
-}
-window.resetDatabase = resetDatabase;
-
-
-/* ==========================================================
-   13. رسالة الإقلاع (شرطية)
-   ========================================================== */
-(function announceReady() {
-  const isDev = location.hostname === 'localhost' ||
-                location.hostname === '127.0.0.1' ||
-                location.search.includes('debug');
-  if (isDev) {
-    console.log(
-      '%c✅ db.js جاهز | v2.1 | الأوامر: resetDatabase()',
-      'color:#43a047;font-weight:bold'
+      },
+      {
+        once: true
+      }
     );
+
+  } else {
+
+    init().catch(
+      error => {
+
+        errorLog(
+          'Auto initialization failed',
+          error
+        );
+
+      }
+    );
+
   }
+
+
 })();
