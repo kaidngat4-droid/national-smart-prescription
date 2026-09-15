@@ -3,10 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>MediPrescribe | سجل Blockchain</title>
+
 <meta name="theme-color" content="#0a1628">
 <meta name="description" content="عرض تفصيلي لسلسلة الكتل الطبية — MediPrescribe">
 <meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 
 <!-- Favicon -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%230a1628'/%3E%3Ccircle cx='50' cy='50' r='42' fill='none' stroke='%23d4af37' stroke-width='2.5'/%3E%3Cpath d='M50 28v44M32 38h36M38 68h24' stroke='%23d4af37' stroke-width='3.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
@@ -17,122 +20,276 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800&family=Great+Vibes&display=swap" rel="stylesheet">
 
 <!-- Font Awesome -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <style>
 /* ==========================================================
-   Audit Blockchain Page v1.0
+   MediPrescribe — Audit Blockchain
+   Enhanced Production UI
    ========================================================== */
 
 :root {
   --navy: #0a1628;
   --navy-2: #0f2138;
   --navy-3: #132a45;
+
   --gold: #d4af37;
   --gold-light: #f1d878;
   --gold-dark: #b8892e;
+
   --green: #43a047;
   --green-light: #81c784;
+
   --red: #e53935;
   --red-light: #ff8a80;
+
   --blue: #0288d1;
   --blue-light: #64b5f6;
-  --cyan: #00F3FF;
+
+  --cyan: #00f3ff;
   --orange: #ff9800;
+
   --text: #eef3f8;
   --muted: #93a2b5;
-  --border: rgba(212, 175, 55, 0.2);
+
+  --border: rgba(212, 175, 55, 0.20);
+  --border-soft: rgba(255, 255, 255, 0.10);
+
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-2: rgba(255, 255, 255, 0.03);
+
+  --shadow-sm: 0 8px 22px rgba(0, 0, 0, 0.20);
+  --shadow-md: 0 16px 40px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 30px 80px rgba(0, 0, 0, 0.60);
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+
+  --focus: 0 0 0 3px rgba(212, 175, 55, 0.20);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+/* ═══════════════════════════════════════════════════════
+   Reset
+   ═══════════════════════════════════════════════════════ */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: dark;
+}
 
 body {
-  font-family: 'Tajawal', 'Cairo', system-ui, sans-serif;
-  background:
-    radial-gradient(1100px 550px at 10% -10%, rgba(2, 136, 209, 0.14), transparent 55%),
-    radial-gradient(900px 650px at 105% 0%, rgba(212, 175, 55, 0.10), transparent 55%),
-    linear-gradient(180deg, var(--navy) 0%, var(--navy-2) 100%);
-  background-attachment: fixed;
-  color: var(--text);
   min-height: 100vh;
+  font-family: 'Tajawal', 'Cairo', system-ui, sans-serif;
   line-height: 1.6;
+  color: var(--text);
+
+  background:
+    radial-gradient(
+      1100px 550px at 10% -10%,
+      rgba(2, 136, 209, 0.14),
+      transparent 55%
+    ),
+    radial-gradient(
+      900px 650px at 105% 0%,
+      rgba(212, 175, 55, 0.10),
+      transparent 55%
+    ),
+    linear-gradient(
+      180deg,
+      var(--navy) 0%,
+      var(--navy-2) 100%
+    );
+
+  background-attachment: fixed;
 }
 
-/* ═══ الهيدر ═══ */
+button,
+input,
+select {
+  font: inherit;
+}
+
+button,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: rgba(212, 175, 55, 0.28);
+  color: #fff;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Focus
+   ═══════════════════════════════════════════════════════ */
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Header
+   ═══════════════════════════════════════════════════════ */
+
 .app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
+
   gap: 14px;
-  padding: 14px 26px;
-  background: rgba(10, 22, 40, 0.75);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  padding: 13px 26px;
+
+  background: rgba(10, 22, 40, 0.84);
   border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 50;
+
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .logo {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 210px;
 }
 
 .logo-icon {
-  font-size: 1.9rem;
   width: 46px;
   height: 46px;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.18), rgba(2, 136, 209, 0.12));
+
+  flex-shrink: 0;
+
+  font-size: 1.9rem;
+
+  border-radius: 12px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(212, 175, 55, 0.18),
+      rgba(2, 136, 209, 0.12)
+    );
+
   border: 1px solid var(--border);
-  filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.3));
+
+  filter:
+    drop-shadow(
+      0 0 10px rgba(212, 175, 55, 0.30)
+    );
 }
 
 .logo h1 {
-  margin: 0;
   font-size: 1.15rem;
   font-weight: 800;
-  background: linear-gradient(90deg, var(--gold-light), #fff 50%, var(--gold-light));
+  line-height: 1.25;
+
+  background:
+    linear-gradient(
+      90deg,
+      var(--gold-light),
+      #fff 50%,
+      var(--gold-light)
+    );
+
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
 .logo small {
-  color: var(--muted);
-  font-size: 0.72rem;
   display: block;
+  margin-top: 2px;
+
+  color: var(--muted);
+  font-size: 0.70rem;
 }
 
 #main-nav {
   display: flex;
+  align-items: center;
+  justify-content: center;
+
   gap: 4px;
   flex-wrap: wrap;
 }
 
 .nav-link {
-  padding: 8px 14px;
-  border-radius: 10px;
-  color: var(--muted);
-  font-weight: 600;
-  font-size: 0.85rem;
-  transition: all 0.15s;
-  border: 1px solid transparent;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+
+  gap: 7px;
+
+  padding: 8px 13px;
+
+  border: 1px solid transparent;
+  border-radius: 10px;
+
+  color: var(--muted);
+
+  font-size: 0.84rem;
+  font-weight: 600;
+
   text-decoration: none;
+
+  transition:
+    color .18s ease,
+    background .18s ease,
+    border-color .18s ease,
+    transform .18s ease;
 }
 
 .nav-link:hover {
   color: var(--gold-light);
   background: rgba(212, 175, 55, 0.08);
+  border-color: rgba(212, 175, 55, 0.10);
+  transform: translateY(-1px);
 }
 
 .nav-link.active {
@@ -144,393 +301,704 @@ body {
 .user-box {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
 }
 
 .user-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  padding: 6px 14px;
+
+  max-width: 240px;
+
+  padding: 6px 13px;
+
   border-radius: 999px;
-  background: rgba(212, 175, 55, 0.1);
   border: 1px solid var(--border);
+
+  background: rgba(212, 175, 55, 0.10);
+
   color: var(--gold-light);
+
+  font-size: 0.80rem;
+  font-weight: 700;
+
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* ═══ الأزرار ═══ */
+/* ═══════════════════════════════════════════════════════
+   Buttons
+   ═══════════════════════════════════════════════════════ */
+
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 10px;
+
+  gap: 7px;
+
+  min-height: 40px;
+
+  padding: 9px 18px;
+
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+
   font-family: inherit;
+  font-size: 0.86rem;
   font-weight: 700;
-  font-size: 0.88rem;
+
   cursor: pointer;
-  transition: all 0.15s;
+  user-select: none;
   white-space: nowrap;
-  text-align: center;
+
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease,
+    background .18s ease,
+    border-color .18s ease,
+    opacity .18s ease;
 }
 
-.btn-sm { padding: 7px 14px; font-size: 0.82rem; }
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-sm {
+  min-height: 36px;
+  padding: 7px 13px;
+  font-size: 0.80rem;
+}
 
 .btn-gold {
-  background: linear-gradient(135deg, var(--gold), var(--gold-light));
   color: var(--navy);
-  box-shadow: 0 10px 24px rgba(212, 175, 55, 0.28);
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--gold),
+      var(--gold-light)
+    );
+
+  box-shadow:
+    0 10px 24px rgba(212, 175, 55, 0.22);
 }
+
 .btn-gold:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 30px rgba(212, 175, 55, 0.4);
+  box-shadow:
+    0 14px 30px rgba(212, 175, 55, 0.34);
 }
 
 .btn-ghost {
-  background: rgba(255, 255, 255, 0.06);
   color: var(--text);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(255, 255, 255, 0.14);
 }
+
 .btn-ghost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
-  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.10);
 }
 
 .btn-danger {
-  background: rgba(220, 53, 69, 0.1);
   color: #ff9aa5;
-  border: 1px solid rgba(220, 53, 69, 0.35);
+  background: rgba(220, 53, 69, 0.09);
+  border-color: rgba(220, 53, 69, 0.34);
 }
+
 .btn-danger:hover:not(:disabled) {
-  background: rgba(220, 53, 69, 0.22);
-  transform: translateY(-2px);
+  background: rgba(220, 53, 69, 0.18);
 }
 
 .btn:disabled {
-  opacity: 0.6;
+  opacity: .58;
   cursor: not-allowed;
   transform: none !important;
 }
 
-/* ═══ الحاوية ═══ */
+/* ═══════════════════════════════════════════════════════
+   Container
+   ═══════════════════════════════════════════════════════ */
+
 .container {
-  max-width: 1180px;
+  width: min(1180px, 100%);
   margin: 0 auto;
-  padding: 24px 20px 40px;
+
+  padding:
+    28px 20px
+    42px;
 }
 
-/* ═══ عنوان الصفحة ═══ */
+/* ═══════════════════════════════════════════════════════
+   Page Header
+   ═══════════════════════════════════════════════════════ */
+
 .page-header {
   text-align: center;
   margin-bottom: 28px;
 }
 
 .page-header-icon {
+  margin-bottom: 8px;
+
   font-size: 3rem;
-  margin-bottom: 10px;
-  filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.4));
+
+  filter:
+    drop-shadow(
+      0 0 20px rgba(212, 175, 55, 0.38)
+    );
 }
 
 .page-header h2 {
-  font-size: 1.7rem;
-  font-weight: 800;
   margin-bottom: 6px;
-  background: linear-gradient(90deg, var(--gold-light), #fff 50%, var(--gold-light));
+
+  font-size: 1.72rem;
+  font-weight: 800;
+
+  background:
+    linear-gradient(
+      90deg,
+      var(--gold-light),
+      #fff 50%,
+      var(--gold-light)
+    );
+
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
 .page-header p {
-  color: var(--muted);
-  font-size: 0.9rem;
-  max-width: 620px;
+  max-width: 680px;
   margin: 0 auto;
+
+  color: var(--muted);
+  font-size: 0.90rem;
 }
 
-/* ═══ البطاقات ═══ */
-.card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 22px;
+/* ═══════════════════════════════════════════════════════
+   Disclaimer
+   ═══════════════════════════════════════════════════════ */
+
+.disclaimer {
   margin-bottom: 20px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+
+  padding: 13px 18px;
+
+  border:
+    1px solid rgba(255, 193, 7, 0.28);
+
+  border-radius: 11px;
+
+  background:
+    rgba(255, 193, 7, 0.065);
+
+  color: #ffd97a;
+
+  font-size: 0.83rem;
+  line-height: 1.8;
+
+  text-align: center;
+}
+
+.disclaimer strong {
+  color: #ffe29a;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Stats
+   ═══════════════════════════════════════════════════════ */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 14px;
+
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 16px 17px;
+
+  border:
+    1px solid var(--border);
+
+  border-radius: 14px;
+
+  background: var(--surface);
+
+  box-shadow: var(--shadow-sm);
+
+  transition:
+    transform .18s ease,
+    border-color .18s ease,
+    box-shadow .18s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+
+  border-color:
+    rgba(212, 175, 55, 0.34);
+
+  box-shadow:
+    0 16px 34px rgba(0, 0, 0, 0.30);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 12px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(212, 175, 55, 0.16),
+      rgba(2, 136, 209, 0.10)
+    );
+
+  font-size: 1.55rem;
+}
+
+.stat-num {
+  color: var(--gold-light);
+
+  font-size: 1.38rem;
+  font-weight: 800;
+
+  line-height: 1.15;
+}
+
+.stat-label {
+  margin-top: 3px;
+
+  color: var(--muted);
+
+  font-size: 0.74rem;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Cards
+   ═══════════════════════════════════════════════════════ */
+
+.card {
+  margin-bottom: 20px;
+
+  padding: 22px;
+
+  border:
+    1px solid var(--border);
+
+  border-radius: var(--radius-lg);
+
+  background:
+    rgba(255, 255, 255, 0.038);
+
+  box-shadow: var(--shadow-md);
+
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
 
 .card-title {
-  margin: 0 0 18px;
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--gold-light);
   display: flex;
   align-items: center;
+
   gap: 8px;
-  border-bottom: 1px dashed var(--border);
+
+  margin-bottom: 18px;
   padding-bottom: 12px;
-}
 
-.card-title i { color: var(--gold); }
+  border-bottom:
+    1px dashed var(--border);
 
-/* ═══ إخلاء المسؤولية ═══ */
-.disclaimer {
-  padding: 12px 18px;
-  border-radius: 10px;
-  background: rgba(255, 193, 7, 0.08);
-  border: 1px solid rgba(255, 193, 7, 0.3);
-  color: #ffd97a;
-  font-size: 0.85rem;
-  line-height: 1.7;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-/* ═══ الإحصائيات ═══ */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px;
-  margin-bottom: 20px;
-}
-
-.stat-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 16px 18px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
-  transition: all 0.18s;
-}
-
-.stat-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
-}
-
-.stat-icon {
-  font-size: 1.6rem;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.16), rgba(2, 136, 209, 0.1));
-  flex-shrink: 0;
-}
-
-.stat-num {
-  font-size: 1.4rem;
-  font-weight: 800;
   color: var(--gold-light);
-  line-height: 1.1;
+
+  font-size: 1.04rem;
+  font-weight: 800;
 }
 
-.stat-label {
-  font-size: 0.76rem;
+.card-title i {
+  color: var(--gold);
+}
+
+#blocks-count {
+  margin-right: auto;
+
   color: var(--muted);
-  margin-top: 2px;
+
+  font-size: .76rem;
+  font-weight: 500;
 }
 
-/* ═══ حالة السلسلة ═══ */
+/* ═══════════════════════════════════════════════════════
+   Chain Status
+   ═══════════════════════════════════════════════════════ */
+
 .chain-status {
   display: flex;
   align-items: center;
+
   gap: 14px;
-  padding: 16px 20px;
-  border-radius: 14px;
+
   margin-bottom: 20px;
-  font-weight: 700;
-  font-size: 0.95rem;
+  padding: 16px 20px;
+
+  border-radius: 14px;
+
   flex-wrap: wrap;
+
+  font-size: .92rem;
+  font-weight: 700;
+
+  transition:
+    background .2s ease,
+    border-color .2s ease;
 }
 
 .chain-status.valid {
-  background: rgba(67, 160, 71, 0.08);
-  border: 1.5px solid rgba(67, 160, 71, 0.4);
   color: var(--green-light);
+
+  background: rgba(67, 160, 71, .08);
+  border: 1.5px solid rgba(67, 160, 71, .40);
 }
 
 .chain-status.invalid {
-  background: rgba(229, 57, 53, 0.08);
-  border: 1.5px solid rgba(229, 57, 53, 0.4);
   color: var(--red-light);
+
+  background: rgba(229, 57, 53, .08);
+  border: 1.5px solid rgba(229, 57, 53, .42);
 }
 
 .chain-status.unknown {
-  background: rgba(255, 152, 0, 0.08);
-  border: 1.5px solid rgba(255, 152, 0, 0.4);
   color: #ffb74d;
+
+  background: rgba(255, 152, 0, .08);
+  border: 1.5px solid rgba(255, 152, 0, .38);
 }
 
 .chain-status-icon {
-  font-size: 1.8rem;
-  line-height: 1;
+  width: 40px;
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   flex-shrink: 0;
+
+  border-radius: 11px;
+
+  background: rgba(255, 255, 255, .05);
+
+  font-size: 1.55rem;
 }
 
 .chain-status-info {
   flex: 1;
-  min-width: 200px;
-  text-align: right;
+  min-width: 220px;
 }
 
 .chain-status-info strong {
   display: block;
-  font-size: 1rem;
+
   margin-bottom: 2px;
+
+  font-size: .98rem;
 }
 
 .chain-status-info small {
+  display: block;
+
   color: var(--muted);
+
+  font-size: .76rem;
   font-weight: 500;
-  font-size: 0.78rem;
 }
 
-/* ═══ شريط الأدوات ═══ */
+/* ═══════════════════════════════════════════════════════
+   Toolbar
+   ═══════════════════════════════════════════════════════ */
+
 .toolbar {
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
   align-items: center;
+
+  gap: 10px;
+
+  flex-wrap: wrap;
+
   margin-bottom: 18px;
 }
 
 .search-input {
   flex: 1;
-  min-width: 200px;
-  padding: 11px 14px;
+  min-width: 220px;
+
+  height: 42px;
+
+  padding: 9px 14px;
+
+  border:
+    1px solid rgba(255, 255, 255, .14);
+
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(10, 22, 40, 0.55);
+
+  background:
+    rgba(10, 22, 40, .62);
+
   color: var(--text);
-  font-size: 0.9rem;
-  font-family: inherit;
+
+  font-size: .88rem;
+
   outline: none;
-  transition: all 0.2s;
+
+  transition:
+    border-color .18s ease,
+    box-shadow .18s ease;
+}
+
+.search-input::placeholder {
+  color: #718095;
 }
 
 .search-input:focus {
   border-color: var(--gold);
-  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.16);
+
+  box-shadow:
+    0 0 0 3px rgba(212, 175, 55, .14);
 }
 
 .filter-group {
   display: flex;
+  align-items: center;
+
   gap: 8px;
+
   flex-wrap: wrap;
 }
 
 .filter-group select {
-  padding: 10px 32px 10px 14px;
+  min-height: 42px;
+
+  padding:
+    9px 32px
+    9px 13px;
+
+  border:
+    1px solid rgba(255, 255, 255, .14);
+
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(10, 22, 40, 0.55);
+
+  background-color:
+    rgba(10, 22, 40, .62);
+
   color: var(--text);
-  font-family: inherit;
-  font-size: 0.85rem;
+
+  font-size: .83rem;
+
   cursor: pointer;
+
   appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2393a2b5' stroke-width='2'><polyline points='6 9 12 15 18 9'/></svg>");
+
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2393a2b5' stroke-width='2'><polyline points='6 9 12 15 18 9'/></svg>");
+
   background-repeat: no-repeat;
-  background-position: left 12px center;
+  background-position: left 11px center;
+
   outline: none;
+}
+
+.filter-group select option {
+  background: var(--navy-2);
+  color: var(--text);
 }
 
 .filter-group select:focus {
   border-color: var(--gold);
-  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.16);
+
+  box-shadow:
+    0 0 0 3px rgba(212, 175, 55, .14);
 }
 
-/* ═══ شبكة الكتل ═══ */
+/* ═══════════════════════════════════════════════════════
+   Blocks
+   ═══════════════════════════════════════════════════════ */
+
 .blocks-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
 }
 
-/* ═══ بطاقة كتلة ═══ */
 .block-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 16px 18px;
-  transition: all 0.18s;
   position: relative;
+
   overflow: hidden;
+
+  padding: 16px 18px;
+
+  border:
+    1px solid var(--border);
+
+  border-radius: 14px;
+
+  background:
+    rgba(255, 255, 255, .028);
+
+  transition:
+    transform .18s ease,
+    background .18s ease,
+    border-color .18s ease,
+    box-shadow .18s ease;
 }
 
 .block-card::before {
   content: '';
+
   position: absolute;
-  top: 0;
-  right: 0;
+  inset:
+    0 auto 0 0;
+
   width: 4px;
-  height: 100%;
-  background: linear-gradient(180deg, var(--gold), var(--gold-light));
+
+  background:
+    linear-gradient(
+      180deg,
+      var(--gold),
+      var(--gold-light)
+    );
 }
 
 .block-card.type-genesis::before {
-  background: linear-gradient(180deg, var(--orange), #ffb74d);
+  background:
+    linear-gradient(
+      180deg,
+      var(--orange),
+      #ffb74d
+    );
 }
 
 .block-card.type-prescription::before {
-  background: linear-gradient(180deg, var(--green), var(--green-light));
+  background:
+    linear-gradient(
+      180deg,
+      var(--green),
+      var(--green-light)
+    );
 }
 
 .block-card.type-lifecycle::before {
-  background: linear-gradient(180deg, var(--blue), var(--blue-light));
+  background:
+    linear-gradient(
+      180deg,
+      var(--blue),
+      var(--blue-light)
+    );
 }
 
 .block-card.type-checkpoint::before {
-  background: linear-gradient(180deg, var(--cyan), #80F8FF);
+  background:
+    linear-gradient(
+      180deg,
+      var(--cyan),
+      #80f8ff
+    );
 }
 
 .block-card:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(212, 175, 55, 0.4);
-  transform: translateX(-3px);
+  background:
+    rgba(255, 255, 255, .052);
+
+  border-color:
+    rgba(212, 175, 55, .38);
+
+  transform:
+    translateX(-3px);
+
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, .22);
 }
+
+.block-card.is-invalid {
+  border-color:
+    rgba(229, 57, 53, .38);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Block Header
+   ═══════════════════════════════════════════════════════ */
 
 .block-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
+  justify-content: space-between;
+
   gap: 10px;
+
+  flex-wrap: wrap;
+
   margin-bottom: 12px;
   padding-bottom: 10px;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+
+  border-bottom:
+    1px dashed rgba(255, 255, 255, .08);
 }
 
 .block-index {
   display: flex;
   align-items: center;
+
   gap: 10px;
+
+  min-width: 0;
 }
 
 .block-num {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--gold), var(--gold-light));
-  color: var(--navy);
+
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
-  font-size: 1rem;
+
   flex-shrink: 0;
+
+  border-radius: 10px;
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--gold),
+      var(--gold-light)
+    );
+
+  color: var(--navy);
+
+  font-size: .95rem;
+  font-weight: 800;
 }
 
 .block-info {
@@ -538,89 +1006,168 @@ body {
 }
 
 .block-title {
-  font-weight: 800;
-  font-size: 0.95rem;
+  overflow: hidden;
+
   color: var(--gold-light);
-  margin-bottom: 2px;
-}
 
-.block-time {
-  font-size: 0.75rem;
-  color: var(--muted);
-}
+  font-size: .93rem;
+  font-weight: 800;
 
-.block-type-badge {
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 700;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.badge-genesis { background: rgba(255, 152, 0, 0.15); color: #ffb74d; border: 1px solid rgba(255, 152, 0, 0.3); }
-.badge-prescription { background: rgba(67, 160, 71, 0.15); color: #81c784; border: 1px solid rgba(67, 160, 71, 0.3); }
-.badge-lifecycle { background: rgba(2, 136, 209, 0.15); color: #64b5f6; border: 1px solid rgba(2, 136, 209, 0.3); }
-.badge-checkpoint { background: rgba(0, 243, 255, 0.15); color: #80F8FF; border: 1px solid rgba(0, 243, 255, 0.3); }
-.badge-unknown { background: rgba(158, 158, 158, 0.15); color: #bdbdbd; border: 1px solid rgba(158, 158, 158, 0.3); }
+.block-time {
+  margin-top: 2px;
 
-/* ═══ صفوف التفاصيل ═══ */
+  color: var(--muted);
+
+  font-size: .73rem;
+}
+
+.block-type-badge {
+  padding: 4px 11px;
+
+  border-radius: 999px;
+
+  font-size: .70rem;
+  font-weight: 700;
+
+  white-space: nowrap;
+}
+
+.badge-genesis {
+  color: #ffb74d;
+  background: rgba(255, 152, 0, .15);
+  border: 1px solid rgba(255, 152, 0, .30);
+}
+
+.badge-prescription {
+  color: #81c784;
+  background: rgba(67, 160, 71, .15);
+  border: 1px solid rgba(67, 160, 71, .30);
+}
+
+.badge-lifecycle {
+  color: #64b5f6;
+  background: rgba(2, 136, 209, .15);
+  border: 1px solid rgba(2, 136, 209, .30);
+}
+
+.badge-checkpoint {
+  color: #80f8ff;
+  background: rgba(0, 243, 255, .13);
+  border: 1px solid rgba(0, 243, 255, .30);
+}
+
+.badge-unknown {
+  color: #bdbdbd;
+  background: rgba(158, 158, 158, .15);
+  border: 1px solid rgba(158, 158, 158, .30);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Details
+   ═══════════════════════════════════════════════════════ */
+
 .block-details {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+
+  grid-template-columns:
+    repeat(auto-fit, minmax(220px, 1fr));
+
   gap: 8px;
+
   margin-bottom: 10px;
 }
 
 .detail-row {
   display: flex;
+
   gap: 8px;
-  font-size: 0.82rem;
+
+  min-width: 0;
+
   padding: 6px 0;
+
+  font-size: .81rem;
 }
 
 .detail-row .label {
-  color: var(--muted);
-  font-weight: 600;
-  flex-shrink: 0;
   min-width: 90px;
+
+  color: var(--muted);
+
+  font-weight: 600;
+
+  flex-shrink: 0;
 }
 
 .detail-row .value {
-  color: var(--text);
-  font-weight: 600;
-  word-break: break-word;
+  min-width: 0;
   flex: 1;
+
+  color: var(--text);
+
+  font-weight: 600;
+
+  overflow-wrap: anywhere;
 }
 
 .detail-row .value.mono {
-  font-family: 'Courier New', monospace;
-  font-size: 0.75rem;
-  color: var(--cyan);
   direction: ltr;
   text-align: right;
-  word-break: break-all;
+
+  color: var(--cyan);
+
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Courier New",
+    monospace;
+
+  font-size: .72rem;
+
+  overflow-wrap: anywhere;
 }
 
-/* ═══ تفاصيل الطبية ═══ */
+/* ═══════════════════════════════════════════════════════
+   Medical / Event information
+   ═══════════════════════════════════════════════════════ */
+
 .medical-info {
   margin-top: 10px;
   padding: 12px 14px;
-  background: rgba(67, 160, 71, 0.05);
-  border: 1px solid rgba(67, 160, 71, 0.2);
+
+  border:
+    1px solid rgba(67, 160, 71, .20);
+
   border-radius: 10px;
+
+  background:
+    rgba(67, 160, 71, .05);
 }
 
 .medical-info-title {
-  font-size: 0.78rem;
-  font-weight: 800;
-  color: var(--green-light);
-  margin-bottom: 8px;
   display: flex;
   align-items: center;
+
   gap: 6px;
+
+  margin-bottom: 8px;
+
+  color: var(--green-light);
+
+  font-size: .77rem;
+  font-weight: 800;
 }
 
-.medical-info-title::before { content: '⚕️'; }
+.medical-info-title::before {
+  content: '⚕️';
+}
 
 .meds-list {
   display: flex;
@@ -630,1240 +1177,3932 @@ body {
 
 .med-item {
   display: flex;
+
   gap: 10px;
-  padding: 6px 10px;
-  background: rgba(255, 255, 255, 0.03);
+
+  padding: 7px 10px;
+
+  border-right:
+    3px solid rgba(67, 160, 71, .40);
+
   border-radius: 8px;
-  font-size: 0.8rem;
-  border-right: 3px solid rgba(67, 160, 71, 0.4);
+
+  background:
+    rgba(255, 255, 255, .03);
+
+  font-size: .78rem;
 }
 
 .med-item strong {
-  color: var(--green-light);
   min-width: 100px;
+
+  color: var(--green-light);
 }
 
 .med-item .med-details {
-  color: var(--muted);
   flex: 1;
+
+  color: var(--muted);
+
+  overflow-wrap: anywhere;
 }
 
-/* ═══ حالة الكتلة (تحقق) ═══ */
+/* ═══════════════════════════════════════════════════════
+   Verification
+   ═══════════════════════════════════════════════════════ */
+
 .block-verify-status {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+
   gap: 8px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  font-weight: 700;
+
   margin-top: 10px;
+  padding: 8px 12px;
+
+  border-radius: 8px;
+
+  font-size: .79rem;
+  font-weight: 700;
+
+  line-height: 1.6;
 }
 
 .block-verify-status.ok {
-  background: rgba(67, 160, 71, 0.08);
-  border: 1px solid rgba(67, 160, 71, 0.3);
   color: var(--green-light);
+
+  background:
+    rgba(67, 160, 71, .08);
+
+  border:
+    1px solid rgba(67, 160, 71, .30);
 }
 
 .block-verify-status.bad {
-  background: rgba(229, 57, 53, 0.08);
-  border: 1px solid rgba(229, 57, 53, 0.3);
   color: var(--red-light);
+
+  background:
+    rgba(229, 57, 53, .08);
+
+  border:
+    1px solid rgba(229, 57, 53, .30);
 }
 
-/* ═══ حالة الفراغ ═══ */
+/* ═══════════════════════════════════════════════════════
+   Empty / Loading / Error
+   ═══════════════════════════════════════════════════════ */
+
 .empty-state {
-  text-align: center;
-  padding: 60px 20px;
+  padding: 58px 20px;
+
   color: var(--muted);
+
+  text-align: center;
 }
 
 .empty-state-icon {
-  font-size: 4rem;
-  margin-bottom: 16px;
-  opacity: 0.5;
+  margin-bottom: 14px;
+
+  font-size: 3.8rem;
+
+  opacity: .50;
 }
 
 .empty-state h3 {
-  font-size: 1.2rem;
-  margin-bottom: 8px;
+  margin-bottom: 7px;
+
   color: var(--text);
+
+  font-size: 1.15rem;
 }
 
 .empty-state p {
-  font-size: 0.9rem;
+  font-size: .86rem;
 }
 
-/* ═══ Footer ═══ */
+.loading-state .empty-state-icon {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.error-state {
+  color: var(--red-light);
+}
+
+.error-state h3 {
+  color: #ffb0b0;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: .45;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: .90;
+    transform: scale(1.05);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Footer
+   ═══════════════════════════════════════════════════════ */
+
 .dashboard-footer {
-  text-align: center;
-  padding: 24px 20px 10px;
-  color: var(--muted);
-  font-size: 0.82rem;
-  line-height: 1.9;
-}
-.dashboard-footer b { color: #c7d2de; }
+  padding: 24px 20px 8px;
 
-/* ═══ التوقيع ═══ */
+  color: var(--muted);
+
+  font-size: .80rem;
+  line-height: 1.9;
+
+  text-align: center;
+}
+
+.dashboard-footer b {
+  color: #c7d2de;
+}
+
+.dashboard-footer small {
+  opacity: .72;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Signature
+   ═══════════════════════════════════════════════════════ */
+
 .e-signature {
   display: flex;
   flex-direction: column;
   align-items: center;
+
   gap: 4px;
-  padding: 20px 0 34px;
+
+  padding:
+    20px 0
+    34px;
 }
 
 .e-signature .sig-label {
-  font-size: 0.68rem;
-  letter-spacing: 1.5px;
   color: #6d7c8f;
+
+  font-size: .66rem;
+
+  letter-spacing: 1.5px;
+
   text-transform: uppercase;
 }
 
 .e-signature .sig-name {
+  color: transparent;
+
   font-family: 'Great Vibes', cursive;
-  font-size: 2.5rem;
+
+  font-size: 2.45rem;
   line-height: 1.1;
-  background: linear-gradient(90deg, var(--gold-dark), var(--gold), var(--gold-light), var(--gold), var(--gold-dark));
+
+  background:
+    linear-gradient(
+      90deg,
+      var(--gold-dark),
+      var(--gold),
+      var(--gold-light),
+      var(--gold),
+      var(--gold-dark)
+    );
+
   background-size: 300% auto;
+
   -webkit-background-clip: text;
   background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.35));
-  animation: sig-shimmer 5s linear infinite;
-}
 
-@keyframes sig-shimmer {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 300% 50%; }
+  filter:
+    drop-shadow(
+      0 0 10px rgba(212, 175, 55, .32)
+    );
+
+  animation:
+    sig-shimmer 5s linear infinite;
 }
 
 .e-signature .sig-role {
-  font-size: 0.76rem;
   color: #95a3b5;
+
+  font-size: .74rem;
 }
 
 .e-signature .sig-underline {
   width: 150px;
   height: 2px;
+
   margin-top: 2px;
+
   border-radius: 2px;
-  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      var(--gold),
+      transparent
+    );
 }
 
-/* ═══ Modal تفاصيل ═══ */
+@keyframes sig-shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: 300% 50%;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Modal
+   ═══════════════════════════════════════════════════════ */
+
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  display: flex;
-  justify-content: center;
-  align-items: center;
+
   z-index: 3000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   padding: 20px;
-  animation: fadeIn 0.3s;
-  backdrop-filter: blur(6px);
+
+  background:
+    rgba(0, 0, 0, .76);
+
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+
+  animation:
+    fade-in .18s ease-out;
 }
 
-.modal.hidden { display: none; }
+.modal.hidden {
+  display: none !important;
+}
 
 .modal-content {
-  background: var(--navy-2);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 26px;
-  max-width: 640px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7);
-  animation: modalIn 0.4s;
   position: relative;
+
+  width: min(680px, 100%);
+  max-height: 90vh;
+
+  overflow-y: auto;
+
+  padding: 26px;
+
+  border:
+    1px solid var(--border);
+
+  border-radius: 18px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(19, 42, 69, .98),
+      rgba(15, 33, 56, .98)
+    );
+
+  box-shadow: var(--shadow-lg);
+
+  animation:
+    modal-in .22s ease-out;
 }
 
 .modal-close {
   position: absolute;
-  top: 14px;
-  left: 16px;
-  font-size: 1.4rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--muted);
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+
+  top: 13px;
+  left: 14px;
+
+  width: 36px;
+  height: 36px;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s;
+
+  border: 1px solid transparent;
+  border-radius: 50%;
+
+  background: transparent;
+
+  color: var(--muted);
+
+  font-size: 1.35rem;
+
+  cursor: pointer;
+
+  transition:
+    color .15s ease,
+    background .15s ease,
+    border-color .15s ease;
 }
 
 .modal-close:hover {
   color: var(--red-light);
-  background: rgba(229, 57, 53, 0.1);
+
+  background:
+    rgba(229, 57, 53, .10);
+
+  border-color:
+    rgba(229, 57, 53, .20);
 }
 
 .modal-title {
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: var(--gold-light);
   margin-bottom: 18px;
-  padding-bottom: 14px;
-  border-bottom: 1px dashed var(--border);
+  padding:
+    0 42px
+    14px 0;
+
+  border-bottom:
+    1px dashed var(--border);
+
+  color: var(--gold-light);
+
+  font-size: 1.12rem;
+  font-weight: 800;
 }
 
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes modalIn {
-  from { opacity: 0; transform: scale(0.9) translateY(20px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+.modal-json {
+  margin-top: 14px;
+  padding-top: 14px;
+
+  border-top:
+    1px dashed var(--border);
 }
 
-/* ═══ Toast ═══ */
+.modal-json-title {
+  display: block;
+
+  margin-bottom: 8px;
+
+  color: var(--gold-light);
+
+  font-weight: 800;
+}
+
+.modal-json pre {
+  max-height: 380px;
+
+  overflow: auto;
+
+  padding: 13px;
+
+  border:
+    1px solid rgba(255,255,255,.08);
+
+  border-radius: 9px;
+
+  background:
+    rgba(0,0,0,.30);
+
+  color: #7ec9ff;
+
+  direction: ltr;
+  text-align: left;
+
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Courier New",
+    monospace;
+
+  font-size: .70rem;
+
+  line-height: 1.6;
+
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: 8px;
+
+  margin-top: 16px;
+}
+
+.modal-alert {
+  margin-top: 14px;
+
+  padding: 12px;
+
+  border-radius: 10px;
+
+  font-size: .83rem;
+  line-height: 1.8;
+}
+
+.modal-alert.error {
+  color: #ffb4b4;
+
+  background:
+    rgba(229,57,53,.10);
+
+  border:
+    1px solid rgba(229,57,53,.40);
+}
+
+.modal-alert.success {
+  color: #a8e6c0;
+
+  background:
+    rgba(67,160,71,.08);
+
+  border:
+    1px solid rgba(67,160,71,.30);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform:
+      scale(.97)
+      translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform:
+      scale(1)
+      translateY(0);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Toast
+   ═══════════════════════════════════════════════════════ */
+
 #toast-box {
   position: fixed;
-  bottom: 24px;
+
   left: 50%;
-  transform: translateX(-50%);
+  bottom: 22px;
+
   z-index: 9999;
+
   display: flex;
   flex-direction: column;
-  gap: 10px;
   align-items: center;
+
+  gap: 9px;
+
+  width: min(520px, 90vw);
+
+  transform: translateX(-50%);
+
   pointer-events: none;
-  max-width: 90vw;
 }
 
 .toast {
-  padding: 12px 22px;
+  width: max-content;
+  max-width: 100%;
+
+  padding: 11px 20px;
+
+  border:
+    1px solid var(--border);
+
   border-radius: 10px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  background: rgba(15, 33, 56, 0.96);
+
+  background:
+    rgba(15,33,56,.97);
+
   color: var(--text);
-  border: 1px solid var(--border);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+
+  box-shadow:
+    0 12px 30px rgba(0,0,0,.50);
+
   backdrop-filter: blur(10px);
-  animation: toast-in 0.3s ease-out;
-  pointer-events: auto;
+
+  font-size: .86rem;
+  font-weight: 600;
+
   text-align: center;
+
+  animation:
+    toast-in .25s ease-out;
 }
 
-.toast.success { border-color: rgba(61, 220, 132, 0.4); color: #9affc4; }
-.toast.error { border-color: rgba(220, 53, 69, 0.4); color: #ff9aa5; }
-.toast.info { border-color: rgba(2, 136, 209, 0.4); color: #7ec9ff; }
-.toast.warning { border-color: rgba(255, 193, 7, 0.4); color: #ffd97a; }
+.toast.success {
+  color: #9affc4;
+  border-color: rgba(61,220,132,.40);
+}
+
+.toast.error {
+  color: #ff9aa5;
+  border-color: rgba(220,53,69,.40);
+}
+
+.toast.info {
+  color: #7ec9ff;
+  border-color: rgba(2,136,209,.40);
+}
+
+.toast.warning {
+  color: #ffd97a;
+  border-color: rgba(255,193,7,.40);
+}
 
 @keyframes toast-in {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* ═══ Responsive ═══ */
+/* ═══════════════════════════════════════════════════════
+   Responsive
+   ═══════════════════════════════════════════════════════ */
+
+@media (max-width: 980px) {
+  .stats-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .app-header {
+    padding:
+      12px 18px;
+  }
+}
+
 @media (max-width: 768px) {
-  .app-header { padding: 12px 16px; }
-  .container { padding: 16px 14px 30px; }
-  .card { padding: 18px 16px; }
-  .page-header h2 { font-size: 1.35rem; }
-  .page-header-icon { font-size: 2.4rem; }
-  #main-nav { order: 3; width: 100%; justify-content: center; }
-  .user-box { order: 1; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
-  .block-details { grid-template-columns: 1fr; }
+  .app-header {
+    padding: 12px 15px;
+  }
+
+  .container {
+    padding:
+      18px 14px
+      30px;
+  }
+
+  .logo {
+    min-width: 0;
+  }
+
+  #main-nav {
+    order: 3;
+    width: 100%;
+
+    justify-content: center;
+
+    padding-top: 2px;
+  }
+
+  .user-box {
+    order: 2;
+  }
+
+  .card {
+    padding: 18px 16px;
+  }
+
+  .page-header {
+    margin-bottom: 22px;
+  }
+
+  .page-header h2 {
+    font-size: 1.38rem;
+  }
+
+  .page-header-icon {
+    font-size: 2.45rem;
+  }
+
+  .toolbar {
+    align-items: stretch;
+  }
+
+  .search-input {
+    flex-basis: 100%;
+  }
+
+  .filter-group {
+    flex: 1;
+  }
+
+  .filter-group select {
+    flex: 1;
+  }
+
+  .block-details {
+    grid-template-columns: 1fr;
+  }
+
+  .chain-status-info {
+    min-width: 160px;
+  }
 }
 
-@media (max-width: 480px) {
-  .stats-grid { grid-template-columns: 1fr; }
-  .block-header { flex-direction: column; align-items: flex-start; }
-  .nav-link { font-size: 0.75rem; padding: 6px 8px; }
+@media (max-width: 560px) {
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.25rem;
+  }
+
+  .stat-num {
+    font-size: 1.15rem;
+  }
+
+  .stat-label {
+    font-size: .68rem;
+  }
+
+  .user-badge {
+    max-width: 150px;
+  }
+
+  .nav-link {
+    padding: 6px 8px;
+    font-size: .72rem;
+  }
+
+  .block-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .block-header > div:last-child {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .med-item {
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .med-item strong {
+    min-width: 0;
+  }
+
+  .detail-row {
+    align-items: flex-start;
+  }
+
+  .detail-row .label {
+    min-width: 78px;
+  }
+
+  .modal {
+    padding: 10px;
+  }
+
+  .modal-content {
+    padding: 21px 15px;
+    max-height: 94vh;
+  }
 }
 
-/* ═══ Print ═══ */
+@media (max-width: 390px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-group {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .filter-group select {
+    width: 100%;
+  }
+
+  .toolbar .btn {
+    flex: 1;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Reduced Motion
+   ═══════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Print
+   ═══════════════════════════════════════════════════════ */
+
 @media print {
-  body { background: #fff !important; color: #000 !important; }
-  .app-header, .toolbar, .e-signature, .btn, .modal { display: none !important; }
-  .card { background: #fff !important; border-color: #ccc !important; box-shadow: none !important; }
+  @page {
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  body {
+    font-family: Arial, sans-serif;
+  }
+
+  .app-header,
+  .toolbar,
+  .e-signature,
+  .btn,
+  #toast-box,
+  .modal,
+  .disclaimer {
+    display: none !important;
+  }
+
+  .container {
+    width: 100%;
+    max-width: none;
+    padding: 0;
+  }
+
+  .page-header {
+    margin-bottom: 15px;
+  }
+
+  .page-header h2 {
+    color: #111 !important;
+    -webkit-text-fill-color: #111;
+    background: none;
+  }
+
+  .page-header p,
+  .stat-label,
+  .block-time,
+  .detail-row .label {
+    color: #555 !important;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .card,
+  .stat-card,
+  .block-card {
+    background: #fff !important;
+    color: #000 !important;
+
+    border-color: #ccc !important;
+
+    box-shadow: none !important;
+
+    break-inside: avoid;
+  }
+
+  .block-card {
+    margin-bottom: 10px;
+  }
+
+  .block-title,
+  .stat-num,
+  .card-title {
+    color: #333 !important;
+  }
+
+  .detail-row .value {
+    color: #111 !important;
+  }
+
+  .detail-row .value.mono {
+    color: #005c68 !important;
+  }
+
+  .block-verify-status {
+    color: #222 !important;
+  }
 }
 </style>
 </head>
+
 <body>
 
-<!-- ==================== الهيدر ==================== -->
+<!-- ======================================================
+     Header
+     ====================================================== -->
+
 <header class="app-header">
+
   <div class="logo">
-    <div class="logo-icon">⚕️</div>
+    <div class="logo-icon" aria-hidden="true">⚕️</div>
+
     <div>
       <h1>MediPrescribe</h1>
       <small>سجل Blockchain — Hash Chain الطبي</small>
     </div>
   </div>
 
-  <nav id="main-nav">
+  <nav id="main-nav" aria-label="التنقل الرئيسي">
+
     <a class="nav-link" href="dashboard.html">
-      <i class="fas fa-prescription" aria-hidden="true"></i> وصفة جديدة
+      <i class="fas fa-prescription" aria-hidden="true"></i>
+      <span>وصفة جديدة</span>
     </a>
+
     <a class="nav-link" href="users.html" id="nav-users">
-      <i class="fas fa-users" aria-hidden="true"></i> المستخدمون
+      <i class="fas fa-users" aria-hidden="true"></i>
+      <span>المستخدمون</span>
     </a>
+
     <a class="nav-link" href="audit-log.html">
-      <i class="fas fa-chart-line" aria-hidden="true"></i> سجل التدقيق
+      <i class="fas fa-chart-line" aria-hidden="true"></i>
+      <span>سجل التدقيق</span>
     </a>
-    <a class="nav-link active" href="audit-blockchain.html">
-      <i class="fas fa-link" aria-hidden="true"></i> Blockchain
+
+    <a
+      class="nav-link active"
+      href="audit-blockchain.html"
+      aria-current="page">
+      <i class="fas fa-link" aria-hidden="true"></i>
+      <span>Blockchain</span>
     </a>
+
     <a class="nav-link" href="index.html">
-      <i class="fas fa-globe" aria-hidden="true"></i> الموقع
+      <i class="fas fa-globe" aria-hidden="true"></i>
+      <span>الموقع</span>
     </a>
+
   </nav>
 
   <div class="user-box">
-    <span class="user-badge" id="user-badge"></span>
-    <button id="logout-btn" class="btn btn-danger btn-sm" type="button">
-      <i class="fas fa-sign-out-alt" aria-hidden="true"></i> خروج
+
+    <span
+      class="user-badge"
+      id="user-badge"
+      aria-label="المستخدم الحالي">
+    </span>
+
+    <button
+      id="logout-btn"
+      class="btn btn-danger btn-sm"
+      type="button">
+
+      <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+      <span>خروج</span>
+
     </button>
+
   </div>
+
 </header>
 
-<!-- ==================== المحتوى ==================== -->
+<!-- ======================================================
+     Main
+     ====================================================== -->
+
 <main class="container">
 
-  <!-- عنوان الصفحة -->
+  <!-- Page Header -->
+
   <div class="page-header">
-    <div class="page-header-icon">⛓️</div>
+
+    <div
+      class="page-header-icon"
+      aria-hidden="true">
+      ⛓️
+    </div>
+
     <h2>سلسلة الكتل الطبية</h2>
-    <p>عرض تفصيلي لكل الكتل المسجَّلة — تحقق من السلامة والأصالة</p>
+
+    <p>
+      عرض تفصيلي للكتل المسجَّلة مع أدوات البحث والتحقق من سلامة الترابط والتجزئة.
+    </p>
+
   </div>
 
-  <!-- إخلاء المسؤولية -->
-  <div class="disclaimer">
-    ⚠️ <strong>ملاحظة:</strong>
-    هذا "Hash Chain" محلي (ليس blockchain لامركزياً). يحقق عدم التلاعب والتحقق من الأصالة،
-    لكنه لا يمنع الحذف الكامل للجهاز.
+  <!-- Disclaimer -->
+
+  <div
+    class="disclaimer"
+    role="note">
+
+    ⚠️
+    <strong>ملاحظة:</strong>
+    هذا النظام يستخدم Hash Chain محليًا وليس Blockchain لامركزيًا.
+    يمكنه كشف عدم تطابق التجزئة أو كسر الترابط عند فحص السلسلة،
+    لكنه لا يمنع حذف بيانات الجهاز أو العبث بها قبل الفحص.
+
   </div>
 
-  <!-- حالة السلسلة -->
-  <div id="chain-status" class="chain-status unknown">
-    <span class="chain-status-icon">⏳</span>
+  <!-- Chain Status -->
+
+  <section
+    id="chain-status"
+    class="chain-status unknown"
+    aria-live="polite"
+    aria-label="حالة سلسلة الكتل">
+
+    <span
+      class="chain-status-icon"
+      aria-hidden="true">
+      ⏳
+    </span>
+
     <div class="chain-status-info">
+
       <strong>جارٍ فحص السلسلة...</strong>
-      <small>يتم التحقق من التجزئة والترابط</small>
-    </div>
-  </div>
 
-  <!-- الإحصائيات -->
-  <div class="stats-grid">
-    <div class="stat-card">
-      <span class="stat-icon">⛓️</span>
-      <div>
-        <div class="stat-num" id="stat-length">—</div>
-        <div class="stat-label">إجمالي الكتل</div>
-      </div>
-    </div>
-    <div class="stat-card">
-      <span class="stat-icon">📜</span>
-      <div>
-        <div class="stat-num" id="stat-rx">—</div>
-        <div class="stat-label">وصفات مسجَّلة</div>
-      </div>
-    </div>
-    <div class="stat-card">
-      <span class="stat-icon">🔄</span>
-      <div>
-        <div class="stat-num" id="stat-events">—</div>
-        <div class="stat-label">أحداث مسجَّلة</div>
-      </div>
-    </div>
-    <div class="stat-card">
-      <span class="stat-icon">📊</span>
-      <div>
-        <div class="stat-num" id="stat-checkpoints">—</div>
-        <div class="stat-label">Checkpoints</div>
-      </div>
-    </div>
-  </div>
+      <small>
+        يتم التحقق من التجزئة والترابط
+      </small>
 
-  <!-- الحجر الصحي -->
-  <div id="quarantine-card" class="card hidden">
-    <h3 class="card-title">
-      <i class="fas fa-exclamation-triangle"></i>
-      الكتل المعطوبة (الحجر الصحي)
+    </div>
+
+  </section>
+
+  <!-- Stats -->
+
+  <section
+    class="stats-grid"
+    aria-label="إحصائيات السلسلة">
+
+    <div class="stat-card">
+
+      <span
+        class="stat-icon"
+        aria-hidden="true">
+        ⛓️
+      </span>
+
+      <div>
+        <div
+          class="stat-num"
+          id="stat-length">
+          —
+        </div>
+
+        <div class="stat-label">
+          إجمالي الكتل
+        </div>
+      </div>
+
+    </div>
+
+    <div class="stat-card">
+
+      <span
+        class="stat-icon"
+        aria-hidden="true">
+        📜
+      </span>
+
+      <div>
+        <div
+          class="stat-num"
+          id="stat-rx">
+          —
+        </div>
+
+        <div class="stat-label">
+          وصفات مسجَّلة
+        </div>
+      </div>
+
+    </div>
+
+    <div class="stat-card">
+
+      <span
+        class="stat-icon"
+        aria-hidden="true">
+        🔄
+      </span>
+
+      <div>
+        <div
+          class="stat-num"
+          id="stat-events">
+          —
+        </div>
+
+        <div class="stat-label">
+          أحداث مسجَّلة
+        </div>
+      </div>
+
+    </div>
+
+    <div class="stat-card">
+
+      <span
+        class="stat-icon"
+        aria-hidden="true">
+        📊
+      </span>
+
+      <div>
+        <div
+          class="stat-num"
+          id="stat-checkpoints">
+          —
+        </div>
+
+        <div class="stat-label">
+          Checkpoints
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- Quarantine -->
+
+  <section
+    id="quarantine-card"
+    class="card hidden"
+    aria-labelledby="quarantine-title">
+
+    <h3
+      class="card-title"
+      id="quarantine-title">
+
+      <i
+        class="fas fa-exclamation-triangle"
+        aria-hidden="true"></i>
+
+      الكتل المعطوبة — الحجر الصحي
+
     </h3>
+
     <div id="quarantine-content"></div>
-  </div>
 
-  <!-- قائمة الكتل -->
-  <div class="card">
-    <h3 class="card-title">
-      <i class="fas fa-cube"></i>
+  </section>
+
+  <!-- Blocks -->
+
+  <section
+    class="card"
+    aria-labelledby="blocks-title">
+
+    <h3
+      class="card-title"
+      id="blocks-title">
+
+      <i
+        class="fas fa-cubes"
+        aria-hidden="true"></i>
+
       كتل السلسلة
-      <span id="blocks-count" style="margin-right:auto;font-size:.78rem;color:var(--muted);font-weight:500;"></span>
+
+      <span id="blocks-count">
+        (—)
+      </span>
+
     </h3>
 
-    <!-- شريط الأدوات -->
+    <!-- Toolbar -->
+
     <div class="toolbar">
-      <input type="search" id="blocks-search" class="search-input"
-             placeholder="🔍 بحث برقم الوصفة، hash، أو التشخيص..."
-             autocomplete="off">
 
-      <div class="filter-group">
-        <select id="filter-type" aria-label="نوع الكتلة">
-          <option value="">كل الأنواع</option>
-          <option value="genesis">🎯 Genesis</option>
-          <option value="prescription">📜 وصفة</option>
-          <option value="lifecycle">🔄 دورة حياة</option>
-          <option value="checkpoint">✅ Checkpoint</option>
+      <label
+        class="sr-only"
+        for="blocks-search">
+        البحث في الكتل
+      </label>
+
+      <input
+        type="search"
+        id="blocks-search"
+        class="search-input"
+        placeholder="🔍 بحث برقم الوصفة، hash، التشخيص، الطبيب..."
+        autocomplete="off"
+        spellcheck="false">
+
+      <div
+        class="filter-group"
+        aria-label="فلاتر السلسلة">
+
+        <label
+          class="sr-only"
+          for="filter-type">
+          نوع الكتلة
+        </label>
+
+        <select
+          id="filter-type"
+          aria-label="نوع الكتلة">
+
+          <option value="">
+            كل الأنواع
+          </option>
+
+          <option value="genesis">
+            🎯 Genesis
+          </option>
+
+          <option value="prescription">
+            📜 وصفة
+          </option>
+
+          <option value="lifecycle">
+            🔄 دورة حياة
+          </option>
+
+          <option value="checkpoint">
+            ✅ Checkpoint
+          </option>
+
         </select>
 
-        <select id="filter-status" aria-label="حالة التحقق">
-          <option value="">كل الحالات</option>
-          <option value="valid">✅ سليمة</option>
-          <option value="invalid">❌ معطوبة</option>
+        <label
+          class="sr-only"
+          for="filter-status">
+          حالة التحقق
+        </label>
+
+        <select
+          id="filter-status"
+          aria-label="حالة التحقق">
+
+          <option value="">
+            كل الحالات
+          </option>
+
+          <option value="valid">
+            ✅ سليمة
+          </option>
+
+          <option value="invalid">
+            ❌ معطوبة
+          </option>
+
         </select>
+
       </div>
 
-      <button class="btn btn-ghost btn-sm" id="refresh-btn" type="button">
-        <i class="fas fa-sync-alt"></i> تحديث
+      <button
+        class="btn btn-ghost btn-sm"
+        id="refresh-btn"
+        type="button">
+
+        <i
+          class="fas fa-sync-alt"
+          aria-hidden="true"></i>
+
+        <span>تحديث</span>
+
       </button>
 
-      <button class="btn btn-gold btn-sm" id="export-btn" type="button">
-        <i class="fas fa-download"></i> تصدير JSON
+      <button
+        class="btn btn-gold btn-sm"
+        id="export-btn"
+        type="button">
+
+        <i
+          class="fas fa-download"
+          aria-hidden="true"></i>
+
+        <span>تصدير JSON</span>
+
       </button>
+
     </div>
 
-    <!-- الشبكة -->
-    <div id="blocks-container" class="blocks-grid">
-      <div class="empty-state">
-        <div class="empty-state-icon">⏳</div>
-        <h3>جارٍ التحميل...</h3>
-        <p>يتم قراءة الكتل من السلسلة</p>
+    <!-- Blocks Container -->
+
+    <div
+      id="blocks-container"
+      class="blocks-grid"
+      aria-live="polite">
+
+      <div class="empty-state loading-state">
+
+        <div
+          class="empty-state-icon"
+          aria-hidden="true">
+          ⏳
+        </div>
+
+        <h3>
+          جارٍ التحميل...
+        </h3>
+
+        <p>
+          يتم قراءة الكتل من السلسلة
+        </p>
+
       </div>
+
     </div>
-  </div>
+
+  </section>
 
 </main>
 
-<!-- ==================== Footer ==================== -->
+<!-- ======================================================
+     Footer
+     ====================================================== -->
+
 <footer class="dashboard-footer">
-  <b>MediPrescribe ⚕️</b> — سجل Blockchain · Hash Chain محلي موقَّع<br>
-  <small style="opacity:.7;">كل كتلة مرتبطة بالتجزئة السابقة — أي تعديل يكسر السلسلة</small>
+
+  <b>MediPrescribe ⚕️</b>
+  —
+  سجل Blockchain · Hash Chain محلي موقَّع
+
+  <br>
+
+  <small>
+    كل كتلة مرتبطة بالتجزئة السابقة؛
+    عدم تطابق التجزئة أو الرابط يظهر أثناء التحقق.
+  </small>
+
 </footer>
 
-<!-- ==================== التوقيع ==================== -->
-<div class="e-signature" role="contentinfo" aria-label="التوقيع الإلكتروني">
-  <span class="sig-label">هندسة وتطوير</span>
-  <span class="sig-name">Dr.Salah Al-Ahdal</span>
-  <span class="sig-role">Design &amp; Development</span>
-  <span class="sig-underline"></span>
+<!-- ======================================================
+     Electronic Signature
+     ====================================================== -->
+
+<div
+  class="e-signature"
+  role="contentinfo"
+  aria-label="التوقيع الإلكتروني">
+
+  <span class="sig-label">
+    هندسة وتطوير
+  </span>
+
+  <span class="sig-name">
+    Dr.Salah Al-Ahdal
+  </span>
+
+  <span class="sig-role">
+    Design &amp; Development
+  </span>
+
+  <span
+    class="sig-underline"
+    aria-hidden="true">
+  </span>
+
 </div>
 
-<!-- ==================== Modal التفاصيل ==================== -->
-<div id="block-modal" class="modal hidden">
+<!-- ======================================================
+     Modal
+     ====================================================== -->
+
+<div
+  id="block-modal"
+  class="modal hidden"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="modal-title">
+
   <div class="modal-content">
-    <button class="modal-close" id="modal-close" type="button" aria-label="إغلاق">×</button>
-    <h3 class="modal-title" id="modal-title">تفاصيل الكتلة</h3>
+
+    <button
+      class="modal-close"
+      id="modal-close"
+      type="button"
+      aria-label="إغلاق نافذة التفاصيل">
+
+      ×
+
+    </button>
+
+    <h3
+      class="modal-title"
+      id="modal-title">
+
+      تفاصيل الكتلة
+
+    </h3>
+
     <div id="modal-body"></div>
+
   </div>
+
 </div>
 
-<!-- ==================== Toast ==================== -->
-<div id="toast-box" role="log" aria-live="polite"></div>
+<!-- ======================================================
+     Toast
+     ====================================================== -->
 
-<!-- ==================== السكربتات ==================== -->
+<div
+  id="toast-box"
+  role="log"
+  aria-live="polite"
+  aria-atomic="true">
+</div>
+
+<!-- ======================================================
+     Scripts
+     ====================================================== -->
+
 <script src="js/data.js"></script>
 <script src="js/db.js"></script>
 <script src="js/blockchain.js"></script>
 
 <script>
 (() => {
-'use strict';
+  'use strict';
 
-/* ═══════════════════════════════════════════════════════
-   1. Auth Guard
-   ═══════════════════════════════════════════════════════ */
-const session = (typeof getCurrentUser === 'function')
-  ? getCurrentUser()
-  : JSON.parse(localStorage.getItem('mp_session') || 'null');
+  /* ======================================================
+     1. Auth Guard
+     ====================================================== */
 
-if (!session) {
-  location.replace('login.html');
-  throw new Error('No session');
-}
-
-console.log('👤 المستخدم:', session.fullName, '|', session.role);
-
-/* ═══════════════════════════════════════════════════════
-   2. أدوات
-   ═══════════════════════════════════════════════════════ */
-const $ = id => document.getElementById(id);
-
-function esc(s) {
-  if (s == null) return '';
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function formatDate(ts) {
-  if (!ts) return '—';
-  try {
-    return new Date(ts).toLocaleString('ar-EG', {
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit'
-    });
-  } catch (_) {
-    return new Date(ts).toLocaleString('ar-EG');
-  }
-}
-
-function truncateHash(hash, len = 16) {
-  if (!hash) return '—';
-  const s = String(hash);
-  return s.length > len * 2
-    ? `${s.substring(0, len)}...${s.substring(s.length - 8)}`
-    : s;
-}
-
-/* ═══════════════════════════════════════════════════════
-   3. Toast
-   ═══════════════════════════════════════════════════════ */
-function showToast(msg, type = 'info', ms = 3000) {
-  const box = $('toast-box');
-  if (!box) return;
-  const t = document.createElement('div');
-  t.className = `toast ${type}`;
-  t.textContent = msg;
-  box.appendChild(t);
-  setTimeout(() => {
-    t.style.transition = 'opacity .3s, transform .3s';
-    t.style.opacity = '0';
-    t.style.transform = 'translateY(20px)';
-    setTimeout(() => t.remove(), 320);
-  }, ms);
-}
-
-/* ═══════════════════════════════════════════════════════
-   4. واجهة المستخدم
-   ═══════════════════════════════════════════════════════ */
-function initUserInterface() {
-  const badge = $('user-badge');
-  if (badge) {
-    badge.textContent = `${session.fullName} · ${session.roleLabel || session.role}`;
-  }
-
-  if (session.role !== 'admin') {
-    $('nav-users')?.remove();
-  }
-}
-
-function initLogout() {
-  $('logout-btn')?.addEventListener('click', () => {
-    if (!confirm('هل تريد تسجيل الخروج؟')) return;
-    localStorage.removeItem('mp_session');
-    location.replace('login.html');
-  });
-}
-
-/* ═══════════════════════════════════════════════════════
-   5. تحميل البيانات
-   ═══════════════════════════════════════════════════════ */
-let allBlocks = [];
-let chainValid = null;
-let chainErrors = [];
-
-async function loadChain() {
-  try {
-    /* تهيئة blockchain */
-    if (typeof PrescriptionChain === 'undefined') {
-      showToast('❌ blockchain.js غير محمّل', 'error', 5000);
-      return;
-    }
-
-    await PrescriptionChain.init();
-
-    /* احصل على الكتل */
-    allBlocks = PrescriptionChain.getChain() || [];
-
-    /* افحص السلسلة */
-    chainValid = await PrescriptionChain.validateChain({ fast: false });
-    chainErrors = chainValid.errors || [];
-
-    /* معلومات السلسلة */
-    const info = await PrescriptionChain.getChainInfo();
-    const events = (PrescriptionChain.getEvents && PrescriptionChain.getEvents()) || [];
-    const quarantine = (PrescriptionChain.getQuarantine)
-      ? await PrescriptionChain.getQuarantine()
-      : null;
-
-    /* تحديث الإحصائيات */
-    updateStats(info, events, quarantine);
-
-    /* حالة السلسلة */
-    updateChainStatus(chainValid);
-
-    /* الحجر الصحي */
-    renderQuarantine(quarantine);
-
-    /* الكتل */
-    renderBlocks();
-
-    console.log('⛓️ blockchain محمّلة —', allBlocks.length, 'كتلة');
-
-  } catch (err) {
-    console.error('loadChain error:', err);
-    showToast('❌ فشل تحميل blockchain: ' + err.message, 'error', 5000);
-  }
-}
-
-/* ═══════════════════════════════════════════════════════
-   6. الإحصائيات
-   ═══════════════════════════════════════════════════════ */
-function updateStats(info, events, quarantine) {
-  if (!info) return;
-
-  $('stat-length').textContent = (info.length || 0).toLocaleString('ar-EG');
-  $('stat-rx').textContent = (info.prescriptionCount || 0).toLocaleString('ar-EG');
-  $('stat-events').textContent = (info.eventCount || 0).toLocaleString('ar-EG');
-  $('stat-checkpoints').textContent = (info.checkpointCount || 0).toLocaleString('ar-EG');
-}
-
-/* ═══════════════════════════════════════════════════════
-   7. حالة السلسلة
-   ═══════════════════════════════════════════════════════ */
-function updateChainStatus(check) {
-  const el = $('chain-status');
-  if (!el) return;
-
-  if (!check) {
-    el.className = 'chain-status unknown';
-    el.innerHTML = `
-      <span class="chain-status-icon">⏳</span>
-      <div class="chain-status-info">
-        <strong>جارٍ فحص السلسلة...</strong>
-        <small>يتم التحقق من التجزئة والترابط</small>
-      </div>
-    `;
-    return;
-  }
-
-  if (check.valid) {
-    el.className = 'chain-status valid';
-    el.innerHTML = `
-      <span class="chain-status-icon">✅</span>
-      <div class="chain-status-info">
-        <strong>السلسلة سليمة 100%</strong>
-        <small>${check.length} كتلة — تم فحصها بوضع ${check.mode === 'fast' ? 'سريع' : 'كامل'}</small>
-      </div>
-    `;
-  } else {
-    el.className = 'chain-status invalid';
-    el.innerHTML = `
-      <span class="chain-status-icon">🚨</span>
-      <div class="chain-status-info">
-        <strong>السلسلة معطوبة!</strong>
-        <small>${check.errors.length} خطأ — راجع التفاصيل أدناه</small>
-      </div>
-      <button class="btn btn-danger btn-sm" onclick="window.showChainErrors()">
-        عرض الأخطاء
-      </button>
-    `;
-  }
-}
-
-window.showChainErrors = () => {
-  if (!chainErrors.length) {
-    showToast('لا توجد أخطاء', 'info');
-    return;
-  }
-  const html = `
-    <div style="padding:14px;background:rgba(229,57,53,.08);border:1px solid rgba(229,57,53,.3);border-radius:10px;">
-      <strong style="color:#ff8a80;">الأخطاء المكتشفة (${chainErrors.length}):</strong>
-      <ul style="margin:10px 20px 0 0;color:#ffb4b4;font-size:.85rem;line-height:1.8;">
-        ${chainErrors.map(e => `
-          <li>كتلة #${e.index} — <strong>${esc(e.type)}</strong>: ${esc(e.message || '')}</li>
-        `).join('')}
-      </ul>
-    </div>
-  `;
-  openModal('أخطاء السلسلة', html);
-};
-
-/* ═══════════════════════════════════════════════════════
-   8. الحجر الصحي
-   ═══════════════════════════════════════════════════════ */
-function renderQuarantine(quarantine) {
-  const card = $('quarantine-card');
-  const content = $('quarantine-content');
-  if (!card || !content) return;
-
-  if (!quarantine || !quarantine.blocks || !quarantine.blocks.length) {
-    card.classList.add('hidden');
-    return;
-  }
-
-  card.classList.remove('hidden');
-  content.innerHTML = `
-    <div style="padding:14px;background:rgba(229,57,53,.08);border:1px solid rgba(229,57,53,.3);border-radius:10px;margin-bottom:12px;">
-      <strong style="color:#ff8a80;">⚠️ تم اكتشاف تلف في السلسلة</strong>
-      <p style="color:#ffb4b4;font-size:.85rem;margin-top:6px;line-height:1.8;">
-        عدد الكتل المعطوبة: <strong>${quarantine.blocks.length}</strong><br>
-        بداية من الكتلة: <strong>#${quarantine.fromIndex}</strong><br>
-        وقت الحجر: ${formatDate(quarantine.quarantinedAt)}
-      </p>
-    </div>
-
-    <button class="btn btn-danger btn-sm" id="clear-quarantine-btn" type="button">
-      <i class="fas fa-trash"></i> حذف الكتل المعطوبة
-    </button>
-  `;
-
-  $('clear-quarantine-btn')?.addEventListener('click', async () => {
-    if (!confirm('هل تريد حذف الكتل المعطوبة من الحجر الصحي؟')) return;
+  function readSession() {
     try {
-      await PrescriptionChain.clearQuarantine();
-      showToast('✅ تم حذف الكتل المعطوبة', 'success');
-      await loadChain();
-    } catch (err) {
-      showToast('❌ فشل الحذف: ' + err.message, 'error');
+      if (typeof getCurrentUser === 'function') {
+        return getCurrentUser();
+      }
+
+      const raw = localStorage.getItem('mp_session');
+      return raw ? JSON.parse(raw) : null;
+
+    } catch (error) {
+      console.error('Session read error:', error);
+      return null;
     }
-  });
-}
-
-/* ═══════════════════════════════════════════════════════
-   9. عرض الكتل
-   ═══════════════════════════════════════════════════════ */
-function getBlockType(block) {
-  const d = block.data || {};
-  return d.type || 'unknown';
-}
-
-function getTypeLabel(type) {
-  const labels = {
-    genesis: '🎯 Genesis',
-    prescription: '📜 وصفة',
-    lifecycle: '🔄 دورة حياة',
-    checkpoint: '✅ Checkpoint',
-    unknown: '❓ غير معروف'
-  };
-  return labels[type] || labels.unknown;
-}
-
-function getTypeBadgeClass(type) {
-  const classes = {
-    genesis: 'badge-genesis',
-    prescription: 'badge-prescription',
-    lifecycle: 'badge-lifecycle',
-    checkpoint: 'badge-checkpoint',
-    unknown: 'badge-unknown'
-  };
-  return classes[type] || classes.unknown;
-}
-
-function renderBlocks() {
-  const container = $('blocks-container');
-  if (!container) return;
-
-  const search = ($('blocks-search')?.value || '').trim().toLowerCase();
-  const typeFilter = $('filter-type')?.value || '';
-  const statusFilter = $('filter-status')?.value || '';
-
-  /* فلترة */
-  let filtered = [...allBlocks].reverse(); /* الأحدث أولاً */
-
-  if (typeFilter) {
-    filtered = filtered.filter(b => getBlockType(b) === typeFilter);
   }
 
-  if (search) {
-    filtered = filtered.filter(b => {
-      const d = b.data || {};
-      const haystack = [
-        d.rxNumber,
-        d.diagnosis,
-        d.doctorName,
-        d.hospital,
-        d.action,
-        b.hash,
-        b.previousHash
-      ].filter(Boolean).join(' ').toLowerCase();
-      return haystack.includes(search);
-    });
-  }
+  const session = readSession();
 
-  /* فحص الحالة */
-  if (statusFilter) {
-    filtered = filtered.filter(b => {
-      const errorIdx = chainErrors.find(e => e.index === b.index);
-      const isInvalid = !!errorIdx;
-      return statusFilter === 'invalid' ? isInvalid : !isInvalid;
-    });
-  }
-
-  /* عرض */
-  if (!filtered.length) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">📭</div>
-        <h3>لا توجد كتل مطابقة</h3>
-        <p>جرّب تعديل معايير البحث أو الفلترة</p>
-      </div>
-    `;
-    updateBlocksCount(0);
+  if (!session) {
+    location.replace('login.html');
     return;
   }
 
-  container.innerHTML = filtered.map(b => renderBlockCard(b)).join('');
+  console.log(
+    '👤 المستخدم:',
+    session.fullName || '—',
+    '|',
+    session.role || '—'
+  );
 
-  /* ربط الأحداث */
-  container.querySelectorAll('[data-block-index]').forEach(card => {
-    card.addEventListener('click', (e) => {
-      if (e.target.closest('button')) return;
-      const idx = parseInt(card.dataset.blockIndex, 10);
-      showBlockDetails(idx);
-    });
-  });
+  /* ======================================================
+     2. Helpers
+     ====================================================== */
 
-  container.querySelectorAll('[data-action="verify"]').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const idx = parseInt(btn.dataset.index, 10);
-      await verifyBlock(idx);
-    });
-  });
+  const $ = id => document.getElementById(id);
 
-  updateBlocksCount(filtered.length);
-}
+  function esc(value) {
+    if (value == null) return '';
 
-function updateBlocksCount(count) {
-  const el = $('blocks-count');
-  if (el) {
-    el.textContent = `(${count} من ${allBlocks.length})`;
-  }
-}
-
-function renderBlockCard(block) {
-  const d = block.data || {};
-  const type = getBlockType(block);
-  const errorIdx = chainErrors.find(e => e.index === block.index);
-  const isInvalid = !!errorIdx;
-
-  /* شارة الحالة */
-  const verifyStatus = isInvalid
-    ? `<div class="block-verify-status bad">
-         ❌ ${esc(errorIdx.type || 'معطوبة')}: ${esc(errorIdx.message || '')}
-       </div>`
-    : `<div class="block-verify-status ok">
-         ✅ التجزئة والترابط سليمان
-       </div>`;
-
-  /* معلومات طبية للوصفات */
-  let medicalHTML = '';
-  if (type === 'prescription') {
-    const meds = Array.isArray(d.medications) ? d.medications : [];
-    medicalHTML = `
-      <div class="medical-info">
-        <div class="medical-info-title">بيانات الوصفة الطبية</div>
-        <div class="detail-row">
-          <span class="label">المريض</span>
-          <span class="value">${esc(d.patientInitials || '—')}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">التشخيص</span>
-          <span class="value">${esc(d.diagnosis || '—')}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">الطبيب</span>
-          <span class="value">${esc(d.doctorName || '—')}</span>
-        </div>
-        ${d.hospital ? `
-          <div class="detail-row">
-            <span class="label">المنشأة</span>
-            <span class="value">${esc(d.hospital)}</span>
-          </div>
-        ` : ''}
-        ${meds.length ? `
-          <div style="margin-top:10px;">
-            <div style="font-size:.75rem;color:var(--muted);font-weight:700;margin-bottom:6px;">
-              💊 الأدوية (${meds.length}):
-            </div>
-            <div class="meds-list">
-              ${meds.map(m => `
-                <div class="med-item">
-                  <strong>${esc(m.n || '—')}</strong>
-                  <span class="med-details">${esc(m.dose || '')}${m.freq ? ' — ' + esc(m.freq) : ''}${m.dur ? ' — ' + esc(m.dur) : ''}</span>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        ` : ''}
-      </div>
-    `;
-  } else if (type === 'lifecycle') {
-    medicalHTML = `
-      <div class="medical-info" style="background:rgba(2,136,209,.05);border-color:rgba(2,136,209,.2);">
-        <div class="medical-info-title" style="color:var(--blue-light);">حدث دورة حياة</div>
-        <div class="detail-row">
-          <span class="label">الإجراء</span>
-          <span class="value">${esc(d.action || '—')}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">رقم الوصفة</span>
-          <span class="value mono">${esc(d.rxNumber || '—')}</span>
-        </div>
-        ${d.reason ? `
-          <div class="detail-row">
-            <span class="label">السبب</span>
-            <span class="value">${esc(d.reason)}</span>
-          </div>
-        ` : ''}
-        ${d.by ? `
-          <div class="detail-row">
-            <span class="label">بواسطة</span>
-            <span class="value">${esc(d.by)}</span>
-          </div>
-        ` : ''}
-      </div>
-    `;
-  } else if (type === 'checkpoint') {
-    medicalHTML = `
-      <div class="medical-info" style="background:rgba(0,243,255,.05);border-color:rgba(0,243,255,.2);">
-        <div class="medical-info-title" style="color:var(--cyan);">نقطة تحقق</div>
-        <div class="detail-row">
-          <span class="label">يغطي حتى</span>
-          <span class="value">#${d.coversUpTo || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">عدد الوصفات</span>
-          <span class="value">${d.recordCount || '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">rootHash</span>
-          <span class="value mono">${esc((d.rootHash || '').substring(0, 32))}...</span>
-        </div>
-      </div>
-    `;
-  } else if (type === 'genesis') {
-    medicalHTML = `
-      <div class="medical-info" style="background:rgba(255,152,0,.05);border-color:rgba(255,152,0,.2);">
-        <div class="medical-info-title" style="color:#ffb74d;">النواة الأولى</div>
-        <div class="detail-row">
-          <span class="label">الإصدار</span>
-          <span class="value">${esc(d.version || '—')}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">الرسالة</span>
-          <span class="value">${esc(d.message || '—')}</span>
-        </div>
-      </div>
-    `;
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
-  return `
-    <div class="block-card type-${type}" data-block-index="${block.index}" style="cursor:pointer;">
-      <div class="block-header">
-        <div class="block-index">
-          <div class="block-num">#${block.index}</div>
-          <div class="block-info">
-            <div class="block-title">
-              ${d.rxNumber ? esc(d.rxNumber) : getTypeLabel(type)}
-            </div>
-            <div class="block-time">${formatDate(block.timestamp)}</div>
-          </div>
+  function safeErrorMessage(error) {
+    if (!error) return 'خطأ غير معروف';
+
+    return error instanceof Error
+      ? error.message
+      : String(error);
+  }
+
+  function formatDate(ts) {
+    if (!ts) return '—';
+
+    try {
+      const date = new Date(ts);
+
+      if (Number.isNaN(date.getTime())) {
+        return '—';
+      }
+
+      return date.toLocaleString('ar-EG', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+
+    } catch (_) {
+      return '—';
+    }
+  }
+
+  function truncateHash(hash, len = 16) {
+    if (!hash) return '—';
+
+    const value = String(hash);
+
+    if (value.length <= len * 2) {
+      return value;
+    }
+
+    return (
+      value.substring(0, len) +
+      '...' +
+      value.substring(value.length - 8)
+    );
+  }
+
+  function setButtonBusy(button, busy, busyText = 'جارٍ التنفيذ...') {
+    if (!button) return;
+
+    if (busy) {
+      if (!button.dataset.originalHtml) {
+        button.dataset.originalHtml = button.innerHTML;
+      }
+
+      button.disabled = true;
+
+      button.innerHTML = `
+        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+        <span>${esc(busyText)}</span>
+      `;
+
+    } else {
+      button.disabled = false;
+
+      if (button.dataset.originalHtml) {
+        button.innerHTML = button.dataset.originalHtml;
+        delete button.dataset.originalHtml;
+      }
+    }
+  }
+
+  /* ======================================================
+     3. Toast
+     ====================================================== */
+
+  function showToast(message, type = 'info', ms = 3000) {
+    const box = $('toast-box');
+
+    if (!box) return;
+
+    const toast = document.createElement('div');
+
+    toast.className = `toast ${type}`;
+    toast.textContent = String(message || '');
+
+    box.appendChild(toast);
+
+    window.setTimeout(() => {
+      toast.style.transition =
+        'opacity .25s ease, transform .25s ease';
+
+      toast.style.opacity = '0';
+      toast.style.transform =
+        'translateY(10px)';
+
+      window.setTimeout(() => {
+        toast.remove();
+      }, 270);
+
+    }, Math.max(500, ms));
+  }
+
+  /* ======================================================
+     4. User Interface
+     ====================================================== */
+
+  function initUserInterface() {
+    const badge = $('user-badge');
+
+    if (badge) {
+      const name =
+        session.fullName ||
+        session.name ||
+        session.username ||
+        'مستخدم';
+
+      const role =
+        session.roleLabel ||
+        session.role ||
+        '';
+
+      badge.textContent =
+        role ? `${name} · ${role}` : name;
+    }
+
+    if (session.role !== 'admin') {
+      $('nav-users')?.remove();
+    }
+  }
+
+  /* ======================================================
+     5. Logout
+     ====================================================== */
+
+  function initLogout() {
+    $('logout-btn')?.addEventListener('click', () => {
+
+      if (!confirm('هل تريد تسجيل الخروج؟')) {
+        return;
+      }
+
+      try {
+        localStorage.removeItem('mp_session');
+      } catch (error) {
+        console.warn(
+          'Unable to clear session:',
+          error
+        );
+      }
+
+      location.replace('login.html');
+    });
+  }
+
+  /* ======================================================
+     6. State
+     ====================================================== */
+
+  let allBlocks = [];
+  let chainValid = null;
+  let chainErrors = [];
+
+  let modalPreviousFocus = null;
+
+  /* ======================================================
+     7. Loading State
+     ====================================================== */
+
+  function renderLoading(message = 'جارٍ التحميل...') {
+    const container = $('blocks-container');
+
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="empty-state loading-state">
+
+        <div
+          class="empty-state-icon"
+          aria-hidden="true">
+          ⏳
         </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <span class="block-type-badge ${getTypeBadgeClass(type)}">${getTypeLabel(type)}</span>
-          <button class="btn btn-ghost btn-sm" data-action="verify" data-index="${block.index}" title="تحقق فوري">
-            <i class="fas fa-shield-alt"></i>
+
+        <h3>${esc(message)}</h3>
+
+        <p>
+          يرجى الانتظار أثناء قراءة السلسلة
+        </p>
+
+      </div>
+    `;
+  }
+
+  function renderLoadError(message) {
+    const container = $('blocks-container');
+
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="empty-state error-state">
+
+        <div
+          class="empty-state-icon"
+          aria-hidden="true">
+          ⚠️
+        </div>
+
+        <h3>
+          تعذر تحميل السلسلة
+        </h3>
+
+        <p>
+          ${esc(message)}
+        </p>
+
+        <div style="margin-top:16px;">
+          <button
+            class="btn btn-gold btn-sm"
+            type="button"
+            id="retry-load-btn">
+
+            <i
+              class="fas fa-redo"
+              aria-hidden="true"></i>
+
+            إعادة المحاولة
+
           </button>
         </div>
+
       </div>
+    `;
+
+    $('retry-load-btn')?.addEventListener(
+      'click',
+      loadChain
+    );
+  }
+
+  /* ======================================================
+     8. Load Chain
+     ====================================================== */
+
+  async function loadChain() {
+
+    renderLoading();
+
+    try {
+
+      if (
+        typeof PrescriptionChain === 'undefined'
+      ) {
+        throw new Error(
+          'ملف blockchain.js غير محمّل أو لم يتم تهيئته.'
+        );
+      }
+
+      if (
+        typeof PrescriptionChain.init !== 'function'
+      ) {
+        throw new Error(
+          'واجهة PrescriptionChain غير مكتملة.'
+        );
+      }
+
+      await PrescriptionChain.init();
+
+      allBlocks =
+        typeof PrescriptionChain.getChain === 'function'
+          ? (PrescriptionChain.getChain() || [])
+          : [];
+
+      if (!Array.isArray(allBlocks)) {
+        allBlocks = [];
+      }
+
+      if (
+        typeof PrescriptionChain.validateChain !==
+        'function'
+      ) {
+        throw new Error(
+          'دالة validateChain غير متوفرة.'
+        );
+      }
+
+      chainValid =
+        await PrescriptionChain.validateChain({
+          fast: false
+        });
+
+      chainErrors =
+        Array.isArray(chainValid?.errors)
+          ? chainValid.errors
+          : [];
+
+      let info = null;
+
+      if (
+        typeof PrescriptionChain.getChainInfo ===
+        'function'
+      ) {
+        info =
+          await PrescriptionChain.getChainInfo();
+      }
+
+      const events =
+        typeof PrescriptionChain.getEvents ===
+        'function'
+          ? (
+              await Promise.resolve(
+                PrescriptionChain.getEvents()
+              )
+            ) || []
+          : [];
+
+      const quarantine =
+        typeof PrescriptionChain.getQuarantine ===
+        'function'
+          ? await PrescriptionChain.getQuarantine()
+          : null;
+
+      updateStats(
+        info,
+        Array.isArray(events) ? events : [],
+        quarantine
+      );
+
+      updateChainStatus(chainValid);
+
+      renderQuarantine(quarantine);
+
+      renderBlocks();
+
+      console.log(
+        '⛓️ blockchain محمّلة —',
+        allBlocks.length,
+        'كتلة'
+      );
+
+    } catch (error) {
+
+      console.error(
+        'loadChain error:',
+        error
+      );
+
+      chainValid = null;
+      chainErrors = [];
+
+      updateChainStatus(null);
+
+      renderLoadError(
+        safeErrorMessage(error)
+      );
+
+      showToast(
+        '❌ فشل تحميل السلسلة: ' +
+        safeErrorMessage(error),
+        'error',
+        5000
+      );
+    }
+  }
+
+  /* ======================================================
+     9. Statistics
+     ====================================================== */
+
+  function updateStats(info, events, quarantine) {
+    const length =
+      Number(info?.length) ||
+      allBlocks.length ||
+      0;
+
+    const prescriptions =
+      Number(info?.prescriptionCount) ||
+      allBlocks.filter(
+        b => getBlockType(b) === 'prescription'
+      ).length ||
+      0;
+
+    const eventCount =
+      Number(info?.eventCount) ||
+      events.length ||
+      0;
+
+    const checkpointCount =
+      Number(info?.checkpointCount) ||
+      allBlocks.filter(
+        b => getBlockType(b) === 'checkpoint'
+      ).length ||
+      0;
+
+    if ($('stat-length')) {
+      $('stat-length').textContent =
+        length.toLocaleString('ar-EG');
+    }
+
+    if ($('stat-rx')) {
+      $('stat-rx').textContent =
+        prescriptions.toLocaleString('ar-EG');
+    }
+
+    if ($('stat-events')) {
+      $('stat-events').textContent =
+        eventCount.toLocaleString('ar-EG');
+    }
+
+    if ($('stat-checkpoints')) {
+      $('stat-checkpoints').textContent =
+        checkpointCount.toLocaleString('ar-EG');
+    }
+  }
+
+  /* ======================================================
+     10. Chain Status
+     ====================================================== */
+
+  function updateChainStatus(check) {
+
+    const el = $('chain-status');
+
+    if (!el) return;
+
+    if (!check) {
+
+      el.className =
+        'chain-status unknown';
+
+      el.innerHTML = `
+        <span
+          class="chain-status-icon"
+          aria-hidden="true">
+          ⏳
+        </span>
+
+        <div class="chain-status-info">
+
+          <strong>
+            تعذر إكمال الفحص
+          </strong>
+
+          <small>
+            تحقق من تحميل محرك Hash Chain ثم أعد المحاولة
+          </small>
+
+        </div>
+      `;
+
+      return;
+    }
+
+    if (check.valid) {
+
+      el.className =
+        'chain-status valid';
+
+      const length =
+        Number(check.length) ||
+        allBlocks.length ||
+        0;
+
+      const mode =
+        check.mode === 'fast'
+          ? 'سريع'
+          : 'كامل';
+
+      el.innerHTML = `
+        <span
+          class="chain-status-icon"
+          aria-hidden="true">
+          ✅
+        </span>
+
+        <div class="chain-status-info">
+
+          <strong>
+            السلسلة اجتازت الفحص
+          </strong>
+
+          <small>
+            ${length.toLocaleString('ar-EG')}
+            كتلة — تم إجراء فحص ${esc(mode)}
+            للتجزئة والترابط
+          </small>
+
+        </div>
+      `;
+
+    } else {
+
+      el.className =
+        'chain-status invalid';
+
+      const errorCount =
+        Array.isArray(check.errors)
+          ? check.errors.length
+          : chainErrors.length;
+
+      el.innerHTML = `
+        <span
+          class="chain-status-icon"
+          aria-hidden="true">
+          🚨
+        </span>
+
+        <div class="chain-status-info">
+
+          <strong>
+            تم اكتشاف مشكلة في السلسلة
+          </strong>
+
+          <small>
+            ${errorCount.toLocaleString('ar-EG')}
+            خطأ — راجع تفاصيل الأخطاء
+          </small>
+
+        </div>
+
+        <button
+          class="btn btn-danger btn-sm"
+          id="show-chain-errors-btn"
+          type="button">
+
+          <i
+            class="fas fa-triangle-exclamation"
+            aria-hidden="true"></i>
+
+          عرض الأخطاء
+
+        </button>
+      `;
+
+      $('show-chain-errors-btn')
+        ?.addEventListener(
+          'click',
+          () => window.showChainErrors()
+        );
+    }
+  }
+
+  /* ======================================================
+     11. Chain Errors
+     ====================================================== */
+
+  window.showChainErrors = () => {
+
+    if (!chainErrors.length) {
+      showToast(
+        'لا توجد أخطاء مسجلة.',
+        'info'
+      );
+      return;
+    }
+
+    const html = `
+      <div
+        style="
+          padding:14px;
+          background:rgba(229,57,53,.08);
+          border:1px solid rgba(229,57,53,.30);
+          border-radius:10px;
+        ">
+
+        <strong
+          style="color:#ff8a80;">
+
+          الأخطاء المكتشفة
+          (${chainErrors.length})
+
+        </strong>
+
+        <ul
+          style="
+            margin:10px 20px 0 0;
+            color:#ffb4b4;
+            font-size:.83rem;
+            line-height:1.9;
+          ">
+
+          ${chainErrors.map(error => `
+            <li>
+              كتلة
+              <strong>
+                #${esc(error?.index ?? '—')}
+              </strong>
+
+              —
+              <strong>
+                ${esc(error?.type || 'خطأ')}
+              </strong>
+
+              :
+              ${esc(error?.message || 'لم يتم توفير وصف للخطأ')}
+            </li>
+          `).join('')}
+
+        </ul>
+
+      </div>
+    `;
+
+    openModal(
+      'أخطاء سلسلة الكتل',
+      html
+    );
+  };
+
+  /* ======================================================
+     12. Quarantine
+     ====================================================== */
+
+  function renderQuarantine(quarantine) {
+
+    const card = $('quarantine-card');
+    const content = $('quarantine-content');
+
+    if (!card || !content) return;
+
+    const blocks =
+      Array.isArray(quarantine?.blocks)
+        ? quarantine.blocks
+        : [];
+
+    if (!blocks.length) {
+      card.classList.add('hidden');
+      content.innerHTML = '';
+      return;
+    }
+
+    card.classList.remove('hidden');
+
+    content.innerHTML = `
+      <div
+        style="
+          padding:14px;
+          background:rgba(229,57,53,.08);
+          border:1px solid rgba(229,57,53,.30);
+          border-radius:10px;
+          margin-bottom:12px;
+        ">
+
+        <strong style="color:#ff8a80;">
+          ⚠️ توجد بيانات في الحجر الصحي
+        </strong>
+
+        <p
+          style="
+            color:#ffb4b4;
+            font-size:.84rem;
+            margin-top:7px;
+            line-height:1.9;
+          ">
+
+          عدد الكتل:
+          <strong>
+            ${blocks.length.toLocaleString('ar-EG')}
+          </strong>
+
+          <br>
+
+          بداية من الكتلة:
+          <strong>
+            #${esc(quarantine?.fromIndex ?? '—')}
+          </strong>
+
+          <br>
+
+          وقت الحجر:
+          ${esc(formatDate(quarantine?.quarantinedAt))}
+
+        </p>
+
+        <p
+          style="
+            color:#d9a8a8;
+            font-size:.76rem;
+            margin-top:7px;
+          ">
+
+          لا يتم حذف هذه البيانات تلقائيًا.
+          استخدم الإجراء التالي فقط بعد مراجعة السجل.
+
+        </p>
+
+      </div>
+
+      <button
+        class="btn btn-danger btn-sm"
+        id="clear-quarantine-btn"
+        type="button">
+
+        <i
+          class="fas fa-trash-can"
+          aria-hidden="true"></i>
+
+        مسح الحجر الصحي
+
+      </button>
+    `;
+
+    $('clear-quarantine-btn')
+      ?.addEventListener(
+        'click',
+        async event => {
+
+          if (
+            typeof PrescriptionChain.clearQuarantine !==
+            'function'
+          ) {
+            showToast(
+              'دالة مسح الحجر الصحي غير متوفرة.',
+              'error'
+            );
+            return;
+          }
+
+          const confirmed = confirm(
+            'هذا الإجراء قد يزيل البيانات الموجودة في الحجر الصحي من التخزين المحلي.\\n\\nهل راجعت السجل وتريد المتابعة؟'
+          );
+
+          if (!confirmed) {
+            return;
+          }
+
+          const button = event.currentTarget;
+
+          setButtonBusy(
+            button,
+            true,
+            'جارٍ المسح...'
+          );
+
+          try {
+
+            await PrescriptionChain.clearQuarantine();
+
+            showToast(
+              'تم تحديث الحجر الصحي.',
+              'success'
+            );
+
+            await loadChain();
+
+          } catch (error) {
+
+            console.error(
+              'clearQuarantine error:',
+              error
+            );
+
+            showToast(
+              '❌ فشل تحديث الحجر الصحي: ' +
+              safeErrorMessage(error),
+              'error',
+              4500
+            );
+
+            setButtonBusy(
+              button,
+              false
+            );
+          }
+        }
+      );
+  }
+
+  /* ======================================================
+     13. Block Types
+     ====================================================== */
+
+  function getBlockType(block) {
+    return (
+      block?.data?.type ||
+      'unknown'
+    );
+  }
+
+  function getTypeLabel(type) {
+
+    const labels = {
+      genesis: '🎯 Genesis',
+      prescription: '📜 وصفة',
+      lifecycle: '🔄 دورة حياة',
+      checkpoint: '✅ Checkpoint',
+      unknown: '❓ غير معروف'
+    };
+
+    return labels[type] || labels.unknown;
+  }
+
+  function getTypeBadgeClass(type) {
+
+    const classes = {
+      genesis: 'badge-genesis',
+      prescription: 'badge-prescription',
+      lifecycle: 'badge-lifecycle',
+      checkpoint: 'badge-checkpoint',
+      unknown: 'badge-unknown'
+    };
+
+    return classes[type] || classes.unknown;
+  }
+
+  /* ======================================================
+     14. Block Error Lookup
+     ====================================================== */
+
+  function getBlockError(index) {
+
+    return chainErrors.find(
+      error =>
+        Number(error?.index) === Number(index)
+    ) || null;
+  }
+
+  /* ======================================================
+     15. Render Blocks
+     ====================================================== */
+
+  function renderBlocks() {
+
+    const container =
+      $('blocks-container');
+
+    if (!container) return;
+
+    const search =
+      ($('blocks-search')?.value || '')
+        .trim()
+        .toLowerCase();
+
+    const typeFilter =
+      $('filter-type')?.value || '';
+
+    const statusFilter =
+      $('filter-status')?.value || '';
+
+    let filtered =
+      [...allBlocks].reverse();
+
+    if (typeFilter) {
+      filtered =
+        filtered.filter(
+          block =>
+            getBlockType(block) ===
+            typeFilter
+        );
+    }
+
+    if (search) {
+
+      filtered =
+        filtered.filter(block => {
+
+          const d =
+            block?.data || {};
+
+          const haystack = [
+            d.rxNumber,
+            d.diagnosis,
+            d.doctorName,
+            d.hospital,
+            d.action,
+            d.reason,
+            d.by,
+            d.patientInitials,
+            block.index,
+            block.hash,
+            block.previousHash,
+            block.merkleRoot
+          ]
+          .filter(
+            value =>
+              value !== null &&
+              value !== undefined
+          )
+          .join(' ')
+          .toLowerCase();
+
+          return haystack.includes(search);
+        });
+    }
+
+    if (statusFilter) {
+
+      filtered =
+        filtered.filter(block => {
+
+          const invalid =
+            Boolean(
+              getBlockError(block.index)
+            );
+
+          return statusFilter === 'invalid'
+            ? invalid
+            : !invalid;
+        });
+    }
+
+    if (!filtered.length) {
+
+      container.innerHTML = `
+        <div class="empty-state">
+
+          <div
+            class="empty-state-icon"
+            aria-hidden="true">
+            📭
+          </div>
+
+          <h3>
+            لا توجد كتل مطابقة
+          </h3>
+
+          <p>
+            جرّب تعديل البحث أو معايير الفلترة.
+          </p>
+
+        </div>
+      `;
+
+      updateBlocksCount(0);
+      return;
+    }
+
+    container.innerHTML =
+      filtered
+        .map(renderBlockCard)
+        .join('');
+
+    container
+      .querySelectorAll(
+        '[data-block-index]'
+      )
+      .forEach(card => {
+
+        card.addEventListener(
+          'click',
+          event => {
+
+            if (
+              event.target.closest('button')
+            ) {
+              return;
+            }
+
+            const index =
+              Number(
+                card.dataset.blockIndex
+              );
+
+            if (
+              Number.isInteger(index)
+            ) {
+              showBlockDetails(index);
+            }
+          }
+        );
+
+        card.addEventListener(
+          'keydown',
+          event => {
+
+            if (
+              event.key !== 'Enter' &&
+              event.key !== ' '
+            ) {
+              return;
+            }
+
+            if (
+              event.target.closest('button')
+            ) {
+              return;
+            }
+
+            event.preventDefault();
+
+            const index =
+              Number(
+                card.dataset.blockIndex
+              );
+
+            if (
+              Number.isInteger(index)
+            ) {
+              showBlockDetails(index);
+            }
+          }
+        );
+      });
+
+    container
+      .querySelectorAll(
+        '[data-action="verify"]'
+      )
+      .forEach(button => {
+
+        button.addEventListener(
+          'click',
+          async event => {
+
+            event.stopPropagation();
+
+            const index =
+              Number(
+                button.dataset.index
+              );
+
+            await verifyBlock(
+              index,
+              button
+            );
+          }
+        );
+      });
+
+    updateBlocksCount(
+      filtered.length
+    );
+  }
+
+  function updateBlocksCount(count) {
+
+    const el =
+      $('blocks-count');
+
+    if (!el) return;
+
+    el.textContent =
+      `(${count.toLocaleString('ar-EG')} من ${
+        allBlocks.length.toLocaleString('ar-EG')
+      })`;
+  }
+
+  /* ======================================================
+     16. Block Card
+     ====================================================== */
+
+  function renderBlockCard(block) {
+
+    const d =
+      block?.data || {};
+
+    const type =
+      getBlockType(block);
+
+    const error =
+      getBlockError(block.index);
+
+    const isInvalid =
+      Boolean(error);
+
+    const verifyStatus =
+      isInvalid
+        ? `
+          <div class="block-verify-status bad">
+
+            <span aria-hidden="true">
+              ❌
+            </span>
+
+            <span>
+              ${esc(error?.type || 'خطأ')}
+              :
+              ${esc(
+                error?.message ||
+                'تم تسجيل مشكلة في هذه الكتلة.'
+              )}
+            </span>
+
+          </div>
+        `
+        : `
+          <div class="block-verify-status ok">
+
+            <span aria-hidden="true">
+              ✅
+            </span>
+
+            <span>
+              اجتازت الكتلة فحص التجزئة والترابط
+              ضمن آخر عملية تحقق.
+            </span>
+
+          </div>
+        `;
+
+    let medicalHTML = '';
+
+    /* Prescription */
+
+    if (type === 'prescription') {
+
+      const meds =
+        Array.isArray(d.medications)
+          ? d.medications
+          : [];
+
+      medicalHTML = `
+        <div class="medical-info">
+
+          <div class="medical-info-title">
+            بيانات الوصفة الطبية
+          </div>
+
+          <div class="detail-row">
+
+            <span class="label">
+              المريض
+            </span>
+
+            <span class="value">
+              ${esc(
+                d.patientInitials ||
+                '—'
+              )}
+            </span>
+
+          </div>
+
+          <div class="detail-row">
+
+            <span class="label">
+              التشخيص
+            </span>
+
+            <span class="value">
+              ${esc(
+                d.diagnosis ||
+                '—'
+              )}
+            </span>
+
+          </div>
+
+          <div class="detail-row">
+
+            <span class="label">
+              الطبيب
+            </span>
+
+            <span class="value">
+              ${esc(
+                d.doctorName ||
+                '—'
+              )}
+            </span>
+
+          </div>
+
+          ${
+            d.hospital
+              ? `
+                <div class="detail-row">
+
+                  <span class="label">
+                    المنشأة
+                  </span>
+
+                  <span class="value">
+                    ${esc(d.hospital)}
+                  </span>
+
+                </div>
+              `
+              : ''
+          }
+
+          ${
+            meds.length
+              ? `
+                <div style="margin-top:10px;">
+
+                  <div
+                    style="
+                      font-size:.75rem;
+                      color:var(--muted);
+                      font-weight:700;
+                      margin-bottom:6px;
+                    ">
+
+                    💊 الأدوية
+                    (${meds.length})
+
+                  </div>
+
+                  <div class="meds-list">
+
+                    ${meds.map(med => `
+
+                      <div class="med-item">
+
+                        <strong>
+                          ${esc(
+                            med?.n ||
+                            '—'
+                          )}
+                        </strong>
+
+                        <span class="med-details">
+
+                          ${esc(
+                            med?.dose ||
+                            ''
+                          )}
+
+                          ${
+                            med?.freq
+                              ? ' — ' +
+                                esc(
+                                  med.freq
+                                )
+                              : ''
+                          }
+
+                          ${
+                            med?.dur
+                              ? ' — ' +
+                                esc(
+                                  med.dur
+                                )
+                              : ''
+                          }
+
+                        </span>
+
+                      </div>
+
+                    `).join('')}
+
+                  </div>
+
+                </div>
+              `
+              : ''
+          }
+
+        </div>
+      `;
+
+    /* Lifecycle */
+
+    } else if (type === 'lifecycle') {
+
+      medicalHTML = `
+        <div
+          class="medical-info"
+          style="
+            background:rgba(2,136,209,.05);
+            border-color:rgba(2,136,209,.20);
+          ">
+
+          <div
+            class="medical-info-title"
+            style="color:var(--blue-light);">
+
+            حدث دورة حياة
+
+          </div>
+
+          <div class="detail-row">
+
+            <span class="label">
+              الإجراء
+            </span>
+
+            <span class="value">
+              ${esc(
+                d.action ||
+                '—'
+              )}
+            </span>
+
+          </div>
+
+          <div class="detail-row">
+
+            <span class="label">
+              رقم الوصفة
+            </span>
+
+            <span class="value mono">
+              ${esc(
+                d.rxNumber ||
+                '—'
+              )}
+            </span>
+
+          </div>
+
+          ${
+            d.reason
+              ? `
+                <div class="detail-row">
+
+                  <span class="label">
+                    السبب
+                  </span>
+
+                  <span class="value">
+                    ${esc(d.reason)}
+                  </span>
+
+                </div>
+              `
+              : ''
+          }
+
+          ${
+            d.by
+              ? `
+                <div class="detail-row">
+
+                  <span class="label">
+                    بواسطة
+                  </span>
+
+                  <span class="value">
+                    ${esc(d.by)}
+                  </span>
+
+                </div>
+              `
+              : ''
+          }
+
+        </div>
+      `;
+
+    /* Checkpoint */
+
+    } else if (type === 'checkpoint') {
+
+      medicalHTML = `
+        <div
+          class="medical-info"
+          style="
+            background:rgba(0,243,255,.05);
+            border-color:rgba(0,243,255,.20);
+          ">
+
+          <div
+            class="medical-info-title"
+            style="color:var(--cyan);">
+
+            نقطة تحقق
+
+          </div>
+
+          <div class="detail-row">
+
+            <span class="label">
+              يغطي حتى
+            </span>
+
+            <span class="value">
+              #${esc(
+                d.coversUpTo ??
+                '—'
+              )}
+            </span>
+
+          </div>
+
+          <div class="detail-row">
+
+            <span class="label">
+              عدد الوصفات
+            </span>
+
+            <span class="value">
+              ${esc(
+                d.recordCount ??
+                '—'
+              )}
+            </span>
+
+          </div>
+
+          <div class="detail-row">
+
+            <span class="label">
+              rootHash
+            </span>
+
+            <span class="value mono">
+              ${esc(
+                truncateHash(
+                  d.rootHash,
+                  20
+                )
+              )}
+            </span>
+
+          </div>
+
+        </div>
+      `;
+
+    /* Genesis */
+
+    } else if (type === 'genesis') {
+
+      medicalHTML = `
+        <div
+          class="medical-info"
+          style="
+            background:rgba(255,152,0,.05);
+            border-color:rgba(255,152,0,.20);
+          ">
+
+          <div
+            class="medical-info-title"
+            style="color:#ffb74d;">
+
+            النواة الأولى
+
+          </div>
+
+          <div class="detail-row">
+
+            <span class="label">
+              الإصدار
+            </span>
+
+            <span class="value">
+              ${esc(
+                d.version ||
+                '—'
+              )}
+            </span>
+
+          </div>
+
+          <div class="detail-row">
+
+            <span class="label">
+              الرسالة
+            </span>
+
+            <span class="value">
+              ${esc(
+                d.message ||
+                '—'
+              )}
+            </span>
+
+          </div>
+
+        </div>
+      `;
+    }
+
+    return `
+      <article
+        class="
+          block-card
+          type-${esc(type)}
+          ${isInvalid ? 'is-invalid' : ''}
+        "
+        data-block-index="${esc(block.index)}"
+        tabindex="0"
+        role="button"
+        aria-label="عرض تفاصيل الكتلة رقم ${esc(block.index)}">
+
+        <div class="block-header">
+
+          <div class="block-index">
+
+            <div class="block-num">
+              #${esc(block.index)}
+            </div>
+
+            <div class="block-info">
+
+              <div class="block-title">
+
+                ${
+                  d.rxNumber
+                    ? esc(d.rxNumber)
+                    : esc(
+                        getTypeLabel(type)
+                      )
+                }
+
+              </div>
+
+              <div class="block-time">
+                ${esc(
+                  formatDate(
+                    block.timestamp
+                  )
+                )}
+              </div>
+
+            </div>
+
+          </div>
+
+          <div
+            style="
+              display:flex;
+              gap:8px;
+              align-items:center;
+              flex-wrap:wrap;
+            ">
+
+            <span
+              class="
+                block-type-badge
+                ${getTypeBadgeClass(type)}
+              ">
+
+              ${esc(
+                getTypeLabel(type)
+              )}
+
+            </span>
+
+            <button
+              class="btn btn-ghost btn-sm"
+              data-action="verify"
+              data-index="${esc(block.index)}"
+              type="button"
+              title="تحقق فوري"
+              aria-label="التحقق من الكتلة رقم ${esc(block.index)}">
+
+              <i
+                class="fas fa-shield-halved"
+                aria-hidden="true"></i>
+
+            </button>
+
+          </div>
+
+        </div>
+
+        <div class="block-details">
+
+          <div class="detail-row">
+
+            <span class="label">
+              hash
+            </span>
+
+            <span class="value mono">
+              ${esc(
+                truncateHash(
+                  block.hash
+                )
+              )}
+            </span>
+
+          </div>
+
+          <div class="detail-row">
+
+            <span class="label">
+              previousHash
+            </span>
+
+            <span class="value mono">
+              ${esc(
+                truncateHash(
+                  block.previousHash
+                )
+              )}
+            </span>
+
+          </div>
+
+          ${
+            block.merkleRoot
+              ? `
+                <div class="detail-row">
+
+                  <span class="label">
+                    merkleRoot
+                  </span>
+
+                  <span class="value mono">
+                    ${esc(
+                      truncateHash(
+                        block.merkleRoot
+                      )
+                    )}
+                  </span>
+
+                </div>
+              `
+              : ''
+          }
+
+          ${
+            block.nonce !== undefined &&
+            block.nonce !== null
+              ? `
+                <div class="detail-row">
+
+                  <span class="label">
+                    nonce
+                  </span>
+
+                  <span class="value">
+                    ${esc(block.nonce)}
+                  </span>
+
+                </div>
+              `
+              : ''
+          }
+
+        </div>
+
+        ${medicalHTML}
+
+        ${verifyStatus}
+
+      </article>
+    `;
+  }
+
+  /* ======================================================
+     17. Modal
+     ====================================================== */
+
+  function openModal(title, content) {
+
+    const modal =
+      $('block-modal');
+
+    const titleEl =
+      $('modal-title');
+
+    const bodyEl =
+      $('modal-body');
+
+    if (!modal || !titleEl || !bodyEl) {
+      return;
+    }
+
+    modalPreviousFocus =
+      document.activeElement;
+
+    titleEl.textContent =
+      String(title || 'تفاصيل');
+
+    bodyEl.innerHTML =
+      content || '';
+
+    modal.classList.remove('hidden');
+
+    document.body.style.overflow =
+      'hidden';
+
+    requestAnimationFrame(() => {
+      $('modal-close')?.focus();
+    });
+  }
+
+  function closeModal() {
+
+    const modal =
+      $('block-modal');
+
+    if (!modal) return;
+
+    modal.classList.add('hidden');
+
+    document.body.style.overflow =
+      '';
+
+    if (
+      modalPreviousFocus &&
+      typeof modalPreviousFocus.focus ===
+        'function' &&
+      document.contains(
+        modalPreviousFocus
+      )
+    ) {
+      modalPreviousFocus.focus();
+    }
+
+    modalPreviousFocus = null;
+  }
+
+  /* ======================================================
+     18. Block Details
+     ====================================================== */
+
+  function showBlockDetails(index) {
+
+    const block =
+      allBlocks.find(
+        item =>
+          Number(item?.index) ===
+          Number(index)
+      );
+
+    if (!block) {
+
+      showToast(
+        '❌ الكتلة غير موجودة.',
+        'error'
+      );
+
+      return;
+    }
+
+    const d =
+      block.data || {};
+
+    const type =
+      getBlockType(block);
+
+    const error =
+      getBlockError(index);
+
+    const html = `
 
       <div class="block-details">
+
         <div class="detail-row">
-          <span class="label">hash</span>
-          <span class="value mono">${esc(truncateHash(block.hash))}</span>
+
+          <span class="label">
+            رقم الكتلة
+          </span>
+
+          <span class="value">
+            #${esc(block.index)}
+          </span>
+
         </div>
+
         <div class="detail-row">
-          <span class="label">previousHash</span>
-          <span class="value mono">${esc(truncateHash(block.previousHash))}</span>
+
+          <span class="label">
+            النوع
+          </span>
+
+          <span class="value">
+            ${esc(
+              getTypeLabel(type)
+            )}
+          </span>
+
         </div>
-        ${block.merkleRoot ? `
-          <div class="detail-row">
-            <span class="label">merkleRoot</span>
-            <span class="value mono">${esc(truncateHash(block.merkleRoot))}</span>
-          </div>
-        ` : ''}
-        ${block.nonce ? `
-          <div class="detail-row">
-            <span class="label">nonce</span>
-            <span class="value">${block.nonce}</span>
-          </div>
-        ` : ''}
-      </div>
 
-      ${medicalHTML}
-      ${verifyStatus}
-    </div>
-  `;
-}
-
-/* ═══════════════════════════════════════════════════════
-   10. تفاصيل كتلة (Modal)
-   ═══════════════════════════════════════════════════════ */
-function showBlockDetails(index) {
-  const block = allBlocks.find(b => b.index === index);
-  if (!block) {
-    showToast('❌ الكتلة غير موجودة', 'error');
-    return;
-  }
-
-  const d = block.data || {};
-  const type = getBlockType(block);
-  const errorIdx = chainErrors.find(e => e.index === index);
-
-  const html = `
-    <div class="block-details">
-      <div class="detail-row">
-        <span class="label">رقم الكتلة</span>
-        <span class="value">#${block.index}</span>
-      </div>
-      <div class="detail-row">
-        <span class="label">النوع</span>
-        <span class="value">${getTypeLabel(type)}</span>
-      </div>
-      <div class="detail-row">
-        <span class="label">الوقت</span>
-        <span class="value">${formatDate(block.timestamp)}</span>
-      </div>
-      <div class="detail-row">
-        <span class="label">nonce</span>
-        <span class="value">${block.nonce || 0}</span>
-      </div>
-    </div>
-
-    <div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--border);">
-      <div class="detail-row">
-        <span class="label">hash</span>
-        <span class="value mono">${esc(block.hash || '')}</span>
-      </div>
-      <div class="detail-row">
-        <span class="label">previousHash</span>
-        <span class="value mono">${esc(block.previousHash || '')}</span>
-      </div>
-      ${block.merkleRoot ? `
         <div class="detail-row">
-          <span class="label">merkleRoot</span>
-          <span class="value mono">${esc(block.merkleRoot)}</span>
+
+          <span class="label">
+            الوقت
+          </span>
+
+          <span class="value">
+            ${esc(
+              formatDate(
+                block.timestamp
+              )
+            )}
+          </span>
+
         </div>
-      ` : ''}
-    </div>
 
-    <div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--border);">
-      <strong style="color:var(--gold-light);display:block;margin-bottom:8px;">
-        📦 بيانات الكتلة الكاملة:
-      </strong>
-      <pre style="background:rgba(0,0,0,.3);padding:12px;border-radius:8px;
-                  overflow-x:auto;font-size:.72rem;color:#7ec9ff;
-                  direction:ltr;text-align:left;line-height:1.6;">${esc(JSON.stringify(d, null, 2))}</pre>
-    </div>
+        <div class="detail-row">
 
-    ${errorIdx ? `
-      <div style="margin-top:14px;padding:12px;background:rgba(229,57,53,.1);
-                  border:1px solid rgba(229,57,53,.4);border-radius:10px;">
-        <strong style="color:#ff8a80;">❌ خطأ في هذه الكتلة:</strong>
-        <p style="color:#ffb4b4;font-size:.85rem;margin-top:6px;line-height:1.8;">
-          <strong>${esc(errorIdx.type)}</strong><br>
-          ${esc(errorIdx.message || '')}
-        </p>
+          <span class="label">
+            nonce
+          </span>
+
+          <span class="value">
+            ${esc(
+              block.nonce ??
+              0
+            )}
+          </span>
+
+        </div>
+
       </div>
-    ` : `
-      <div style="margin-top:14px;padding:12px;background:rgba(67,160,71,.08);
-                  border:1px solid rgba(67,160,71,.3);border-radius:10px;">
-        <strong style="color:#81c784;">✅ الكتلة سليمة</strong>
-        <p style="color:#a8e6c0;font-size:.85rem;margin-top:6px;line-height:1.8;">
-          التجزئة مطابقة والترابط بالسلسلة سليم.
-        </p>
+
+      <div
+        style="
+          margin-top:14px;
+          padding-top:14px;
+          border-top:1px dashed var(--border);
+        ">
+
+        <div class="detail-row">
+
+          <span class="label">
+            hash
+          </span>
+
+          <span class="value mono">
+            ${esc(
+              block.hash ||
+              '—'
+            )}
+          </span>
+
+        </div>
+
+        <div class="detail-row">
+
+          <span class="label">
+            previousHash
+          </span>
+
+          <span class="value mono">
+            ${esc(
+              block.previousHash ||
+              '—'
+            )}
+          </span>
+
+        </div>
+
+        ${
+          block.merkleRoot
+            ? `
+              <div class="detail-row">
+
+                <span class="label">
+                  merkleRoot
+                </span>
+
+                <span class="value mono">
+                  ${esc(
+                    block.merkleRoot
+                  )}
+                </span>
+
+              </div>
+            `
+            : ''
+        }
+
       </div>
-    `}
 
-    <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn btn-gold btn-sm" id="verify-block-btn" data-index="${index}">
-        <i class="fas fa-shield-alt"></i> إعادة التحقق
-      </button>
-      <button class="btn btn-ghost btn-sm" id="copy-block-json">
-        <i class="fas fa-copy"></i> نسخ JSON
-      </button>
-    </div>
-  `;
+      <div class="modal-json">
 
-  openModal(`تفاصيل الكتلة #${index}`, html);
+        <strong class="modal-json-title">
+          📦 بيانات الكتلة الكاملة
+        </strong>
 
-  /* ربط الأحداث */
-  $('verify-block-btn')?.addEventListener('click', async () => {
-    closeModal();
-    await verifyBlock(index);
-  });
+        <pre>${esc(
+          JSON.stringify(
+            d,
+            null,
+            2
+          )
+        )}</pre>
 
-  $('copy-block-json')?.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(block, null, 2));
-      showToast('📋 تم نسخ JSON', 'success');
-    } catch (_) {
-      showToast('❌ فشل النسخ', 'error');
-    }
-  });
-}
+      </div>
 
-/* ═══════════════════════════════════════════════════════
-   11. تحقق فوري من كتلة
-   ═══════════════════════════════════════════════════════ */
-async function verifyBlock(index) {
-  const block = allBlocks.find(b => b.index === index);
-  if (!block) {
-    showToast('❌ الكتلة غير موجودة', 'error');
-    return;
-  }
+      ${
+        error
+          ? `
+            <div class="modal-alert error">
 
-  try {
-    /* 1. أعد حساب التجزئة */
-    const recalc = await PrescriptionChain.sha256(
-      JSON.stringify({
-        sv: PrescriptionChain.SCHEMA_VERSION,
-        i: block.index,
-        t: block.timestamp,
-        d: block.data,
-        p: block.previousHash,
-        n: block.nonce
-      })
+              <strong>
+                ❌ مشكلة مسجلة لهذه الكتلة
+              </strong>
+
+              <p>
+                <strong>
+                  ${esc(
+                    error.type ||
+                    'خطأ'
+                  )}
+                </strong>
+
+                <br>
+
+                ${esc(
+                  error.message ||
+                  'لم يتم توفير وصف.'
+                )}
+
+              </p>
+
+            </div>
+          `
+          : `
+            <div class="modal-alert success">
+
+              <strong>
+                ✅ الكتلة اجتازت آخر فحص للسلسلة
+              </strong>
+
+              <p>
+                لم يتم تسجيل خطأ لهذه الكتلة ضمن نتيجة
+                آخر عملية تحقق من السلسلة.
+              </p>
+
+            </div>
+          `
+      }
+
+      <div class="modal-actions">
+
+        <button
+          class="btn btn-gold btn-sm"
+          id="verify-block-btn"
+          data-index="${esc(index)}"
+          type="button">
+
+          <i
+            class="fas fa-shield-halved"
+            aria-hidden="true"></i>
+
+          إعادة التحقق
+
+        </button>
+
+        <button
+          class="btn btn-ghost btn-sm"
+          id="copy-block-json"
+          type="button">
+
+          <i
+            class="fas fa-copy"
+            aria-hidden="true"></i>
+
+          نسخ JSON
+
+        </button>
+
+      </div>
+    `;
+
+    openModal(
+      `تفاصيل الكتلة #${index}`,
+      html
     );
 
-    if (recalc !== block.hash) {
-      showToast('❌ التجزئة غير مطابقة! الكتلة معدّلة.', 'error', 5000);
-      return;
-    }
+    $('verify-block-btn')
+      ?.addEventListener(
+        'click',
+        async event => {
 
-    /* 2. تحقق من الارتباط بالكتلة السابقة */
-    if (index > 0) {
-      const prev = allBlocks[index - 1];
-      if (prev && block.previousHash !== prev.hash) {
-        showToast('❌ الارتباط بالكتلة السابقة مكسور!', 'error', 5000);
-        return;
-      }
-    }
+          const button =
+            event.currentTarget;
 
-    /* 3. تحقق التوقيع (للوصفات) */
-    if (block.data && block.data.type === 'prescription' && block.data.sig) {
-      const sigCheck = await PrescriptionChain.verifySignature(
-        block.data.signedBy,
-        block.data
+          setButtonBusy(
+            button,
+            true,
+            'جارٍ التحقق...'
+          );
+
+          try {
+            await verifyBlock(index);
+          } finally {
+            if (
+              document.contains(button)
+            ) {
+              setButtonBusy(
+                button,
+                false
+              );
+            }
+          }
+        }
       );
-      if (!sigCheck.valid) {
-        showToast('❌ التوقيع غير صالح!', 'error', 5000);
-        return;
-      }
-    }
 
-    showToast(`✅ الكتلة #${index} سليمة 100%`, 'success', 3000);
+    $('copy-block-json')
+      ?.addEventListener(
+        'click',
+        async event => {
 
-  } catch (err) {
-    console.error('verifyBlock error:', err);
-    showToast('❌ خطأ في التحقق: ' + err.message, 'error', 4000);
+          const button =
+            event.currentTarget;
+
+          try {
+
+            await copyText(
+              JSON.stringify(
+                block,
+                null,
+                2
+              )
+            );
+
+            showToast(
+              '📋 تم نسخ JSON.',
+              'success'
+            );
+
+          } catch (error) {
+
+            console.error(
+              'copy error:',
+              error
+            );
+
+            showToast(
+              '❌ تعذر نسخ JSON.',
+              'error'
+            );
+          }
+        }
+      );
   }
-}
 
-/* ═══════════════════════════════════════════════════════
-   12. Modal
-   ═══════════════════════════════════════════════════════ */
-function openModal(title, content) {
-  const modal = $('block-modal');
-  $('modal-title').textContent = title;
-  $('modal-body').innerHTML = content;
-  modal.classList.remove('hidden');
-}
+  /* ======================================================
+     19. Clipboard
+     ====================================================== */
 
-function closeModal() {
-  $('block-modal')?.classList.add('hidden');
-}
+  async function copyText(text) {
 
-/* ═══════════════════════════════════════════════════════
-   13. تصدير JSON
-   ═══════════════════════════════════════════════════════ */
-async function exportChain() {
-  try {
-    if (typeof PrescriptionChain.exportChain !== 'function') {
-      showToast('❌ دالة التصدير غير متوفرة', 'error');
+    if (
+      navigator.clipboard &&
+      typeof navigator.clipboard.writeText ===
+        'function'
+    ) {
+      await navigator.clipboard.writeText(
+        text
+      );
+
       return;
     }
 
-    const data = await PrescriptionChain.exportChain();
-    const json = JSON.stringify(data, null, 2);
-    const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
+    const textarea =
+      document.createElement('textarea');
 
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `MediPrescribe_Blockchain_${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    textarea.value = text;
 
-    showToast(`✅ تم تصدير ${data.length || 0} كتلة`, 'success');
-  } catch (err) {
-    console.error('exportChain error:', err);
-    showToast('❌ فشل التصدير: ' + err.message, 'error');
-  }
-}
+    textarea.setAttribute(
+      'readonly',
+      ''
+    );
 
-/* ═══════════════════════════════════════════════════════
-   14. ربط الأحداث
-   ═══════════════════════════════════════════════════════ */
-function initEventListeners() {
-  $('blocks-search')?.addEventListener('input', renderBlocks);
-  $('filter-type')?.addEventListener('change', renderBlocks);
-  $('filter-status')?.addEventListener('change', renderBlocks);
+    textarea.style.position =
+      'fixed';
 
-  $('refresh-btn')?.addEventListener('click', async () => {
-    showToast('🔄 جارٍ التحديث...', 'info', 1500);
-    await loadChain();
-  });
+    textarea.style.opacity =
+      '0';
 
-  $('export-btn')?.addEventListener('click', exportChain);
+    textarea.style.pointerEvents =
+      'none';
 
-  $('modal-close')?.addEventListener('click', closeModal);
-  $('block-modal')?.addEventListener('click', (e) => {
-    if (e.target.id === 'block-modal') closeModal();
-  });
+    document.body.appendChild(
+      textarea
+    );
 
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeModal();
-  });
-}
+    textarea.select();
 
-/* ═══════════════════════════════════════════════════════
-   15. التشغيل
-   ═══════════════════════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', async () => {
-  console.log('⛓️ MediPrescribe — سجل Blockchain');
+    const success =
+      document.execCommand(
+        'copy'
+      );
 
-  initUserInterface();
-  initLogout();
-  initEventListeners();
+    textarea.remove();
 
-  /* تهيئة DB للمصادقة */
-  if (typeof initDB === 'function') {
-    try { await initDB(); } catch (e) { /* تجاهل */ }
+    if (!success) {
+      throw new Error(
+        'Clipboard unavailable'
+      );
+    }
   }
 
-  /* تحميل السلسلة */
-  await loadChain();
+  /* ======================================================
+     20. Verify Single Block
+     ====================================================== */
 
-  console.log('✅ audit-blockchain.html — جاهز');
-});
+  async function verifyBlock(
+    index,
+    sourceButton = null
+  ) {
+
+    const block =
+      allBlocks.find(
+        item =>
+          Number(item?.index) ===
+          Number(index)
+      );
+
+    if (!block) {
+
+      showToast(
+        '❌ الكتلة غير موجودة.',
+        'error'
+      );
+
+      return false;
+    }
+
+    if (
+      typeof PrescriptionChain.sha256 !==
+      'function'
+    ) {
+
+      showToast(
+        '❌ دالة SHA-256 غير متوفرة.',
+        'error'
+      );
+
+      return false;
+    }
+
+    if (sourceButton) {
+      setButtonBusy(
+        sourceButton,
+        true,
+        'جارٍ التحقق...'
+      );
+    }
+
+    try {
+
+      /* -----------------------------------------------
+         1. Hash
+         ----------------------------------------------- */
+
+      const payload = {
+        sv:
+          PrescriptionChain.SCHEMA_VERSION,
+        i:
+          block.index,
+        t:
+          block.timestamp,
+        d:
+          block.data,
+        p:
+          block.previousHash,
+        n:
+          block.nonce
+      };
+
+      const recalculated =
+        await PrescriptionChain.sha256(
+          JSON.stringify(payload)
+        );
+
+      if (
+        recalculated !==
+        block.hash
+      ) {
+
+        showToast(
+          '❌ التجزئة غير مطابقة؛ قد تكون بيانات الكتلة قد تغيرت.',
+          'error',
+          5000
+        );
+
+        return false;
+      }
+
+      /* -----------------------------------------------
+         2. Previous Hash
+         ----------------------------------------------- */
+
+      if (
+        Number(block.index) > 0
+      ) {
+
+        const previous =
+          allBlocks.find(
+            item =>
+              Number(item?.index) ===
+              Number(block.index) - 1
+          );
+
+        if (
+          previous &&
+          block.previousHash !==
+            previous.hash
+        ) {
+
+          showToast(
+            '❌ الرابط مع الكتلة السابقة غير مطابق.',
+            'error',
+            5000
+          );
+
+          return false;
+        }
+      }
+
+      /* -----------------------------------------------
+         3. Prescription Signature
+         ----------------------------------------------- */
+
+      if (
+        block.data?.type ===
+          'prescription' &&
+        block.data?.sig &&
+        typeof PrescriptionChain.verifySignature ===
+          'function'
+      ) {
+
+        const signatureResult =
+          await PrescriptionChain.verifySignature(
+            block.data.signedBy,
+            block.data
+          );
+
+        if (
+          !signatureResult?.valid
+        ) {
+
+          showToast(
+            '❌ توقيع الوصفة غير صالح.',
+            'error',
+            5000
+          );
+
+          return false;
+        }
+      }
+
+      showToast(
+        `✅ الكتلة #${index} اجتازت التحقق.`,
+        'success',
+        3000
+      );
+
+      return true;
+
+    } catch (error) {
+
+      console.error(
+        'verifyBlock error:',
+        error
+      );
+
+      showToast(
+        '❌ خطأ أثناء التحقق: ' +
+        safeErrorMessage(error),
+        'error',
+        4500
+      );
+
+      return false;
+
+    } finally {
+
+      if (sourceButton) {
+        setButtonBusy(
+          sourceButton,
+          false
+        );
+      }
+    }
+  }
+
+  /* ======================================================
+     21. Export
+     ====================================================== */
+
+  async function exportChain() {
+
+    const button =
+      $('export-btn');
+
+    if (
+      typeof PrescriptionChain?.exportChain !==
+      'function'
+    ) {
+
+      showToast(
+        '❌ دالة التصدير غير متوفرة.',
+        'error'
+      );
+
+      return;
+    }
+
+    setButtonBusy(
+      button,
+      true,
+      'جارٍ التصدير...'
+    );
+
+    try {
+
+      const data =
+        await PrescriptionChain.exportChain();
+
+      const json =
+        JSON.stringify(
+          data,
+          null,
+          2
+        );
+
+      const blob =
+        new Blob(
+          [json],
+          {
+            type:
+              'application/json;charset=utf-8'
+          }
+        );
+
+      const url =
+        URL.createObjectURL(
+          blob
+        );
+
+      const anchor =
+        document.createElement('a');
+
+      anchor.href = url;
+
+      anchor.download =
+        `MediPrescribe_Blockchain_${
+          new Date()
+            .toISOString()
+            .slice(0, 10)
+        }.json`;
+
+      document.body.appendChild(
+        anchor
+      );
+
+      anchor.click();
+
+      anchor.remove();
+
+      window.setTimeout(
+        () => URL.revokeObjectURL(url),
+        1000
+      );
+
+      const count =
+        Array.isArray(data)
+          ? data.length
+          : (
+              Array.isArray(
+                data?.chain
+              )
+                ? data.chain.length
+                : allBlocks.length
+            );
+
+      showToast(
+        `✅ تم تجهيز تصدير ${count.toLocaleString('ar-EG')} كتلة.`,
+        'success'
+      );
+
+    } catch (error) {
+
+      console.error(
+        'exportChain error:',
+        error
+      );
+
+      showToast(
+        '❌ فشل التصدير: ' +
+        safeErrorMessage(error),
+        'error',
+        4500
+      );
+
+    } finally {
+
+      setButtonBusy(
+        button,
+        false
+      );
+    }
+  }
+
+  /* ======================================================
+     22. Event Listeners
+     ====================================================== */
+
+  function initEventListeners() {
+
+    $('blocks-search')
+      ?.addEventListener(
+        'input',
+        renderBlocks
+      );
+
+    $('filter-type')
+      ?.addEventListener(
+        'change',
+        renderBlocks
+      );
+
+    $('filter-status')
+      ?.addEventListener(
+        'change',
+        renderBlocks
+      );
+
+    $('refresh-btn')
+      ?.addEventListener(
+        'click',
+        async event => {
+
+          const button =
+            event.currentTarget;
+
+          setButtonBusy(
+            button,
+            true,
+            'جارٍ التحديث...'
+          );
+
+          try {
+
+            await loadChain();
+
+            showToast(
+              '🔄 تم تحديث السلسلة.',
+              'success',
+              1800
+            );
+
+          } finally {
+
+            setButtonBusy(
+              button,
+              false
+            );
+          }
+        }
+      );
+
+    $('export-btn')
+      ?.addEventListener(
+        'click',
+        exportChain
+      );
+
+    $('modal-close')
+      ?.addEventListener(
+        'click',
+        closeModal
+      );
+
+    $('block-modal')
+      ?.addEventListener(
+        'click',
+        event => {
+
+          if (
+            event.target ===
+            $('block-modal')
+          ) {
+            closeModal();
+          }
+        }
+      );
+
+    document.addEventListener(
+      'keydown',
+      event => {
+
+        if (
+          event.key === 'Escape' &&
+          !$('block-modal')?.classList.contains(
+            'hidden'
+          )
+        ) {
+          closeModal();
+        }
+      }
+    );
+  }
+
+  /* ======================================================
+     23. Startup
+     ====================================================== */
+
+  document.addEventListener(
+    'DOMContentLoaded',
+    async () => {
+
+      console.log(
+        '⛓️ MediPrescribe — سجل Blockchain'
+      );
+
+      initUserInterface();
+
+      initLogout();
+
+      initEventListeners();
+
+      /* DB */
+      if (
+        typeof initDB === 'function'
+      ) {
+        try {
+          await initDB();
+        } catch (error) {
+          console.warn(
+            'initDB warning:',
+            error
+          );
+        }
+      }
+
+      /* Chain */
+      await loadChain();
+
+      console.log(
+        '✅ audit-blockchain.html — جاهز'
+      );
+    }
+  );
 
 })();
 </script>
 
 </body>
-</html>
+   </html>
