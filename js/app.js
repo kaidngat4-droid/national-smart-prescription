@@ -1,17 +1,25 @@
 /* ==========================================================
    MediPrescribe Pro — app.js
-   منطق لوحة تحكم الطبيب — الإصدار 3.1 (الموثوقة إكلينيكياً)
+   منطق لوحة تحكم الطبيب — الإصدار 3.2 (الموثوقة إكلينيكياً)
    ----------------------------------------------------------
-   التحديثات الطبية الموثوقة في 3.1:
-   • ClinicalValidator: تحقق إكلينيكي شامل (عمر/وزن/تشخيص/أدوية/حمل)
-   • حساب الجرعات بالوزن مع سقف الحد الأقصى + تقريب عملي آمن
-   • VitalsInterpreter: تفسير طبي للضغط/الحرارة/SpO₂/النبض مع تنبيهات
-   • حفظ ذرّي (Atomic) مع Rollback عند الفشل
-   • حماية كاملة من XSS في كل المخرجات
-   • سبب إلزامي موثّق لتجاوز تنبيهات السلامة
-   • صلاحية الوصفة (30 يوم) + عدد التعبئات في السجل والطباعة
-   • جدول مواعيد الجرعات في الطباعة
-   • التحقق من سلامة Blockchain عند الإقلاع
+   التحديثات الطبية الموثوقة في 3.2:
+   • ClinicalValidator v2.0:
+       - جدول وزن WHO/CDC المرجعي بدل (العمر×2)+8 التقريبية
+       - فئة حمل D = توثيق إلزامي (ليست حظراً) — حسب FDA PLLR 2015
+       - حظر مثبطات ACE/ARB في الحمل (توصية AHA)
+       - فحص الحساسية المتقاطعة بالصنف (بنسلين/سيفالوسبورين...)
+       - سقف يومي إجمالي (calc.maxDaily) + تقريب عملي لا يتجاوز +10%
+       - تحقق منطقي الحمل: سن الإنجاب (12–55) وإلا خطأ إدخال
+   • VitalsInterpreter v2:
+       - أزمة الضغط >180/120 (ACC/AHA 2017)
+       - أطفال ≥13س = عتبات البالغين، <13س = جداول AAP p95 التقريبية
+       - جدول نبض الأطفال المصحح (AAP/Cleveland Clinic)
+   • صلاحية الوصفة: مضادات 10 أيام افتراضياً، الباقي 30 يوماً
+     (قابل للتخصيص بحقول dx.validityDays)
+   • BMI لا يُحتسب/يُصنَّف للأطفال <سنتين (وزن/طول WHO بدلاً منه)
+
+   المراجع: AAP CPG 2017 (Flynn et al) · ACC/AHA 2017 · FDA PLLR 2015
+            WHO Child Growth Standards · BNF for Children
 
    ✅ يتكامل مع: safety.js / rx.js / summary.js / blockchain.js
                  local-ai.js / bluetooth-vitals.js / i18n.js (اختياري)
@@ -22,8 +30,9 @@
 /* ==========================================================
    00. أدوات أساسية + الثوابت الإكلينيكية
    ========================================================== */
-const APP_VERSION = '3.1.0';
-const RX_VALIDITY_DAYS = 30;          // صلاحية الوصفة بالأيام
+const APP_VERSION = '3.2.0';
+const RX_VALIDITY_DAYS = 30;          // صلاحية الوصفة العامة بالأيام
+const ANTIBIOTIC_VALIDITY_DAYS = 10;  // صلاحية المضادات الحيوية (إرشادية)
 const DEFAULT_REFILLS = 0;            // عدد التعبئات الافتراضي
 
 /* ── حماية XSS: تجب أي نص قبل حقنه في HTML ── */
@@ -48,12 +57,6 @@ function safeParseFloat(v, fallback = null) {
   return Number.isNaN(n) ? fallback : n;
 }
 
-/* ── الوزن المتوقع للأطفال (1–12 سنة): (العمر × 2) + 8 ── */
-function expectedChildWeight(age) {
-  if (age == null || age < 1 || age > 12) return null;
-  return 2 * age + 8;
-}
-
 /* ── تحويل التكرار إلى مواعيد عملية ── */
 const FREQ_SCHEDULE = [
   { re: /مرة\s*واحدة|مرة\s*يومي|OD|once/i,          times: ['08:00 صباحاً'] },
@@ -67,6 +70,14 @@ function scheduleFor(freq) {
   if (!freq) return '';
   const hit = FREQ_SCHEDULE.find(f => f.re.test(String(freq)));
   return hit ? hit.times.join(' — ') : '';
+}
+
+/* ── صلاحية الوصفة حسب نوعها ──
+   dx.validityDays يتيح تخصيصاً دقيقاً لكل بروتوكول */
+function validityFor(dx) {
+  if (dx && dx.validityDays != null) return dx.validityDays;
+  if (dx && dx.antibiotic) return ANTIBIOTIC_VALIDITY_DAYS;
+  return RX_VALIDITY_DAYS;
 }
 
 
@@ -244,28 +255,62 @@ function initDiagnosisSearch() {
 
 
 /* ==========================================================
-   05. المحرك الإكلينيكي — ClinicalValidator
-   (تحقق طبي موثوق قبل كل عرض/حفظ)
+   05. المحرك الإكلينيكي — ClinicalValidator v2.0
+   المراجع: AAP CPG 2017 (Flynn et al, Pediatrics 140(3))
+            ACC/AHA 2017 · WHO Child Growth Standards
+            FDA PLLR 2015 · BNF for Children
    ========================================================== */
 const ClinicalValidator = {
 
+  /* ── الوزن المرجعي (الوسيط) حسب WHO/CDC — يحل محل (العمر×2)+8 التقريبية ── */
+  REF_WEIGHT_MEDIAN_KG: { 1:9.5, 2:12.3, 3:14.3, 4:16.3, 5:18.4, 6:20.7,
+                          7:23.0, 8:25.8, 9:28.7, 10:32.1, 11:36.1, 12:40.7 },
+
+  /* ── مدى سن الإنجاب المعقول لتفعيل "حامل" ── */
+  REPRODUCTIVE_AGE: { min: 12, max: 55 },
+
+  /* ── جدول تفاعلات الحساسية المتقاطعة للأصناف (مبسّط، ACAAI/WAO) ── */
+  ALLERGY_CROSS_REACTIVITY: {
+    'بنسلين':       ['سيفالوسبورين', 'أموكسيسيلين', 'أمبيسيلين', 'بنزيل بنسلين'],
+    'سيفالوسبورين': ['بنسلين', 'أموكسيسيلين'],
+    'سلفا':         ['كوتريموكسازول', 'سلفاميثوكسازول'],
+  },
+
+  /* ── أدوية محظورة حملياً بصنفها (AHA: ACEi/ARB لا تُستخدم في الحمل) ── */
+  PREGNANCY_CONTRAINDICATED_PATTERNS: [
+    /إنالابريل|ليسينوبريل|راميبريل|كابتوبريل|مثبط\s*ACE|ACE\s*inhibitor/i,
+    /سارتان|sartan|لوزارتان|فالسارتان|إيربيسارتان|candesartan|telmisartan/i,
+    /وورفارين|warfarin/i,
+    /أيزوتريتينوين|isotretinoin/i,
+  ],
+
   /* ── تحقق من معطيات المريض الأساسية ── */
-  validatePatient({ age, gender, weight, height }) {
+  validatePatient({ age, gender, weight, height, pregnant }) {
     const errors = [], warnings = [];
 
     if (age != null) {
       if (age < 0 || age > 120) errors.push('العمر خارج النطاق المنطقي (0–120 سنة)');
-      if (age < 1)  warnings.push('👶 رضيع — الجرعات يجب أن تحسب بدقة حسب الوزن');
-      if (age >= 65) warnings.push('🧓 مريض مسن — ابدأ بجرعات منخفضة وافحص التفاعلات');
+      if (age < 0.08) warnings.push('👶 حديث ولادة (<28 يوم) — استقلاب الأدوية ناضج جزئياً فقط؛ استخدم جرعات حديثي الولادة الموثقة');
+      else if (age < 1) warnings.push('👶 رضيع — الجرعات يجب أن تُحسب بدقة حسب الوزن');
+      if (age >= 65) warnings.push('🧓 مريض مسن — ابدأ بجرعات منخفضة وافحص التفاعلات (معايير Beers)');
+    }
+
+    /* ── فحص منطقي الحمل الجديد ── */
+    if (pregnant) {
+      if (age != null && (age < this.REPRODUCTIVE_AGE.min || age > this.REPRODUCTIVE_AGE.max)) {
+        errors.push(`⛔ "حامل" غير منطقية لعمر ${age} سنة — تحقق من إدخال الجنس/العمر`);
+      } else {
+        warnings.push('🤰 حمل مؤكد/محتمل — راجع كل دواء وفق تصنيف الحمل ووثّق الأسباب');
+      }
     }
 
     if (weight != null) {
       if (weight < 2 || weight > 250) {
         errors.push('الوزن خارج النطاق المنطقي (2–250 كغ)');
       } else if (age != null && age >= 1 && age <= 12) {
-        const exp = expectedChildWeight(age);
-        if (exp && (weight < exp * 0.65 || weight > exp * 1.45)) {
-          warnings.push(`⚖️ الوزن ${weight}كغ يبتعد كثيراً عن المتوقع لعمر ${age}س (~${exp}كغ) — تحقق من الإدخال`);
+        const median = this.REF_WEIGHT_MEDIAN_KG[Math.round(age)];
+        if (median && (weight < median * 0.6 || weight > median * 1.4)) {
+          warnings.push(`⚖️ الوزن ${weight}كغ يبتعد كثيراً عن الوسيط المرجعي لعمر ${age}س (~${median}كغ حسب WHO) — تحقق من الإدخال أو وثّق سوء التغذية/السمنة`);
         }
       }
     }
@@ -289,68 +334,154 @@ const ClinicalValidator = {
     return { ok: true };
   },
 
-  /* ── حساب الجرعة بالوزن: سقف أقصى + تقريب عملي آمن ── */
-  calculateDose(med, weight) {
+  /* ── تكرار → مرات/يوم (للفحص اليومي) ── */
+  freqToTimesPerDay(freq) {
+    if (!freq) return 1;
+    const f = String(freq);
+    if (/أربع|4\s*مرات|q6|كل\s*6|qid/i.test(f)) return 4;
+    if (/ثلاث|3\s*مرات|q8|كل\s*8|tid|ter/i.test(f)) return 3;
+    if (/مرتين|q12|BD|bis|كل\s*12/i.test(f)) return 2;
+    return 1;
+  },
+
+  /* ── حساب الجرعة بالوزن v2:
+     • سقف لكل جرعة (calc.max) — بدون تغيير
+     • سقف يومي إجمالي جديد (calc.maxDaily) — الجرعة × مرات/يوم
+     • تقريب عملي بخطوات الصياغة الشائعة مع منع التجاوز >10% للأعلى
+       (مبدأ الجرعات العملية في BNF for Children) ── */
+  calculateDose(med, weight, timesPerDay = 1) {
     if (!med || !med.calc || !weight || weight <= 0) return null;
+
     let dose = med.calc.mgkg * weight;
     let capped = false;
 
+    /* السقف لكل جرعة */
     if (med.calc.max) {
       const maxVal = safeParseFloat(String(med.calc.max).replace(/[^\d.]/g, ''));
       if (maxVal != null && dose > maxVal) { dose = maxVal; capped = true; }
     }
 
-    let rounded;
-    if (dose >= 100)      rounded = Math.round(dose / 10) * 10;
-    else if (dose >= 10)  rounded = Math.round(dose);
-    else                  rounded = Math.round(dose * 2) / 2;
+    /* السقف اليومي الإجمالي الجديد */
+    let dailyCapped = false;
+    if (med.calc.maxDaily && timesPerDay > 0) {
+      const maxDaily = safeParseFloat(String(med.calc.maxDaily).replace(/[^\d.]/g, ''));
+      const currentDaily = dose * timesPerDay;
+      if (maxDaily != null && currentDaily > maxDaily) {
+        dose = maxDaily / timesPerDay;
+        capped = true; dailyCapped = true;
+      }
+    }
 
-    return { raw: dose, dose: rounded, unit: med.calc.unit || 'ملغ', capped };
+    /* التقريب العملي الآمن */
+    const STEPS = [0.1, 0.25, 0.5, 1, 2.5, 5, 10, 20, 25, 50, 100, 250, 500];
+    let step = STEPS.find(s => dose / s < 20) || 500;
+    let rounded = Math.round(dose / step) * step;
+
+    if (rounded > dose * 1.1 && rounded > step) {
+      /* لا تتجاوز +10% — اخفض للخطوة الأدنى */
+      const idx = STEPS.indexOf(step);
+      if (idx > 0) {
+        step = STEPS[idx - 1];
+        rounded = Math.round(dose / step) * step;
+      }
+      if (rounded > dose * 1.15) {
+        rounded = Math.floor(dose / step) * step; /* تقريب لأسفل كآلية أخيرة */
+      }
+    }
+
+    /* تنبيه إذا كانت الجرعة المحسوبة أدنى من الحد العملي للصياغة */
+    const belowPractical = dose < 0.1;
+
+    return { raw: dose, dose: rounded, unit: med.calc.unit || 'ملغ',
+             capped, dailyCapped, belowPractical };
   },
 
-  /* ── فحص كل دواء مقابل ملف المريض ──
+  /* ── فحص كل دواء مقابل ملف المريض v2 ──
+     مستويات التنبيه:
+       block   → يوقف الوصفة حتى بتجاوز موثق
+       override→ لا يوقف لكن يتطلب سبباً موثقاً (فئة حمل D...)
+       warn    → تنبيه معلوماتي فقط
      حقول اختيارية في بيانات الدواء:
-     pregCat (A/B/C/D/X) · pedsOnly:false · calc:{mgkg,unit,max}   */
+       pregCat (A/B/C/D/X) · pedsOnly:false · calc:{mgkg,unit,max,maxDaily} */
   checkMedSafety(med, profile) {
     const alerts = [];
     if (!med) return alerts;
 
-    if (profile.pregnant && med.pregCat) {
-      const cat = String(med.pregCat).toUpperCase();
-      if (cat === 'X') {
-        alerts.push({ level: 'block', msg: `⛔ ${med.n}: فئة حمل X — ممنوع أثناء الحمل` });
-      } else if (cat === 'D') {
-        alerts.push({ level: 'block', msg: `⛔ ${med.n}: فئة حمل D — خطر واضح، يتطلب تقييماً متخصصاً` });
-      } else if (cat === 'C') {
-        alerts.push({ level: 'warn', msg: `⚠️ ${med.n}: فئة حمل C — يُستخدم بحذر بعد تقييم المنفعة/الخطر` });
+    const medName = med.n || '';
+
+    if (profile.pregnant) {
+      /* فحص الصنف المحظور حملياً (مستقل عن pregCat) */
+      const hitPattern = this.PREGNANCY_CONTRAINDICATED_PATTERNS.find(re => re.test(medName));
+      if (hitPattern) {
+        alerts.push({ level: 'block',
+          msg: `⛔ ${medName}: ممنوع في الحمل (مثبط ACE/ARB أو دواء مسفر — تشوهات جنينية موثقة)` });
+      }
+
+      if (med.pregCat) {
+        const cat = String(med.pregCat).toUpperCase();
+        if (cat === 'X') {
+          alerts.push({ level: 'block', msg: `⛔ ${medName}: فئة حمل X — ممنوع أثناء الحمل` });
+        } else if (cat === 'D') {
+          /* تصحيح طبي: D ≠ حظر — تُستخدم بحجة موثقة عندما تتجاوز المنفعة الخطر */
+          alerts.push({ level: 'override',
+            msg: `⚠️ ${medName}: فئة حمل D — يُستخدم فقط إذا كانت المنفعة تفوق الخطر الموثق، مع توثيق سبب الاختيار` });
+        } else if (cat === 'C') {
+          alerts.push({ level: 'warn',
+            msg: `⚠️ ${medName}: فئة حمل C — يُستخدم بحذر بعد تقييم المنفعة/الخطر` });
+        }
       }
     }
 
     if (med.pedsOnly === false && profile.age != null && profile.age < 12) {
-      alerts.push({ level: 'warn', msg: `⚠️ ${med.n}: السلامة للأطفال غير مثبتة` });
+      alerts.push({ level: 'warn', msg: `⚠️ ${medName}: السلامة للأطفال غير مثبتة` });
     }
 
     if (med.calc && profile.weight != null) {
-      const r = this.calculateDose(med, profile.weight);
-      if (r && r.capped) {
-        alerts.push({ level: 'warn',
-          msg: `⚠️ ${med.n}: الجرعة المحسوبة ${r.raw.toFixed(1)}${r.unit} تتجاوز الحد الأقصى — اعتُمد ${r.dose}${r.unit}` });
+      const tpd = this.freqToTimesPerDay(med.freq);
+      const r = this.calculateDose(med, profile.weight, tpd);
+      if (r) {
+        if (r.capped) {
+          alerts.push({ level: 'warn',
+            msg: `⚠️ ${medName}: الجرعة المحسوبة ${r.raw.toFixed(1)}${r.unit} تجاوزت السقف — اعتُمد ${r.dose}${r.unit}` });
+        }
+        if (r.dailyCapped) {
+          alerts.push({ level: 'warn',
+            msg: `⚠️ ${medName}: الجرعة اليومية الإجمالية تجاوزت الحد الأقصى اليومي (${med.calc.maxDaily})` });
+        }
+        if (r.belowPractical) {
+          alerts.push({ level: 'warn',
+            msg: `⚠️ ${medName}: الجرعة المحسوبة (${r.raw.toFixed(2)}${r.unit}) أدنى من الحد العملي للصياغة — راجع الصيغة/التركيز المتاح` });
+        }
       }
+    }
+
+    /* فحص الحساسية المتقاطعة بالصنف */
+    if (profile.allergies) {
+      const allergList = String(profile.allergies).split(/[,،؛;]/).map(s => s.trim()).filter(Boolean);
+      allergList.forEach(allerg => {
+        const crossList = this.ALLERGY_CROSS_REACTIVITY[allerg];
+        if (crossList && crossList.some(c => medName.includes(c) || c.includes(medName))) {
+          alerts.push({ level: 'block',
+            msg: `⛔ ${medName}: تفاعل متقاطع محتمل مع حساسية «${allerg}» — استبدل الدواء أو وثّق تحملاً موثقاً` });
+        }
+      });
     }
 
     return alerts;
   },
 
-  /* ── تجميع تقرير سلامة كامل (للعرض وللحفظ) ── */
+  /* ── تجميع تقرير سلامة كامل (للعرض وللحفظ) — يتعامل مع مستوى override ── */
   buildSafetyReport(dx, profile) {
-    const report = { blocks: [], warns: [] };
+    const report = { blocks: [], warns: [], overrides: [] };
 
     const ageCheck = this.checkDiagnosisAge(dx, profile.age);
     if (!ageCheck.ok) report.warns.push(ageCheck.msg);
 
     (dx?.meds || []).forEach(m => {
       this.checkMedSafety(m, profile).forEach(a => {
-        (a.level === 'block' ? report.blocks : report.warns).push(a.msg);
+        if (a.level === 'block') report.blocks.push(a.msg);
+        else if (a.level === 'override') report.overrides.push(a.msg);
+        else report.warns.push(a.msg);
       });
     });
 
@@ -375,7 +506,8 @@ function collectPatientProfile() {
     weight:  safeParseFloat(document.getElementById('p-weight')?.value),
     height:  safeParseFloat(document.getElementById('p-height')?.value),
     pregnant: (document.getElementById('p-gender')?.value === 'أنثى') &&
-              !!(document.getElementById('p-pregnant')?.checked)
+              !!(document.getElementById('p-pregnant')?.checked),
+    allergies: (document.getElementById('p-allergies')?.value || '').trim()   /* ← جديد */
   };
 }
 
@@ -385,16 +517,20 @@ async function buildProtocolHTML(id) {
 
   const profile = collectPatientProfile();
 
-  /* ── 1) تقرير السلامة الإكلينيكي المحلي ── */
+  /* ── 1) تقرير السلامة الإكلينيكي المحلي v2 ── */
   const localReport = ClinicalValidator.buildSafetyReport(dx, profile);
   let clinicalHTML = '';
-  if (localReport.blocks.length || localReport.warns.length) {
+  if (localReport.blocks.length || localReport.warns.length || localReport.overrides.length) {
     clinicalHTML = `
       <div style="margin-bottom:12px;">
         ${localReport.blocks.map(m => `
           <div style="padding:9px 12px;margin-bottom:6px;background:rgba(229,57,53,.12);
                       border:1px solid rgba(229,57,53,.4);border-radius:8px;
                       font-size:.83rem;color:#ff8a80;line-height:1.7;">${m}</div>`).join('')}
+        ${localReport.overrides.map(m => `
+          <div style="padding:9px 12px;margin-bottom:6px;background:rgba(171,71,188,.1);
+                      border:1px solid rgba(171,71,188,.4);border-radius:8px;
+                      font-size:.83rem;color:#ce93d8;line-height:1.7;">${m}</div>`).join('')}
         ${localReport.warns.map(m => `
           <div style="padding:9px 12px;margin-bottom:6px;background:rgba(255,167,38,.08);
                       border:1px solid rgba(255,167,38,.3);border-radius:8px;
@@ -428,7 +564,8 @@ async function buildProtocolHTML(id) {
 
   /* ── 3) الأدوية والجرعات المحسوبة الآمنة ── */
   const medsHTML = dx.meds.map((m, i) => {
-    const calc = ClinicalValidator.calculateDose(m, profile.weight);
+    const calc = ClinicalValidator.calculateDose(
+      m, profile.weight, ClinicalValidator.freqToTimesPerDay(m.freq));
     const sched = scheduleFor(m.freq);
     let calcInfo = '';
     if (calc) {
@@ -437,7 +574,10 @@ async function buildProtocolHTML(id) {
                     background:rgba(2,136,209,.1);padding:6px 10px;border-radius:6px;line-height:1.7;">
           💉 الجرعة المحسوبة: <strong>${calc.dose} ${esc(calc.unit)}</strong>
           ${calc.capped ? ' <span style="color:#ffb74d;">(تم ضبطها بالحد الأقصى)</span>' : ''}
-          ${m.calc.max ? ` — الحد الأقصى: ${esc(m.calc.max)}` : ''}
+          ${calc.dailyCapped ? ' <span style="color:#ff8a80;">(ضُبطت الجرعة اليومية الإجمالية)</span>' : ''}
+          ${calc.belowPractical ? ' <span style="color:#ff8a80;">(أدنى من الحد العملي للصياغة)</span>' : ''}
+          ${m.calc.max ? ` — الحد الأقصى/جرعة: ${esc(m.calc.max)}` : ''}
+          ${m.calc.maxDaily ? ` — الحد الأقصى اليومي: ${esc(m.calc.maxDaily)}` : ''}
           ${sched ? `<br>🕐 المواعيد: ${esc(sched)}` : ''}
         </div>`;
     } else if (m.calc && (!profile.weight || profile.weight <= 0)) {
@@ -486,7 +626,8 @@ async function buildProtocolHTML(id) {
                 font-size:.8rem;color:#7ec9ff;line-height:1.8;">
       <strong>🧫 مضاد حيوي — الاستخدام الرشيد:</strong><br>
       • وثّق الاستطباب قبل الصرف &nbsp;• خذ مسحة/زرعاً عند الإمكان<br>
-      • راجع الاستجابة خلال 48–72 ساعة &nbsp;• لا توصف للعدوى الفيروسية
+      • راجع الاستجابة خلال 48–72 ساعة &nbsp;• لا توصف للعدوى الفيروسية<br>
+      • الصلاحية الإرشادية: ${validityFor(dx)} يوماً
     </div>` : '';
 
   return `
@@ -506,6 +647,7 @@ async function buildProtocolHTML(id) {
 
     <div style="font-size:.78rem;color:#93a2b5;margin-bottom:14px;">
       📚 مرجع: <strong style="color:#c7d2de;">${esc(dx.ref || 'WHO / Guidelines')}</strong>
+      &nbsp;·&nbsp; ⏳ صلاحية إرشادية: ${validityFor(dx)} يوماً
     </div>
 
     ${clinicalHTML}
@@ -585,36 +727,39 @@ function hideProtocol() {
 
 
 /* ==========================================================
-   06-أ. نافذة سبب التجاوز الإلزامي (موثّقة طبياً)
+   06-أ. نافذة سبب التجاوز/التوثيق الإلزامي (موثّقة طبياً)
    ========================================================== */
-function requestOverrideReason(alerts) {
+function requestOverrideReason(alerts, mode = 'block') {
+  /* mode = 'block'   → سبب تجاوز تنبيهات حرجة
+     mode = 'override'→ توثيق سبب استخدام أدوية الفئة D أو ما شابه */
   return new Promise((resolve) => {
+    const isDoc = mode === 'override';
     const overlay = document.createElement('div');
     overlay.style.cssText =
       'position:fixed;inset:0;background:rgba(4,10,20,.8);z-index:9999;' +
       'display:flex;align-items:center;justify-content:center;padding:20px;';
     overlay.innerHTML = `
-      <div style="background:#0d1b2e;border:1px solid rgba(229,57,53,.5);border-radius:14px;
+      <div style="background:#0d1b2e;border:1px solid ${isDoc ? 'rgba(171,71,188,.5)' : 'rgba(229,57,53,.5)'};border-radius:14px;
                   max-width:460px;width:100%;padding:22px;direction:rtl;" role="dialog" aria-modal="true">
-        <div style="font-weight:800;color:#ff8a80;font-size:1.05rem;margin-bottom:6px;">
-          ⛔ تنبيهات سلامة حرجة
+        <div style="font-weight:800;color:${isDoc ? '#ce93d8' : '#ff8a80'};font-size:1.05rem;margin-bottom:6px;">
+          ${isDoc ? '📋 توثيق إكلينيكي مطلوب' : '⛔ تنبيهات سلامة حرجة'}
         </div>
         <div style="font-size:.82rem;color:#c7d2de;line-height:1.9;max-height:140px;overflow-y:auto;
-                    background:rgba(229,57,53,.07);border-radius:8px;padding:10px 12px;margin-bottom:14px;">
+                    background:rgba(${isDoc ? '171,71,188' : '229,57,53'},.07);border-radius:8px;padding:10px 12px;margin-bottom:14px;">
           ${alerts.map(a => '• ' + esc(a)).join('<br>')}
         </div>
         <label style="display:block;font-size:.82rem;color:#ffb74d;margin-bottom:6px;font-weight:700;">
-          ✍️ سبب التجاوز الإكلينيكي (إلزامي — يُسجَّل في التدقيق):
+          ✍️ ${isDoc ? 'السبب الإكلينيكي (إلزامي — يُسجَّل في التدقيق):' : 'سبب التجاوز الإكلينيكي (إلزامي — يُسجَّل في التدقيق):'}
         </label>
         <textarea id="override-reason-input" rows="3"
-          placeholder="مثال: لا توجد بدائل مناسبة، المريض تحت المراقبة..."
+          placeholder="${isDoc ? 'مثال: اضطراب نقص أكسجة مهدد للحياة ولا توجد بدائل موثقة...' : 'مثال: لا توجد بدائل مناسبة، المريض تحت المراقبة...'}"
           style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);
                  border-radius:8px;color:#e8eef5;padding:10px;font-family:inherit;font-size:.85rem;
                  resize:vertical;box-sizing:border-box;"></textarea>
         <div style="display:flex;gap:10px;margin-top:16px;">
           <button type="button" id="override-confirm"
-            style="flex:1;padding:10px;background:rgba(229,57,53,.85);color:#fff;border:none;
-                   border-radius:8px;font-weight:700;cursor:pointer;">تأكيد التجاوز</button>
+            style="flex:1;padding:10px;background:${isDoc ? 'rgba(171,71,188,.85)' : 'rgba(229,57,53,.85)'};color:#fff;border:none;
+                   border-radius:8px;font-weight:700;cursor:pointer;">${isDoc ? 'تأكيد التوثيق' : 'تأكيد التجاوز'}</button>
           <button type="button" id="override-cancel"
             style="flex:1;padding:10px;background:rgba(255,255,255,.08);color:#c7d2de;
                    border:1px solid rgba(255,255,255,.15);border-radius:8px;cursor:pointer;">إلغاء</button>
@@ -693,8 +838,8 @@ async function savePrescription({ thenPrint = false } = {}) {
     return;
   }
 
-  /* ── بوابة 2: التحقق الإكلينيكي من معطيات المريض ── */
-  const patientCheck = ClinicalValidator.validatePatient({ age, gender, weight, height });
+  /* ── بوابة 2: التحقق الإكلينيكي من معطيات المريض v2 (يشمل منطقي الحمل) ── */
+  const patientCheck = ClinicalValidator.validatePatient({ age, gender, weight, height, pregnant });
   if (patientCheck.errors.length) {
     showToast('⛔ ' + patientCheck.errors[0], 'error', 5000);
     return;
@@ -709,9 +854,10 @@ async function savePrescription({ thenPrint = false } = {}) {
     await logAudit('تجاوز عدم تطابق عمر/تشخيص', ageCheck.msg);
   }
 
-  /* ── بوابة 4: السلامة الدوائية الموحّدة ── */
+  /* ── بوابة 4: السلامة الدوائية الموحّدة v2 ── */
   const safetyOverride = { alerts: [], reason: null, by: session.username, at: null };
-  const profile = { age, gender, weight, height, pregnant };
+  /* profile الآن يتضمن الحساسية لكي يفحص التفاعلات المتقاطعة */
+  const profile = { age, gender, weight, height, pregnant, allergies };
 
   const localReport = ClinicalValidator.buildSafetyReport(dx, profile);
   let blockingAlerts = [...localReport.blocks];
@@ -729,9 +875,10 @@ async function savePrescription({ thenPrint = false } = {}) {
     }
   }
 
+  /* 4-أ: تنبيهات الحظر (blocks) — تتطلب سبب تجاوز موثق أو تُوقف */
   if (blockingAlerts.length) {
     safetyOverride.alerts = blockingAlerts;
-    const reason = await requestOverrideReason(blockingAlerts);
+    const reason = await requestOverrideReason(blockingAlerts, 'block');
     if (!reason) {
       showToast('⛔ تم إيقاف الوصفة لأسباب سلامة', 'error');
       return;
@@ -740,6 +887,21 @@ async function savePrescription({ thenPrint = false } = {}) {
     safetyOverride.at = Date.now();
     await logAudit('تجاوز تنبيه سلامة',
       `${name} — ${blockingAlerts.length} تنبيه حرج — السبب: ${reason}`);
+  }
+
+  /* 4-ب: تنبيهات الفئة D وأمثالها — لا توقف لكن تتطلب توثيقاً إلزامياً */
+  if (localReport.overrides.length) {
+    const docReason = await requestOverrideReason(localReport.overrides, 'override');
+    if (!docReason) {
+      showToast('⛔ لم يُوثَّق سبب استخدام الأدوية عالية الخطر — تم إيقاف الوصفة', 'error');
+      return;
+    }
+    safetyOverride.alerts = safetyOverride.alerts.concat(localReport.overrides);
+    safetyOverride.reason = safetyOverride.reason
+      ? safetyOverride.reason + ' | ' + docReason : docReason;
+    safetyOverride.at = safetyOverride.at || Date.now();
+    await logAudit('توثيق استخدام دواء عالي الخطر',
+      `${name} — ${localReport.overrides.join(' | ')} — السبب: ${docReason}`);
   }
   localReport.warns.forEach(w => showToast(w, 'warning', 6000));
 
@@ -793,8 +955,10 @@ async function savePrescription({ thenPrint = false } = {}) {
     }
 
     /* ── بيانات مشتقة ── */
-    const bmi = (weight && height) ? +(weight / Math.pow(height / 100, 2)).toFixed(1) : null;
-    const validUntil = Date.now() + RX_VALIDITY_DAYS * 864e5;
+    const bmi = (weight && height && age >= 2)
+      ? +(weight / Math.pow(height / 100, 2)).toFixed(1) : null;   /* BMI غير معتمد <سنتين */
+    const validityDays = validityFor(dx);                          /* صلاحية حسب نوع الوصفة */
+    const validUntil = Date.now() + validityDays * 864e5;
 
     /* ══ الحفظ الذرّي: مريض ← وصفة، مع Rollback عند الفشل ══ */
     patientId = await DB.add('patients', {
@@ -821,6 +985,7 @@ async function savePrescription({ thenPrint = false } = {}) {
       alert: dx.alert || '',
       allergies, pregnant, chronicMeds,
       safetyOverride: safetyOverride.alerts.length ? safetyOverride : null,
+      validityDays,
       validUntil,
       refills: DEFAULT_REFILLS,
       doctor: session.fullName,
@@ -902,6 +1067,7 @@ async function savePrescription({ thenPrint = false } = {}) {
           advice: dx.advice || '',
           alert: dx.alert || '',
           allergies, pregnant, chronicMeds,
+          validityDays,
           validUntil,
           doctor: session.fullName,
           createdAt: Date.now()
@@ -1027,7 +1193,7 @@ function renderRecords(records) {
       r.age != null ? `${r.age}س` : '',
       r.gender || '',
       r.weight ? `${r.weight}كغ` : '',
-      r.bmi ? `BMI ${r.bmi}` : ''
+      (r.bmi && (r.age ?? 99) >= 2) ? `BMI ${r.bmi}` : ''
     ].filter(Boolean).join(' · ');
 
     let safetyBadges = '';
@@ -1040,7 +1206,7 @@ function renderRecords(records) {
         background:rgba(233,30,99,.15);color:#f48fb1;padding:2px 6px;border-radius:4px;margin-top:4px;">🤰 حامل</span>`;
     }
     if (r.safetyOverride) {
-      safetyBadges += `<span title="${esc('تجاوز سلامة: ' + (r.safetyOverride.reason || ''))}"
+      safetyBadges += `<span title="${esc('تجاوز/توثيق سلامة: ' + (r.safetyOverride.reason || ''))}"
         style="display:inline-block;font-size:.7rem;background:rgba(229,57,53,.15);
         color:#ff8a80;padding:2px 6px;border-radius:4px;margin-top:4px;">⚠️ تجاوز موثق</span>`;
     }
@@ -1265,11 +1431,12 @@ async function printRecord(id) {
   const overrideInfo = r.safetyOverride ? `
     <div style="margin:8px 0;padding:8px 12px;background:#fff3f3;
                 border-right:3px solid #e53935;border-radius:6px;font-size:.82rem;">
-      <strong>⚠️ تم تجاوز تنبيهات سلامة:</strong> ${esc((r.safetyOverride.alerts || []).join(' | '))}
+      <strong>⚠️ تم تجاوز/توثيق تنبيهات سلامة:</strong> ${esc((r.safetyOverride.alerts || []).join(' | '))}
       <br><small>السبب: ${esc(r.safetyOverride.reason || '—')} — بقلم: ${esc(r.safetyOverride.by || '—')}</small>
     </div>` : '';
 
-  const bmiRow = r.bmi ? `
+  /* BMI لا يُصنَّف للأطفال <سنتين — يُستخدم وزن/طول WHO */
+  const bmiRow = (r.bmi && (r.age ?? 99) >= 2) ? `
     <tr><td colspan="2"><strong>BMI:</strong> ${esc(r.bmi)}
       (${r.bmi < 18.5 ? 'نحافة' : r.bmi < 25 ? 'طبيعي' : r.bmi < 30 ? 'زيادة وزن' : 'سمنة'})</td></tr>` : '';
 
@@ -1322,14 +1489,19 @@ async function printRecord(id) {
         </thead>
         <tbody>
           ${(r.meds || []).map(m => {
-            const calc = ClinicalValidator.calculateDose(m, r.weight);
-            const doseText = calc
-              ? `${esc(m.dose)} <br><small style="color:#0277bd;">محسوبة: ${calc.dose} ${esc(calc.unit)}</small>`
-              : esc(m.dose);
+            const calc = ClinicalValidator.calculateDose(
+              m, r.weight, ClinicalValidator.freqToTimesPerDay(m.freq));
+            let calcNote = '';
+            if (calc) {
+              calcNote = `<br><small style="color:#0277bd;">محسوبة: ${calc.dose} ${esc(calc.unit)}</small>`;
+              if (calc.capped) calcNote += `<br><small style="color:#e65100;">(بحد أقصى ${esc(m.calc.max || '')})</small>`;
+              if (calc.dailyCapped) calcNote += `<br><small style="color:#e65100;">(ضُبطت الجرعة اليومية)</small>`;
+              if (calc.belowPractical) calcNote += `<br><small style="color:#e65100;">(أدنى من الحد العملي)</small>`;
+            }
             return `
             <tr>
               <td style="border:1px solid #ccc;padding:8px;">${esc(m.n)}</td>
-              <td style="border:1px solid #ccc;padding:8px;">${doseText}</td>
+              <td style="border:1px solid #ccc;padding:8px;">${esc(m.dose)}${calcNote}</td>
               <td style="border:1px solid #ccc;padding:8px;">${esc(m.freq)}</td>
               <td style="border:1px solid #ccc;padding:8px;font-size:.78rem;">${esc(scheduleFor(m.freq) || '—')}</td>
               <td style="border:1px solid #ccc;padding:8px;">${esc(m.dur)}</td>
@@ -1364,7 +1536,7 @@ async function printRecord(id) {
       </div>
 
       <div style="margin-top:26px;padding-top:10px;border-top:1px dashed #bbb;font-size:.7rem;color:#888;text-align:center;">
-        وصفة صادرة إلكترونياً — تحقق عبر رمز QR · صالحة ${RX_VALIDITY_DAYS} يوم من تاريخ الإصدار ·
+        وصفة صادرة إلكترونياً — تحقق عبر رمز QR · صالحة ${r.validityDays ?? RX_VALIDITY_DAYS} يوم من تاريخ الإصدار ·
         ${esc(r.rxNumber || '')} · الإصدار ${APP_VERSION}
       </div>
     </div>
@@ -1510,7 +1682,7 @@ async function exportCSV() {
       'الحساسية', 'حامل', 'أدوية مزمنة',
       'تجاوز سلامة', 'سبب التجاوز',
       'كتلة blockchain', 'hash blockchain',
-      'تاريخ الإصدار', 'صالحة حتى', 'عدد التعبئات'
+      'تاريخ الإصدار', 'صالحة حتى', 'أيام الصلاحية', 'عدد التعبئات'
     ];
 
     const rows = records.map((r, i) => [
@@ -1521,7 +1693,7 @@ async function exportCSV() {
       r.gender || '',
       r.weight ?? '',
       r.height ?? '',
-      r.bmi ?? '',
+      (r.bmi && (r.age ?? 99) >= 2) ? r.bmi : '',
       r.phone || '',
       r.diagnosis || '',
       r.diagnosisCategory || '',
@@ -1536,6 +1708,7 @@ async function exportCSV() {
       r.blockchainHash ? String(r.blockchainHash).substring(0, 16) : '',
       new Date(r.createdAt).toLocaleString('ar-EG'),
       r.validUntil ? new Date(r.validUntil).toLocaleDateString('ar-EG') : '',
+      r.validityDays ?? '',
       r.refills ?? 0
     ]);
 
@@ -1756,79 +1929,121 @@ function initAIPredictor() {
 
 
 /* ==========================================================
-   16. قراءات Bluetooth الحيوية + المفسّر الإكلينيكي
+   16. قراءات Bluetooth الحيوية + المفسّر الإكلينيكي v2
+   العتبات: AAP CPG 2017 · ACC/AHA 2017 · Cleveland Clinic/AAP
    ========================================================== */
 const VitalsInterpreter = {
 
+  /* جدول العتبات التقريبي لضغط <13 سنة (SBP/DBP ≈ p95 التقريبية — AAP 2017) */
+  PEDS_BP_P95: { 1:[104,58], 2:[106,61], 3:[108,63], 4:[110,66], 5:[112,68],
+                 6:[114,70], 7:[116,72], 8:[118,74], 9:[120,76],
+                 10:[122,78], 11:[124,80], 12:[126,82] },
+
   bp(sys, dia, age) {
     if (sys == null || dia == null) return null;
-    if (age != null && age < 13) {
-      /* تبسيط إرشادي للأطفال — يفضل الرسم البياني للنسب المئوية */
-      if (sys >= 120 || dia >= 80)
-        return { level: 'warn', color: '#ffb74d',
-          msg: `⚠️ ضغط مرتفع لعمر ${age} سنة — يُفضل قياس متكرر ومراجعة النسب المئوية` };
-      if (sys <= 90 || dia <= 50)
+
+    /* ── الأطفال ≥13 سنة: نفس عتبات البالغين (AAP 2017) ── */
+    if (age != null && age >= 13) return this._adultBP(sys, dia);
+
+    /* ── الأطفال 1–12 سنة: عتبات عمرية تقريبية ≈ p95 ── */
+    if (age != null && age >= 1 && age <= 12) {
+      const [p95s, p95d] = this.PEDS_BP_P95[Math.round(age)] || [120, 80];
+      if (sys >= p95s + 12 || dia >= p95d + 12)
         return { level: 'danger', color: '#ff8a80',
-          msg: '🚨 ضغط منخفض — افحص الإشراف والعلامات الحيوية' };
-      return { level: 'ok', color: '#81c784', msg: '✅ ضغط ضمن المدى المقبول للطفل' };
+          msg: `🚨 ارتفاع ضغط درجة 2 لعمر ${age}س (≥p95+12) — قياس متكرر عبر 3 زيارات وتقييم ثانوي عاجل` };
+      if (sys >= p95s || dia >= p95d)
+        return { level: 'warn', color: '#ffb74d',
+          msg: `⚠️ ارتفاع ضغط درجة 1 لعمر ${age}س (≥p95) — قياس متكرر + تعديل نمط الحياة` };
+      if (sys >= 120 && dia < 80)
+        return { level: 'warn', color: '#ffb74d',
+          msg: '⚠️ ضغط مرتفع ضمن الطبيعي (محدد AAP ≥120/<80 لـ <13س)' };
+      if (sys < p95s * 0.75 || dia < 50)
+        return { level: 'danger', color: '#ff8a80',
+          msg: '🚨 ضغط منخفض مفرط — افحص الإشراف والجفاف والإنتان' };
+      return { level: 'ok', color: '#81c784', msg: `✅ ضغط طبيعي لعمر ${age} سنة` };
     }
-    if (sys >= 180 || dia >= 110)
+
+    /* ── الرضع <1 سنة: تقييم حذر — لا عتبات ثابتة موثقة بدون أطوال ── */
+    if (age != null && age < 1) {
+      if (sys >= 110 || dia >= 70)
+        return { level: 'warn', color: '#ffb74d',
+          msg: '⚠️ ضغط مرتفع لرضيع — يتطلب قياساً متكرراً ورسم بياني للنسب المئوية' };
+      return { level: 'ok', color: '#81c784', msg: '✅ ضغط ضمن المدى التقريبي للرضيع' };
+    }
+
+    return this._adultBP(sys, dia);
+  },
+
+  /* عتبات البالغين — ACC/AHA 2017:
+     طبيعي <120/80 · مرتفع 120–129/<80 · درجة 1: 130–139/80–89
+     درجة 2: ≥140/90 · طارئ ضغطي: >180/120 */
+  _adultBP(sys, dia) {
+    if (sys > 180 || dia > 120)
       return { level: 'danger', color: '#ff8a80',
-        msg: '🚨 ارتفاع شديد (أزمة/طارئ محتمل) — قيّم الأعراض العضوية فوراً' };
+        msg: '🚨 طارئ ضغطي محتمل (>180/120) — قيّم الآفة العضوية الحادة فوراً (دماغية/قلبية/كلوية)' };
     if (sys >= 160 || dia >= 100)
       return { level: 'danger', color: '#ff8a80',
-        msg: '⛔ ارتفاع درجة 2 — يحتاج تدخلاً دوائياً عاجلاً' };
+        msg: '⛔ ارتفاع ضغط درجة 2 (≥160/100) — علاج دوائي عاجل' };
     if (sys >= 140 || dia >= 90)
       return { level: 'warn', color: '#ffb74d',
-        msg: '⚠️ ارتفاع درجة 1 — قياس متكرر + تعديل نمط الحياة/علاج' };
+        msg: '⚠️ ارتفاع ضغط درجة 1 (≥140/90) — قياس متكرر + تعديل نمط الحياة/علاج' };
+    if (sys >= 130 || dia >= 80)
+      return { level: 'warn', color: '#ffb74d',
+        msg: '⚠️ ارتفاع ضغط درجة 1 (130–139/80–89) — إعادة قياس وتقييم مخاطر' };
+    if (sys >= 120 && dia < 80)
+      return { level: 'warn', color: '#ffb74d', msg: '⚠️ ضغط مرتفع (120–129/<80) — متابعة نمط الحياة' };
     if (sys < 90 || dia < 60)
       return { level: 'warn', color: '#ffb74d',
-        msg: '⚠️ ضغط منخفض — ابحث عن الجفاف/النزف/الإنتان' };
-    return { level: 'ok', color: '#81c784', msg: '✅ ضغط طبيعي' };
+        msg: '⚠️ ضغط منخفض (<90/60) — ابحث عن الجفاف/النزف/الصدمة الإنتانية' };
+    return { level: 'ok', color: '#81c784', msg: '✅ ضغط طبيعي (<120/80)' };
   },
 
   tempC(t) {
     if (t == null) return null;
     if (t < 35)   return { level: 'danger', color: '#ff8a80',
-      msg: '🚨 نقص حرارة — افحص التعرض/الإرهاق/الاستقلاب' };
+      msg: '🚨 نقص حرارة (<35°) — افحص التعرض/الاستقلاب/إنتان حديثي الولادة' };
     if (t < 37.3) return { level: 'ok', color: '#81c784', msg: '✅ حرارة طبيعية' };
-    if (t <= 38)  return { level: 'warn', color: '#ffb74d',
-      msg: '⚠️ ارتفاع خفيف — راقب وعالج السبب' };
-    if (t <= 39)  return { level: 'warn', color: '#ffb74d',
-      msg: '🌡️ حمى — فكر بمضاد حيوي حسب الاستطباب وخفّض الحرارة' };
-    if (t <= 40.5) return { level: 'danger', color: '#ff8a80',
-      msg: '🚨 حمى شديدة — تحتاج خفضاً فورياً وتقييماً' };
+    if (t < 38)   return { level: 'warn', color: '#ffb74d',
+      msg: '⚠️ ارتفاع خفيف (37.3–38°) — راقب وعالج السبب' };
+    if (t < 39)   return { level: 'warn', color: '#ffb74d',
+      msg: '🌡️ حمى (38–39°) — علاج سببي، وخفّض الحرارة عند عدم الراحة' };
+    if (t < 41)   return { level: 'danger', color: '#ff8a80',
+      msg: '🚨 حمى شديدة (≥39°) — خفض فوري وتقييم عاجل للمصدر' };
     return { level: 'danger', color: '#ff8a80',
-      msg: '🚨❗ فرط حرارة >40.5 — طارئ طبي' };
+      msg: '🚨❗ فرط حرارة (≥41°) — طارئ طبي فوري' };
   },
 
   spo2(s) {
     if (s == null) return null;
-    if (s >= 95)  return { level: 'ok', color: '#81c784', msg: '✅ تشبع طبيعي' };
+    if (s >= 95)  return { level: 'ok', color: '#81c784', msg: '✅ تشبع طبيعي (≥95%)' };
     if (s >= 92)  return { level: 'warn', color: '#ffb74d',
-      msg: '⚠️ تشبع منخفض — مراقبة مستمرة + أكسجين عند الحاجة' };
+      msg: '⚠️ تشبع منخفض خفيف (92–94%) — مراقبة مستمرة' };
     if (s >= 90)  return { level: 'warn', color: '#ffb74d',
-      msg: '⛔ تشبع منخفض — أكسجين وتقييم عاجل' };
+      msg: '⛔ تشبع منخفض (90–91%) — أكسجين وتقييم عاجل' };
     return { level: 'danger', color: '#ff8a80',
-      msg: '🚨 نقص أكسجة شديد — تدخل فوري' };
+      msg: '🚨 نقص أكسجة شديد (<90%) — تدخل فوري' };
   },
 
+  /* جدول النبض المصحح — AAP/Cleveland Clinic:
+     0–3ش 110–160 · 3–6ش 100–150 · 6–12ش 90–130 · 1–3س 80–125
+     3–6س 70–115 · 6–12س 60–100 · ≥13س 60–100 */
   pulse(p, age) {
     if (p == null) return null;
     const ranges = [
-      { maxAge: 1,  min: 100, max: 160 },
-      { maxAge: 4,  min: 90,  max: 140 },
-      { maxAge: 6,  min: 80,  max: 130 },
-      { maxAge: 12, min: 70,  max: 110 },
-      { maxAge: 18, min: 60,  max: 100 },
-      { maxAge: 200, min: 60, max: 100 }
+      { maxAge: 0.25, min: 110, max: 160, label: 'حديث ولادة' },
+      { maxAge: 0.5,  min: 100, max: 150, label: '3–6 أشهر' },
+      { maxAge: 1,    min: 90,  max: 130, label: '6–12 شهراً' },
+      { maxAge: 3,    min: 80,  max: 125, label: '1–3 سنوات' },
+      { maxAge: 6,    min: 70,  max: 115, label: '3–6 سنوات' },
+      { maxAge: 12,   min: 60,  max: 100, label: '6–12 سنة' },
+      { maxAge: 200,  min: 60,  max: 100, label: '≥13 سنة' }
     ];
     const r = ranges.find(x => (age ?? 30) <= x.maxAge) || ranges[ranges.length - 1];
     if (p > r.max) return { level: 'warn', color: '#ffb74d',
-      msg: `⚠️ تسرع نبض (المدى الطبيعي ${r.min}–${r.max})` };
+      msg: `⚠️ تسرع نبض ل${r.label} (الطبيعي ${r.min}–${r.max}/د) — استبعد الحمى/الجفاف/الألم` };
     if (p < r.min) return { level: 'warn', color: '#ffb74d',
-      msg: `⚠️ بطء نبض (المدى الطبيعي ${r.min}–${r.max})` };
-    return { level: 'ok', color: '#81c784', msg: '✅ نبض ضمن الطبيعي' };
+      msg: `⚠️ بطء نبض ل${r.label} (الطبيعي ${r.min}–${r.max}/د)` };
+    return { level: 'ok', color: '#81c784', msg: `✅ نبض طبيعي ل${r.label}` };
   }
 };
 
@@ -2193,15 +2408,23 @@ function ageFromDOB(dobValue) {
   return age >= 0 && age <= 120 ? age : null;
 }
 
+/* BMI: لا يُحتسب/يُصنَّف للأطفال <سنتين (يُستخدم وزن/طول WHO بدلاً منه) */
 function updateBMIHint() {
   const weightEl = document.getElementById('p-weight');
   const heightEl = document.getElementById('p-height');
+  const ageEl = document.getElementById('p-age');
   const hint = document.getElementById('p-bmi-hint');
   if (!hint) return;
 
   const w = safeParseFloat(weightEl?.value);
   const h = safeParseFloat(heightEl?.value);
+  const age = safeParseInt(ageEl?.value);
   if (!w || !h) { hint.textContent = ''; return; }
+
+  if (age != null && age < 2) {
+    hint.textContent = '⚖️ <سنتين: استخدم رسم وزن/طول WHO بدل BMI';
+    return;
+  }
 
   const bmi = w / Math.pow(h / 100, 2);
   const cat = bmi < 18.5 ? 'نحافة' : bmi < 25 ? 'طبيعي'
@@ -2369,8 +2592,8 @@ function playSaveAnimation(btn) {
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('%c🏥 MediPrescribe — لوحة التحكم v' + APP_VERSION, 'color:#d4af37;font-weight:bold');
   console.log('   ├─ الدور:', session.role);
-  console.log('   ├─ ClinicalValidator: ✅');
-  console.log('   ├─ VitalsInterpreter: ✅');
+  console.log('   ├─ ClinicalValidator v2.0 (WHO/CDC · FDA PLLR · AHA): ✅');
+  console.log('   ├─ VitalsInterpreter v2 (AAP 2017 · ACC/AHA 2017): ✅');
   console.log('   ├─ SafetyCheck:', typeof SafetyCheck !== 'undefined' ? '✅' : '❌');
   console.log('   ├─ RxSecure:', typeof RxSecure !== 'undefined' ? '✅' : '❌');
   console.log('   ├─ PatientSummary:', typeof PatientSummary !== 'undefined' ? '✅' : '❌');
@@ -2459,6 +2682,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 window.appAPI = {
   APP_VERSION,
   RX_VALIDITY_DAYS,
+  ANTIBIOTIC_VALIDITY_DAYS,
   showToast,
   loadRecords,
   updateStats,
@@ -2472,6 +2696,7 @@ window.appAPI = {
   updateRecordsCountBadge,
   ClinicalValidator,
   VitalsInterpreter,
+  validityFor,
   scheduleFor,
   esc,
   currentProtocolId: () => currentProtocolId
