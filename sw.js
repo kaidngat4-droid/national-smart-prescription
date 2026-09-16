@@ -19,7 +19,7 @@
 /* ═══════════════════════════════════════════════════════
    1. الإعدادات
    ═══════════════════════════════════════════════════════ */
-const CACHE_VERSION = 'v2.0.0';
+const CACHE_VERSION = 'v2.1.0';
 const CACHE_PREFIX = 'mediprescribe';
 
 const STATIC_CACHE = `${CACHE_PREFIX}-static-${CACHE_VERSION}`;
