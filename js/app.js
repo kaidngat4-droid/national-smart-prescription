@@ -344,13 +344,48 @@ const ClinicalValidator = {
     return 1;
   },
 
-  /* ── حساب الجرعة بالوزن v2:
-     • سقف لكل جرعة (calc.max) — بدون تغيير
-     • سقف يومي إجمالي جديد (calc.maxDaily) — الجرعة × مرات/يوم
+  /* ── مطابقة وزن المريض لفئة ضمن جدول calc.categories (v3.3) ──
+     يدعم صيغ النطاق: "< 20 كغ" · "> 40 كغ" · "20-40 كغ" */
+  matchWeightCategory(categories, weight) {
+    if (!Array.isArray(categories) || weight == null) return null;
+    for (const c of categories) {
+      const r = String(c?.range || '');
+      let m;
+      if ((m = r.match(/<\s*(\d+(?:\.\d+)?)/))) {
+        if (weight < parseFloat(m[1])) return c;
+      } else if ((m = r.match(/>\s*(\d+(?:\.\d+)?)/))) {
+        if (weight > parseFloat(m[1])) return c;
+      } else if ((m = r.match(/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)/))) {
+        const lo = parseFloat(m[1]), hi = parseFloat(m[2]);
+        if (weight >= lo && weight <= hi) return c;
+      }
+    }
+    return null;
+  },
+
+  /* ── حساب الجرعة بالوزن v3:
+     • جدول فئوي (calc.categories) — أدق من معادلة mg/kg العامة، يُفضَّل عند توفره
+     • سقف لكل جرعة (calc.max)
+     • سقف يومي إجمالي (calc.maxDaily) — الجرعة × مرات/يوم
      • تقريب عملي بخطوات الصياغة الشائعة مع منع التجاوز >10% للأعلى
        (مبدأ الجرعات العملية في BNF for Children) ── */
   calculateDose(med, weight, timesPerDay = 1) {
     if (!med || !med.calc || !weight || weight <= 0) return null;
+
+    /* ── فئة وزنية محددة مسبقاً (أدق من الصيغة العامة) ── */
+    if (Array.isArray(med.calc.categories) && med.calc.categories.length) {
+      const cat = this.matchWeightCategory(med.calc.categories, weight);
+      if (cat) {
+        const doseVal = safeParseFloat(String(cat.dose).replace(/[^\d.]/g, ''));
+        if (doseVal != null) {
+          return {
+            raw: doseVal, dose: doseVal, unit: med.calc.unit || 'ملغ',
+            capped: false, dailyCapped: false, belowPractical: false,
+            fromCategory: true, categoryLabel: cat.range
+          };
+        }
+      }
+    }
 
     let dose = med.calc.mgkg * weight;
     let capped = false;
@@ -402,7 +437,7 @@ const ClinicalValidator = {
        override→ لا يوقف لكن يتطلب سبباً موثقاً (فئة حمل D...)
        warn    → تنبيه معلوماتي فقط
      حقول اختيارية في بيانات الدواء:
-       pregCat (A/B/C/D/X) · pedsOnly:false · calc:{mgkg,unit,max,maxDaily} */
+       pregCat (A/B/C/D/X) · pedsOnly:false · calc:{mgkg,unit,max,maxDaily,categories} */
   checkMedSafety(med, profile) {
     const alerts = [];
     if (!med) return alerts;
@@ -569,10 +604,13 @@ async function buildProtocolHTML(id) {
     const sched = scheduleFor(m.freq);
     let calcInfo = '';
     if (calc) {
+      const doseLabel = calc.fromCategory
+        ? `💉 الجرعة حسب فئة الوزن (${esc(calc.categoryLabel)}): <strong>${calc.dose} ${esc(calc.unit)}</strong>`
+        : `💉 الجرعة المحسوبة: <strong>${calc.dose} ${esc(calc.unit)}</strong>`;
       calcInfo = `
         <div style="font-size:.78rem;color:#7ec9ff;margin-top:4px;
                     background:rgba(2,136,209,.1);padding:6px 10px;border-radius:6px;line-height:1.7;">
-          💉 الجرعة المحسوبة: <strong>${calc.dose} ${esc(calc.unit)}</strong>
+          ${doseLabel}
           ${calc.capped ? ' <span style="color:#ffb74d;">(تم ضبطها بالحد الأقصى)</span>' : ''}
           ${calc.dailyCapped ? ' <span style="color:#ff8a80;">(ضُبطت الجرعة اليومية الإجمالية)</span>' : ''}
           ${calc.belowPractical ? ' <span style="color:#ff8a80;">(أدنى من الحد العملي للصياغة)</span>' : ''}
@@ -602,6 +640,30 @@ async function buildProtocolHTML(id) {
       </div>`;
   }).join('');
 
+  /* ── 3-أ) قسم الأدوية — أو رسالة توضيحية عندما يكون العلاج إجرائياً بلا أدوية أساسية ── */
+  const medsSectionHTML = dx.meds.length
+    ? `<div style="margin-bottom:14px;">
+        <strong style="color:var(--mp-gold-light);display:block;margin-bottom:8px;">
+          💊 الأدوية والجرعات:
+        </strong>
+        ${medsHTML}
+      </div>`
+    : ((dx.procedures || []).length
+        ? `<div style="margin-bottom:14px;padding:10px 12px;background:rgba(255,255,255,.03);
+                      border-radius:8px;color:#93a2b5;font-size:.85rem;line-height:1.7;">
+            💊 لا توجد أدوية دوائية أساسية لهذا التشخيص — العلاج الأساسي إجرائي/جراحي (انظر أدناه).
+          </div>`
+        : '');
+
+  /* ── 3-ب) الإجراءات التداخلية (procedures — جديد v5.0 لسرطانات الجلد) ── */
+  const proceduresHTML = (dx.procedures || []).length
+    ? `<div style="margin-top:14px;">
+        <strong style="color:var(--mp-gold-light);">🔬 الإجراءات التداخلية:</strong>
+        <ul style="margin:6px 0 0 20px;color:#c7d2de;font-size:.85rem;line-height:1.8;">
+          ${dx.procedures.map(p => `<li>${esc(p)}</li>`).join('')}
+        </ul>
+      </div>` : '';
+
   /* ── 4) المستلزمات والفحوصات ── */
   const suppliesHTML = (dx.supplies || []).length
     ? `<div style="margin-top:14px;">
@@ -617,6 +679,14 @@ async function buildProtocolHTML(id) {
         <ul style="margin:6px 0 0 20px;color:#c7d2de;font-size:.85rem;line-height:1.8;">
           ${dx.labs.map(l => `<li>${esc(l)}</li>`).join('')}
         </ul>
+      </div>` : '';
+
+  /* ── 4-أ) ملاحظة إكلينيكية إضافية (clinicalNote) ── */
+  const clinicalNoteHTML = dx.clinicalNote
+    ? `<div style="margin-top:14px;padding:10px 12px;background:rgba(126,201,255,.08);
+                  border:1px solid rgba(126,201,255,.3);border-radius:8px;
+                  font-size:.82rem;color:#7ec9ff;line-height:1.8;">
+        <strong>📝 ملاحظة إكلينيكية:</strong> ${esc(dx.clinicalNote)}
       </div>` : '';
 
   /* ── 5) وصية الاستخدام الرشيد للمضادات ── */
@@ -654,15 +724,12 @@ async function buildProtocolHTML(id) {
     ${safetyHTML}
     ${stewardshipHTML}
 
-    <div style="margin-bottom:14px;">
-      <strong style="color:var(--mp-gold-light);display:block;margin-bottom:8px;">
-        💊 الأدوية والجرعات:
-      </strong>
-      ${medsHTML}
-    </div>
+    ${medsSectionHTML}
+    ${proceduresHTML}
 
     ${suppliesHTML}
     ${labsHTML}
+    ${clinicalNoteHTML}
 
     <div style="margin-top:14px;padding:12px;background:rgba(67,160,71,.08);
                 border:1px solid rgba(67,160,71,.25);border-radius:8px;">
@@ -981,6 +1048,7 @@ async function savePrescription({ thenPrint = false } = {}) {
       meds: dx.meds,
       supplies: dx.supplies || [],
       labs: dx.labs || [],
+      procedures: dx.procedures || [],
       advice: dx.advice || '',
       alert: dx.alert || '',
       allergies, pregnant, chronicMeds,
@@ -1064,6 +1132,7 @@ async function savePrescription({ thenPrint = false } = {}) {
           meds: dx.meds,
           supplies: dx.supplies || [],
           labs: dx.labs || [],
+          procedures: dx.procedures || [],
           advice: dx.advice || '',
           alert: dx.alert || '',
           allergies, pregnant, chronicMeds,
@@ -1440,6 +1509,56 @@ async function printRecord(id) {
     <tr><td colspan="2"><strong>BMI:</strong> ${esc(r.bmi)}
       (${r.bmi < 18.5 ? 'نحافة' : r.bmi < 25 ? 'طبيعي' : r.bmi < 30 ? 'زيادة وزن' : 'سمنة'})</td></tr>` : '';
 
+  /* ── الإجراءات التداخلية (procedures) — للطباعة، عندما لا توجد أدوية أساسية ── */
+  const proceduresBlock = (r.procedures && r.procedures.length) ? `
+    <div style="margin-top:16px;">
+      <h3 style="color:#0a1628;margin-bottom:6px;">🔬 الإجراءات التداخلية:</h3>
+      <ul style="margin:6px 0 0 20px;font-size:.85rem;line-height:1.8;">
+        ${r.procedures.map(p => `<li>${esc(p)}</li>`).join('')}
+      </ul>
+    </div>` : '';
+
+  const medsTableBlock = (r.meds && r.meds.length) ? `
+      <h3 style="color:#0a1628;margin-top:20px;">الأدوية:</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:.85rem;margin-top:8px;">
+        <thead>
+          <tr style="background:#f4f7f6;">
+            <th style="border:1px solid #ccc;padding:8px;text-align:right;">الدواء</th>
+            <th style="border:1px solid #ccc;padding:8px;text-align:right;">الجرعة</th>
+            <th style="border:1px solid #ccc;padding:8px;text-align:right;">التكرار</th>
+            <th style="border:1px solid #ccc;padding:8px;text-align:right;">المواعيد</th>
+            <th style="border:1px solid #ccc;padding:8px;text-align:right;">المدة</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${r.meds.map(m => {
+            const calc = ClinicalValidator.calculateDose(
+              m, r.weight, ClinicalValidator.freqToTimesPerDay(m.freq));
+            let calcNote = '';
+            if (calc) {
+              const label = calc.fromCategory
+                ? `حسب فئة الوزن (${esc(calc.categoryLabel)}): ${calc.dose} ${esc(calc.unit)}`
+                : `محسوبة: ${calc.dose} ${esc(calc.unit)}`;
+              calcNote = `<br><small style="color:#0277bd;">${label}</small>`;
+              if (calc.capped) calcNote += `<br><small style="color:#e65100;">(بحد أقصى ${esc(m.calc.max || '')})</small>`;
+              if (calc.dailyCapped) calcNote += `<br><small style="color:#e65100;">(ضُبطت الجرعة اليومية)</small>`;
+              if (calc.belowPractical) calcNote += `<br><small style="color:#e65100;">(أدنى من الحد العملي)</small>`;
+            }
+            return `
+            <tr>
+              <td style="border:1px solid #ccc;padding:8px;">${esc(m.n)}</td>
+              <td style="border:1px solid #ccc;padding:8px;">${esc(m.dose)}${calcNote}</td>
+              <td style="border:1px solid #ccc;padding:8px;">${esc(m.freq)}</td>
+              <td style="border:1px solid #ccc;padding:8px;font-size:.78rem;">${esc(scheduleFor(m.freq) || '—')}</td>
+              <td style="border:1px solid #ccc;padding:8px;">${esc(m.dur)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>` : `
+      <div style="margin-top:16px;padding:10px 12px;background:#f4f7f6;border-radius:6px;font-size:.85rem;color:#555;">
+        لا توجد أدوية دوائية أساسية لهذا التشخيص — العلاج الأساسي إجرائي/جراحي (انظر أعلاه).
+      </div>`;
+
   const printHTML = `
     <div style="padding:30px;font-family:'Tajawal','Cairo',sans-serif;direction:rtl;">
       <div style="text-align:center;border-bottom:2px solid #d4af37;padding-bottom:16px;margin-bottom:20px;">
@@ -1476,39 +1595,8 @@ async function printRecord(id) {
         ${bmiRow}
       </table>
 
-      <h3 style="color:#0a1628;margin-top:20px;">الأدوية:</h3>
-      <table style="width:100%;border-collapse:collapse;font-size:.85rem;margin-top:8px;">
-        <thead>
-          <tr style="background:#f4f7f6;">
-            <th style="border:1px solid #ccc;padding:8px;text-align:right;">الدواء</th>
-            <th style="border:1px solid #ccc;padding:8px;text-align:right;">الجرعة</th>
-            <th style="border:1px solid #ccc;padding:8px;text-align:right;">التكرار</th>
-            <th style="border:1px solid #ccc;padding:8px;text-align:right;">المواعيد</th>
-            <th style="border:1px solid #ccc;padding:8px;text-align:right;">المدة</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${(r.meds || []).map(m => {
-            const calc = ClinicalValidator.calculateDose(
-              m, r.weight, ClinicalValidator.freqToTimesPerDay(m.freq));
-            let calcNote = '';
-            if (calc) {
-              calcNote = `<br><small style="color:#0277bd;">محسوبة: ${calc.dose} ${esc(calc.unit)}</small>`;
-              if (calc.capped) calcNote += `<br><small style="color:#e65100;">(بحد أقصى ${esc(m.calc.max || '')})</small>`;
-              if (calc.dailyCapped) calcNote += `<br><small style="color:#e65100;">(ضُبطت الجرعة اليومية)</small>`;
-              if (calc.belowPractical) calcNote += `<br><small style="color:#e65100;">(أدنى من الحد العملي)</small>`;
-            }
-            return `
-            <tr>
-              <td style="border:1px solid #ccc;padding:8px;">${esc(m.n)}</td>
-              <td style="border:1px solid #ccc;padding:8px;">${esc(m.dose)}${calcNote}</td>
-              <td style="border:1px solid #ccc;padding:8px;">${esc(m.freq)}</td>
-              <td style="border:1px solid #ccc;padding:8px;font-size:.78rem;">${esc(scheduleFor(m.freq) || '—')}</td>
-              <td style="border:1px solid #ccc;padding:8px;">${esc(m.dur)}</td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>
+      ${medsTableBlock}
+      ${proceduresBlock}
 
       ${r.advice ? `
         <div style="margin-top:20px;padding:12px;background:#f4f7f6;border-right:4px solid #00796b;">
