@@ -3684,7 +3684,6 @@
 
   };
 
-
   /* =========================================================
    * 48. GLOBAL EXPORT
    * ========================================================= */
@@ -3693,65 +3692,307 @@
 
 
   /* =========================================================
-   * 49. BACKWARD COMPATIBILITY
+   * 49. USER MANAGEMENT HELPERS
+   *
+   * ⭐ دوال مفقودة في db.js الأصلي — لكن login.html يحتاجها
+   * بدونها: تسجيل الدخول يفشل دائماً
    * ========================================================= */
 
-  /*
-   * بعض الأكواد القديمة قد تستخدم:
-   *
-   * DB.all('prescriptions')
-   * DB.add('audit', data)
-   * DB.get(...)
-   * DB.put(...)
-   *
-   * API الحالية تدعمها مباشرة.
-   */
+  /* ── قراءة قائمة المستخدمين ── */
+  async function getAllUsers() {
+    try {
+      const users = await API.getSetting('users', []);
+      return Array.isArray(users) ? users : [];
+    } catch (_) {
+      /* fallback: اقرأ من localStorage */
+      try {
+        const raw = localStorage.getItem('mp_users');
+        return raw ? JSON.parse(raw) : [];
+      } catch (_) {
+        return [];
+      }
+    }
+  }
+
+  /* ── حفظ قائمة المستخدمين ── */
+  async function saveAllUsers(users) {
+    const list = Array.isArray(users) ? users : [];
+
+    /* احفظ في IndexedDB */
+    await API.put('settings', {
+      key: 'users',
+      value: list,
+      updatedAt: new Date().toISOString()
+    });
+
+    /* احفظ نسخة في localStorage للتوافق */
+    try {
+      localStorage.setItem('mp_users', JSON.stringify(list));
+    } catch (_) {}
+
+    return true;
+  }
+
+  /* ── البحث عن مستخدم باسم المستخدم ── */
+  async function getUserByUsername(username) {
+    if (!username) return null;
+
+    const target = String(username).trim().toLowerCase();
+    const users = await getAllUsers();
+
+    return users.find(u =>
+      String(u.username || '').toLowerCase() === target
+    ) || null;
+  }
+
+  /* ── التحقق من كلمة المرور ── */
+  async function verifyPassword(inputPassword, storedPassword) {
+    if (!inputPassword || !storedPassword) return false;
+
+    /* 1) مطابقة مباشرة (نص عادي — للتطوير) */
+    if (String(inputPassword) === String(storedPassword)) {
+      return true;
+    }
+
+    /* 2) دعم SHA-256 إن وُجد */
+    if (window.crypto && window.crypto.subtle) {
+      try {
+        const buf = await crypto.subtle.digest(
+          'SHA-256',
+          new TextEncoder().encode(inputPassword)
+        );
+        const hash = Array.from(new Uint8Array(buf))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('');
+
+        if (hash === storedPassword) return true;
+      } catch (_) {}
+    }
+
+    return false;
+  }
+
+  /* ── تحديث آخر تسجيل دخول ── */
+  async function updateLastLogin(userId) {
+    try {
+      const users = await getAllUsers();
+      const idx = users.findIndex(u => u.id === userId);
+      if (idx === -1) return false;
+
+      users[idx].lastLogin = new Date().toISOString();
+      users[idx].updatedAt = new Date().toISOString();
+
+      await saveAllUsers(users);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /* ── إعادة تعيين قاعدة البيانات ── */
+  async function resetDatabase() {
+    try {
+      /* 1) امسح IndexedDB */
+      if (typeof indexedDB !== 'undefined') {
+        await new Promise((resolve) => {
+          const req = indexedDB.deleteDatabase(CONFIG.dbName);
+          req.onsuccess = () => resolve(true);
+          req.onerror = () => resolve(false);
+          req.onblocked = () => resolve(false);
+        });
+      }
+
+      /* 2) امسح localStorage */
+      try {
+        localStorage.removeItem('mp_session');
+        localStorage.removeItem('mp_users');
+        localStorage.removeItem('mp_username');
+        localStorage.removeItem('mp_prescription_draft');
+      } catch (_) {}
+
+      /* 3) امسح Cache */
+      if (typeof caches !== 'undefined') {
+        try {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+        } catch (_) {}
+      }
+
+      return true;
+    } catch (err) {
+      errorLog('resetDatabase failed:', err);
+      return false;
+    }
+  }
+
+  /* ── إنشاء مستخدمين افتراضيين إذا كانت القائمة فارغة ── */
+  async function seedDefaultUsers() {
+    const users = await getAllUsers();
+    if (users.length > 0) return false; /* موجودون بالفعل */
+
+    const now = new Date().toISOString();
+
+    const defaults = [
+      {
+        id: 'USER-admin-001',
+        username: 'admin',
+        password: 'admin123',
+        fullName: 'د. المسؤول العام',
+        role: 'admin',
+        roleLabel: 'مسؤول النظام',
+        hospital: 'هيئة مستشفى الثورة العام',
+        status: 'active',
+        permissions: ['*'],
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: 'USER-doctor-001',
+        username: 'dr.salem',
+        password: 'salam123',
+        fullName: 'د. سالم العمري',
+        role: 'doctor',
+        roleLabel: 'طبيب باطني',
+        hospital: 'هيئة مستشفى الثورة العام',
+        status: 'active',
+        permissions: ['create_prescription', 'view_records'],
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: 'USER-pharma-001',
+        username: 'pharma.ali',
+        password: 'ali123',
+        fullName: 'د. علي الصيدلي',
+        role: 'pharmacist',
+        roleLabel: 'صيدلي',
+        hospital: 'مستشفى جبله الجامعي',
+        status: 'active',
+        permissions: ['view_records', 'export_data'],
+        createdAt: now,
+        updatedAt: now
+      }
+    ];
+
+    await saveAllUsers(defaults);
+
+    try {
+      console.log('✅ DB: تم إنشاء المستخدمين الافتراضيين:', defaults.length);
+    } catch (_) {}
+
+    return true;
+  }
 
 
   /* =========================================================
-   * 50. AUTO INIT
+   * 50. BACKWARD COMPATIBILITY ALIASES
+   *
+   * ⭐ مهم جداً:
+   * app.js يستدعي initDB() و logAudit()
+   * login.html يستدعي getUserByUsername() و verifyPassword()
    * ========================================================= */
 
-  if (
-    document.readyState ===
-    'loading'
-  ) {
+  /* ── Aliases الرئيسية ── */
+  window.initDB            = init;
+  window.logAudit          = audit;
 
+  /* ── دوال المستخدمين (login.html) ── */
+  window.getAllUsers       = getAllUsers;
+  window.saveAllUsers      = saveAllUsers;
+  window.getUserByUsername = getUserByUsername;
+  window.verifyPassword    = verifyPassword;
+  window.updateLastLogin   = updateLastLogin;
+  window.resetDatabase     = resetDatabase;
+  window.seedDefaultUsers  = seedDefaultUsers;
+
+  /* ── Stubs للدوال الخارجية ── */
+  if (typeof window.getCurrentUser === 'undefined') {
+    window.getCurrentUser = function() {
+      try {
+        return JSON.parse(localStorage.getItem('mp_session') || 'null');
+      } catch (_) {
+        return null;
+      }
+    };
+  }
+
+  if (typeof window.hasPermission === 'undefined') {
+    window.hasPermission = function() {
+      /* مؤقت: يُسمح بكل الصلاحيات حتى تُحمَّل users.js */
+      return true;
+    };
+  }
+
+  if (typeof window.showToast === 'undefined') {
+    window.showToast = function(message, type, duration) {
+      try {
+        console.log(`[Toast:${type || 'info'}] ${message}`);
+      } catch (_) {}
+    };
+  }
+
+  if (typeof window.esc === 'undefined') {
+    window.esc = function(s) {
+      return String(s ?? '').replace(/[&<>"']/g,
+        c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;',
+                '"': '&quot;', "'": '&#39;' }[c]));
+    };
+  }
+
+  if (typeof window.getRoleLabel === 'undefined') {
+    window.getRoleLabel = function(role) {
+      const labels = {
+        admin: 'مسؤول النظام',
+        doctor: 'طبيب',
+        pharmacist: 'صيدلي',
+        nurse: 'ممرض',
+        viewer: 'مشاهد'
+      };
+      return labels[role] || role || 'مستخدم';
+    };
+  }
+
+
+  /* =========================================================
+   * 51. AUTO INIT
+   * ========================================================= */
+
+  async function autoInit() {
+    try {
+      await init();
+
+      /* ⭐ زرع المستخدمين الافتراضيين إن كانت القائمة فارغة */
+      await seedDefaultUsers();
+
+    } catch (error) {
+      errorLog('Auto initialization failed', error);
+    }
+  }
+
+  if (document.readyState === 'loading') {
     document.addEventListener(
       'DOMContentLoaded',
-      () => {
-
-        init().catch(
-          error => {
-
-            errorLog(
-              'Auto initialization failed',
-              error
-            );
-
-          }
-        );
-
-      },
-      {
-        once: true
-      }
+      autoInit,
+      { once: true }
     );
-
   } else {
-
-    init().catch(
-      error => {
-
-        errorLog(
-          'Auto initialization failed',
-          error
-        );
-
-      }
-    );
-
+    autoInit();
   }
+
+
+  /* =========================================================
+   * 52. LOG READY
+   * ========================================================= */
+
+  debugLog(`✅ MediPrescribe DB v${CONFIG.version} loaded`);
+
+  try {
+    console.log(
+      '%c✅ db.js v' + CONFIG.version,
+      'color:#43a047;font-weight:bold',
+      '— دوال: initDB, logAudit, getUserByUsername, verifyPassword, seedDefaultUsers'
+    );
+  } catch (_) {}
 
 
 })();
