@@ -1930,9 +1930,8 @@
   window.refreshRecordsBadge = updateRecordsBadge;
 })();
 </script>
-
 <!-- ==========================================================
-     Service Worker Registration
+     Service Worker Registration — GitHub Pages Compatible
      ========================================================== -->
 <script>
 (function registerServiceWorker() {
@@ -1943,52 +1942,98 @@
     return;
   }
 
+  if (location.protocol === 'file:') {
+    console.warn('⚠️ SW لا يعمل عبر file://');
+    return;
+  }
+
+  if (location.protocol !== 'https:' &&
+      location.hostname !== 'localhost' &&
+      location.hostname !== '127.0.0.1') {
+    console.warn('⚠️ SW يتطلب HTTPS أو localhost');
+    return;
+  }
+
+  /* ⭐ مسارات نسبية */
+  const SW_URL = new URL('sw.js', document.baseURI).href;
+  const SW_SCOPE = new URL('./', document.baseURI).href;
+
+  let refreshing = false;
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    console.log('🔄 SW جديد نشط — إعادة التحميل...');
+    window.location.reload();
+  });
+
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    const data = event && event.data;
+    if (data && data.type === 'SW_ACTIVATED') {
+      console.log('🚀 SW نشط — الإصدار:', data.version || 'unknown');
+    }
+  });
+
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js', {
-        scope: '/'
+      const registration = await navigator.serviceWorker.register(SW_URL, {
+        scope: SW_SCOPE,
+        updateViaCache: 'none'
       });
 
       console.log('✅ Service Worker مسجّل:', registration.scope);
 
-      registration.addEventListener('updatefound', () => {
-        const newWorker = registration.installing;
-        if (!newWorker) return;
-        console.log('🔄 تحديث جديد قيد التثبيت...');
-
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            if (confirm('🆕 يوجد تحديث جديد. هل تريد إعادة التحميل الآن؟')) {
-              newWorker.postMessage({ type: 'SKIP_WAITING' });
+      function watchWorker(worker) {
+        if (!worker) return;
+        worker.addEventListener('statechange', () => {
+          if (worker.state === 'installed') {
+            if (navigator.serviceWorker.controller) {
+              console.log('🆕 تحديث جاهز');
+              if (typeof window.showToast === 'function') {
+                window.showToast(
+                  '🆕 يوجد تحديث جديد — أعد تحميل الصفحة لتطبيقه',
+                  'info',
+                  6000
+                );
+              }
+            } else {
+              console.log('✅ SW مثبَّت لأول مرة');
             }
           }
         });
+      }
+
+      if (registration.installing) {
+        watchWorker(registration.installing);
+      }
+
+      registration.addEventListener('updatefound', () => {
+        console.log('🔍 تحديث جديد قيد التثبيت...');
+        watchWorker(registration.installing);
       });
 
-      navigator.serviceWorker.addEventListener('message', (event) => {
-        const data = event && event.data;
-        if (data && data.type === 'SW_ACTIVATED') {
-          console.log('🚀 Service Worker جديد مفعّل — الإصدار:', data.version);
-        }
-      });
+      let lastCheck = Date.now();
+      const ONE_HOUR = 60 * 60 * 1000;
 
-      /* فحص تحديثات كل ساعة */
-      setInterval(() => {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible') return;
+        if (Date.now() - lastCheck < ONE_HOUR) return;
+        lastCheck = Date.now();
         registration.update().catch(err =>
-          console.warn('فشل فحص التحديث:', err));
-      }, 60 * 60 * 1000);
+          console.warn('⚠️ فشل فحص التحديث:', err.message));
+      });
 
-    } catch (err) {
-      console.error('❌ فشل تسجيل Service Worker:', err);
-    }
-  });
+    } catch (error) {
+      const name = error && error.name ? error.name : '';
+      const message = error && error.message ? error.message : '';
 
-  /* إعادة تحميل عند تفعيل SW جديد (مع منع التكرار) */
-  let refreshing = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!refreshing) {
-      refreshing = true;
-      location.reload();
+      if (name === 'SecurityError') {
+        console.error('🔒 SW: يتطلب HTTPS أو localhost', error);
+      } else if (name === 'NetworkError' || message.includes('404')) {
+        console.error('🌐 SW: تعذر جلب sw.js من:', SW_URL);
+      } else {
+        console.error('❌ فشل تسجيل SW:', error);
+      }
     }
   });
 })();
