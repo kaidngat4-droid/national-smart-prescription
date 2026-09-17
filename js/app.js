@@ -2688,7 +2688,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log('   ├─ PrescriptionChain:', typeof PrescriptionChain !== 'undefined' ? '✅' : '❌');
   console.log('   ├─ LocalAI:', typeof LocalAI !== 'undefined' ? '✅' : '❌');
   console.log('   ├─ VitalsReader:', typeof VitalsReader !== 'undefined' ? '✅' : '❌');
-  console.log('   └─ I18n:', typeof I18n !== 'undefined' ? '✅' : '❌');
 
   // 0) الثيم قبل أي رسم
   initThemeToggle();
