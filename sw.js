@@ -27,7 +27,7 @@
    1. VERSION & CACHE CONFIGURATION
    ═══════════════════════════════════════════════════════ */
 
-const CACHE_VERSION = 'v4.0.0';
+const CACHE_VERSION = 'v5.0.0';
 
 const CACHE_PREFIX = 'mediprescribe';
 
