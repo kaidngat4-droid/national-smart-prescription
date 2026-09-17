@@ -3010,89 +3010,216 @@
   </script>
 
 
-  <!-- =======================================================
-       Service Worker
-       ======================================================= -->
+!-- =======================================================
+     MediPrescribe — Service Worker
+     Production Registration
+     GitHub Pages Compatible
+     ======================================================= -->
 
-  <script>
-    (function () {
-      "use strict";
+<script>
+(function () {
+  "use strict";
 
-      if (
-        !("serviceWorker" in navigator)
-      ) {
+  /*
+   * Service Worker غير مدعوم في المتصفح
+   */
+  if (!("serviceWorker" in navigator)) {
+    console.warn(
+      "MediPrescribe: Service Worker is not supported."
+    );
+    return;
+  }
+
+  let refreshing = false;
+
+  /*
+   * عند انتقال Service Worker جديد إلى controller
+   * نعيد تحميل الصفحة مرة واحدة فقط.
+   */
+  navigator.serviceWorker.addEventListener(
+    "controllerchange",
+    function () {
+
+      if (refreshing) {
         return;
       }
 
-      window.addEventListener(
-        "load",
-        function () {
+      refreshing = true;
 
-          navigator.serviceWorker
-            .register("/sw.js", {
-              scope: "/"
-            })
-            .then(function (registration) {
+      window.location.reload();
+    }
+  );
+
+  /*
+   * استقبال رسائل Service Worker
+   */
+  navigator.serviceWorker.addEventListener(
+    "message",
+    function (event) {
+
+      if (!event.data) {
+        return;
+      }
+
+      if (event.data.type === "SW_ACTIVATED") {
+
+        console.info(
+          "MediPrescribe Service Worker activated:",
+          event.data.version || "unknown"
+        );
+      }
+
+    }
+  );
+
+  /*
+   * تسجيل Service Worker بعد تحميل الصفحة
+   */
+  window.addEventListener(
+    "load",
+    function () {
+
+      navigator.serviceWorker
+        .register("./sw.js", {
+          scope: "./",
+          updateViaCache: "none"
+        })
+
+        .then(function (registration) {
+
+          console.info(
+            "MediPrescribe Service Worker registered:",
+            registration.scope
+          );
+
+          /*
+           * مراقبة وجود Service Worker جديد
+           */
+          registration.addEventListener(
+            "updatefound",
+            function () {
+
+              const newWorker =
+                registration.installing;
+
+              if (!newWorker) {
+                return;
+              }
 
               console.info(
-                "MediPrescribe Service Worker registered."
+                "MediPrescribe: New Service Worker found."
               );
 
-              /*
-               * فحص التحديثات بشكل دوري،
-               * دون إجبار الصفحة على إعادة التحميل
-               * إلا عند تغيّر الـ controller.
-               */
-
-              const checkUpdate =
+              newWorker.addEventListener(
+                "statechange",
                 function () {
 
-                  registration
-                    .update()
-                    .catch(function () {
-                      /* تجاهل أخطاء الشبكة المؤقتة */
-                    });
+                  console.info(
+                    "MediPrescribe SW state:",
+                    newWorker.state
+                  );
 
-                };
+                  /*
+                   * Worker الجديد أصبح جاهزًا
+                   * وهناك Worker قديم يتحكم بالصفحة.
+                   */
+                  if (
+                    newWorker.state === "installed" &&
+                    navigator.serviceWorker.controller
+                  ) {
 
-              checkUpdate();
+                    const updateAccepted =
+                      window.confirm(
+                        "يتوفر تحديث جديد لـ MediPrescribe.\n\nهل تريد تطبيق التحديث الآن؟"
+                      );
 
-              setInterval(
-                checkUpdate,
-                60 * 60 * 1000
+                    if (updateAccepted) {
+
+                      newWorker.postMessage({
+                        type: "SKIP_WAITING"
+                      });
+
+                    }
+
+                  }
+
+                }
               );
+            }
+          );
 
-            })
-            .catch(function (error) {
+          /*
+           * فحص التحديث مباشرة
+           */
+          function checkForUpdate() {
 
-              console.warn(
-                "Service Worker registration failed:",
-                error
-              );
+            registration
+              .update()
+              .catch(function () {
+                /*
+                 * تجاهل أخطاء الشبكة المؤقتة
+                 */
+              });
+          }
 
-            });
+          checkForUpdate();
 
-          let refreshing = false;
+          /*
+           * فحص التحديث عند عودة المستخدم
+           * إلى الصفحة بعد تركها.
+           */
+          document.addEventListener(
+            "visibilitychange",
+            function () {
 
-          navigator.serviceWorker
-            .addEventListener(
-              "controllerchange",
-              function () {
-
-                if (refreshing) return;
-
-                refreshing = true;
-
-                window.location.reload();
-
+              if (
+                document.visibilityState === "visible"
+              ) {
+                checkForUpdate();
               }
+
+            }
+          );
+
+          /*
+           * فحص دوري كل ساعة
+           */
+          window.setInterval(
+            checkForUpdate,
+            60 * 60 * 1000
+          );
+
+          /*
+           * معلومات تشخيصية
+           */
+          if (navigator.serviceWorker.controller) {
+
+            console.info(
+              "MediPrescribe: Service Worker is controlling this page."
             );
 
-        }
-      );
+          } else {
 
-    })();
-  </script>
+            console.info(
+              "MediPrescribe: Service Worker will control this page after activation."
+            );
+          }
 
+        })
+
+        .catch(function (error) {
+
+          console.warn(
+            "MediPrescribe Service Worker registration failed:",
+            error
+          );
+
+        });
+
+    }
+  );
+
+})();
+</script>
 </body>
   </html>
