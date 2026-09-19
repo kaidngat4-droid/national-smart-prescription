@@ -1,2825 +1,3259 @@
-/* ============================================================
- * MediPrescribe — Users UI Controller
- * users-ui.js v3.0.0
+/* =========================================================
+ * MediPrescribe
+ * users-ui.js
+ * Version: 3.0.0
  *
- * متوافق مع User API v6.0.0+
- * ============================================================ */
-
-'use strict';
+ * إدارة المستخدمين + RBAC
+ * متوافق مع users.html المرفق
+ * ========================================================= */
 
 (function (window, document) {
+  "use strict";
 
-    const VERSION = '3.0.0';
-    const USER = window.User;
+  /* =========================================================
+     CONFIG
+     ========================================================= */
 
-    console.log(`🚀 users-ui.js v${VERSION} loading...`);
+  const CONFIG = {
+    apiWaitTimeout: 10000,
+    apiWaitInterval: 100,
+    debounceDelay: 250,
+    toastDuration: 3500,
+    minPasswordLength: 8,
+    minFullNameLength: 3,
+    minUsernameLength: 3
+  };
 
-    /* =========================================================
-       DOM HELPERS
-       ========================================================= */
+  /* =========================================================
+     STATE
+     ========================================================= */
 
-    const $ = (selector, root = document) =>
-        root?.querySelector?.(selector) || null;
+  const state = {
+    users: [],
+    filteredUsers: [],
 
-    const $$ = (selector, root = document) =>
-        root?.querySelectorAll
-            ? Array.from(root.querySelectorAll(selector))
-            : [];
+    currentView: "grid",
 
-    /* =========================================================
-       STATE
-       ========================================================= */
+    search: "",
+    filterRole: "",
+    filterStatus: "",
 
-    const state = {
-        users: [],
-        filtered: [],
-        currentView: 'grid',
-        search: '',
-        filterRole: '',
-        filterStatus: '',
-        pendingDeleteId: null,
-        canManage: false,
-        loading: false,
-        saving: false,
-        deleting: false
-    };
+    pendingDeleteId: null,
 
-    /* =========================================================
-       HELPERS
-       ========================================================= */
+    canManage: false,
 
-    function toast(message, type = 'info', duration = 4000) {
-        const box = $('#toast-box');
+    loading: false,
+    initialized: false,
+    eventsBound: false,
 
-        if (!box) {
-            console.log(`[toast:${type}]`, message);
-            return;
-        }
+    requestId: 0
+  };
 
-        const el = document.createElement('div');
+  /* =========================================================
+     DOM HELPERS
+     ========================================================= */
 
-        el.className = `toast ${type}`;
-        el.setAttribute(
-            'role',
-            type === 'error' ? 'alert' : 'status'
-        );
+  function $(selector, root) {
+    return (root || document).querySelector(selector);
+  }
 
-        el.textContent = String(message ?? '');
+  function $$(selector, root) {
+    return Array.from(
+      (root || document).querySelectorAll(selector)
+    );
+  }
 
-        box.appendChild(el);
+  function byId(id) {
+    return document.getElementById(id);
+  }
 
-        window.setTimeout(() => {
-            el.style.opacity = '0';
-            el.style.transform = 'translateY(10px)';
+  function exists(id) {
+    return Boolean(byId(id));
+  }
 
-            window.setTimeout(() => {
-                el.remove();
-            }, 300);
+  function getValue(id, fallback) {
+    const el = byId(id);
 
-        }, duration);
+    if (!el) {
+      return fallback == null ? "" : fallback;
     }
 
-    function escapeHTML(value) {
-        return String(value ?? '').replace(/[&<>"']/g, char => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;'
-        }[char]));
+    return el.value == null
+      ? (fallback == null ? "" : fallback)
+      : String(el.value);
+  }
+
+  function setValue(id, value) {
+    const el = byId(id);
+
+    if (!el) {
+      return;
     }
 
-    function normalizeText(value) {
-        return String(value ?? '')
-            .normalize('NFKC')
-            .toLowerCase()
-            .replace(/[\u064B-\u065F\u0670]/g, '')
-            .replace(/[إأآٱ]/g, 'ا')
-            .replace(/ى/g, 'ي')
-            .replace(/ة/g, 'ه')
-            .trim();
+    el.value =
+      value == null
+        ? ""
+        : String(value);
+  }
+
+  function setText(id, value) {
+    const el = byId(id);
+
+    if (!el) {
+      return;
     }
 
-    function debounce(fn, delay = 250) {
-        let timer = null;
+    el.textContent =
+      value == null
+        ? ""
+        : String(value);
+  }
 
-        return function (...args) {
-            window.clearTimeout(timer);
+  /* =========================================================
+     SAFE HTML
+     ========================================================= */
 
-            timer = window.setTimeout(() => {
-                fn.apply(this, args);
-            }, delay);
-        };
+  function escapeHTML(value) {
+    if (value === null || value === undefined) {
+      return "";
     }
 
-    function getUserId(user) {
-        return user?.id ??
-            user?._id ??
-            user?.userId ??
-            '';
-    }
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
 
-    function getUserName(user) {
-        return user?.name ||
-            user?.fullName ||
-            user?.username ||
-            'مستخدم بدون اسم';
-    }
+  /* =========================================================
+     NORMALIZATION
+     ========================================================= */
 
-    function getUserRole(user) {
-        return String(user?.role || '')
-            .trim()
-            .toLowerCase();
-    }
-
-    function getInitials(name) {
-
-        const parts = String(name ?? '')
-            .trim()
-            .split(/\s+/)
-            .filter(Boolean);
-
-        if (!parts.length) {
-            return '؟';
-        }
-
-        if (parts.length === 1) {
-            return parts[0]
-                .slice(0, 2)
-                .toUpperCase();
-        }
-
-        return (
-            parts[0][0] +
-            parts[parts.length - 1][0]
-        ).toUpperCase();
-    }
-
-    function formatDate(value) {
-
-        if (!value) {
-            return '—';
-        }
-
-        const date = new Date(value);
-
-        if (Number.isNaN(date.getTime())) {
-            return '—';
-        }
-
-        try {
-
-            return new Intl.DateTimeFormat('ar-YE', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            }).format(date);
-
-        } catch {
-
-            return date.toLocaleDateString();
-        }
-    }
-
-    function setElementText(id, value) {
-
-        const element = document.getElementById(id);
-
-        if (element) {
-            element.textContent = String(value ?? '');
-        }
-    }
-
-    function setFieldValue(id, value = '') {
-
-        const element = document.getElementById(id);
-
-        if (element) {
-            element.value = value ?? '';
-        }
-    }
-
-    function getFieldValue(id) {
-
-        return document.getElementById(id)?.value ?? '';
-    }
-
-    function setButtonBusy(
-        button,
-        busy,
-        busyText = 'جاري التنفيذ...'
+  function normalizeId(value) {
+    if (
+      value === null ||
+      value === undefined
     ) {
+      return "";
+    }
 
-        if (!button) {
-            return;
+    return String(value).trim();
+  }
+
+  function normalizeText(value) {
+    return String(value == null ? "" : value)
+      .trim()
+      .toLowerCase();
+  }
+
+  function getUserId(user) {
+    if (!user) {
+      return "";
+    }
+
+    return normalizeId(
+      user.id ??
+      user.userId ??
+      user._id
+    );
+  }
+
+  function getUserName(user) {
+    if (!user) {
+      return "";
+    }
+
+    return (
+      user.fullName ||
+      user.name ||
+      user.displayName ||
+      user.username ||
+      "بدون اسم"
+    );
+  }
+
+  function getUsername(user) {
+    return (
+      user.username ||
+      user.userName ||
+      ""
+    );
+  }
+
+  function getEmail(user) {
+    return (
+      user.email ||
+      user.emailAddress ||
+      ""
+    );
+  }
+
+  function getPhone(user) {
+    return (
+      user.phone ||
+      user.mobile ||
+      user.phoneNumber ||
+      ""
+    );
+  }
+
+  function getRole(user) {
+    return String(
+      user && user.role
+        ? user.role
+        : ""
+    ).toLowerCase();
+  }
+
+  /* =========================================================
+     ROLE LABELS
+     ========================================================= */
+
+  const ROLE_LABELS = {
+    admin: "مدير النظام",
+    doctor: "طبيب",
+    pharmacist: "صيدلي",
+    nurse: "ممرض",
+    receptionist: "استقبال"
+  };
+
+  const ROLE_ICONS = {
+    admin: "👑",
+    doctor: "🩺",
+    pharmacist: "💊",
+    nurse: "👩‍⚕️",
+    receptionist: "📋"
+  };
+
+  function getRoleLabel(role) {
+    const normalized = String(
+      role || ""
+    ).toLowerCase();
+
+    if (
+      window.User &&
+      typeof window.User.getRoleLabel === "function"
+    ) {
+      try {
+        const result =
+          window.User.getRoleLabel(normalized);
+
+        if (result) {
+          return result;
         }
+      } catch (_) {}
+    }
 
-        if (busy) {
+    return (
+      ROLE_LABELS[normalized] ||
+      role ||
+      "غير محدد"
+    );
+  }
 
-            if (!button.dataset.originalText) {
-                button.dataset.originalText =
-                    button.textContent;
-            }
+  function getRoleIcon(role) {
+    return (
+      ROLE_ICONS[
+        String(role || "").toLowerCase()
+      ] ||
+      "👤"
+    );
+  }
 
-            button.disabled = true;
-            button.setAttribute('aria-busy', 'true');
-            button.textContent = busyText;
+  /* =========================================================
+     STATUS
+     ========================================================= */
 
-        } else {
+  function getUserStatus(user) {
+    if (!user) {
+      return "inactive";
+    }
 
-            button.disabled = false;
-            button.removeAttribute('aria-busy');
+    const explicitStatus =
+      String(
+        user.status ||
+        ""
+      ).toLowerCase();
 
-            if (button.dataset.originalText) {
+    if (
+      explicitStatus === "suspended" ||
+      user.suspended === true ||
+      user.isSuspended === true
+    ) {
+      return "suspended";
+    }
 
-                button.textContent =
-                    button.dataset.originalText;
+    if (
+      explicitStatus === "inactive" ||
+      explicitStatus === "disabled"
+    ) {
+      return "inactive";
+    }
 
-                delete button.dataset.originalText;
-            }
+    if (
+      explicitStatus === "active"
+    ) {
+      return "active";
+    }
+
+    if (
+      user.active === false ||
+      user.isActive === false
+    ) {
+      return "inactive";
+    }
+
+    return "active";
+  }
+
+  function isUserActive(user) {
+    return getUserStatus(user) === "active";
+  }
+
+  function getStatusLabel(status) {
+    switch (status) {
+      case "active":
+        return "نشط";
+
+      case "suspended":
+        return "موقوف";
+
+      case "inactive":
+        return "غير نشط";
+
+      default:
+        return "غير محدد";
+    }
+  }
+
+  /* =========================================================
+     DATE
+     ========================================================= */
+
+  function formatDate(value) {
+    if (!value) {
+      return "—";
+    }
+
+    try {
+      const date =
+        value instanceof Date
+          ? value
+          : new Date(value);
+
+      if (Number.isNaN(date.getTime())) {
+        return "—";
+      }
+
+      return new Intl.DateTimeFormat(
+        "ar-SA",
+        {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
         }
+      ).format(date);
+
+    } catch (_) {
+      return "—";
+    }
+  }
+
+  /* =========================================================
+     INITIALS
+     ========================================================= */
+
+  function getInitials(user) {
+    const name =
+      getUserName(user).trim();
+
+    if (!name) {
+      return "؟";
     }
 
-    /* =========================================================
-       STATUS
-       ========================================================= */
+    const parts =
+      name
+        .split(/\s+/)
+        .filter(Boolean);
 
-    function isUserActive(user) {
-        return user?.active !== false;
+    if (parts.length === 1) {
+      return parts[0].slice(0, 2);
     }
 
-    function isUserSuspended(user) {
+    return (
+      parts[0].charAt(0) +
+      parts[parts.length - 1].charAt(0)
+    );
+  }
 
-        return user?.suspended === true ||
-            user?.status === 'suspended' ||
-            user?.accountStatus === 'suspended';
+  /* =========================================================
+     TOAST
+     ========================================================= */
+
+  function showToast(
+    message,
+    type,
+    duration
+  ) {
+    const box =
+      byId("toast-box");
+
+    if (!box) {
+      console[type === "error" ? "error" : "log"](
+        "MediPrescribe:",
+        message
+      );
+      return;
     }
 
-    function getStatus(user) {
+    const toast =
+      document.createElement("div");
 
-        if (isUserSuspended(user)) {
-            return 'suspended';
+    toast.className =
+      "toast " +
+      (
+        type ||
+        "success"
+      );
+
+    toast.setAttribute(
+      "role",
+      "alert"
+    );
+
+    toast.textContent =
+      String(message || "");
+
+    box.appendChild(toast);
+
+    window.setTimeout(
+      function () {
+        if (toast.parentNode) {
+          toast.remove();
         }
+      },
+      duration ||
+      CONFIG.toastDuration
+    );
+  }
 
-        return isUserActive(user)
-            ? 'active'
-            : 'inactive';
+  /* =========================================================
+     DEBOUNCE
+     ========================================================= */
+
+  function debounce(
+    callback,
+    delay
+  ) {
+    let timer = null;
+
+    return function () {
+      const context = this;
+      const args = arguments;
+
+      clearTimeout(timer);
+
+      timer = setTimeout(
+        function () {
+          callback.apply(
+            context,
+            args
+          );
+        },
+        delay
+      );
+    };
+  }
+
+  /* =========================================================
+     USER API
+     ========================================================= */
+
+  function hasRequiredUserAPI() {
+    return Boolean(
+      window.User &&
+      typeof window.User.getAllUsers ===
+        "function"
+    );
+  }
+
+  async function waitForUserAPI() {
+    if (hasRequiredUserAPI()) {
+      return window.User;
     }
 
-    function getStatusLabel(status) {
+    const started =
+      Date.now();
 
-        const labels = {
-            active: 'نشط',
-            inactive: 'غير نشط',
-            suspended: 'موقوف'
-        };
-
-        return labels[status] || 'غير معروف';
-    }
-
-    function getStatusClass(status) {
-
-        const classes = {
-            active: 'status-active',
-            inactive: 'status-inactive',
-            suspended: 'status-suspended'
-        };
-
-        return classes[status] ||
-            'status-inactive';
-    }
-
-    /* =========================================================
-       ROLE
-       ========================================================= */
-
-    function getRoleLabel(role) {
-
-        try {
-
-            if (
-                USER &&
-                typeof USER.getRoleLabel === 'function'
-            ) {
-
-                return USER.getRoleLabel(role) ||
-                    role ||
-                    '—';
-            }
-
-        } catch (error) {
-
-            console.warn(
-                '[users-ui] getRoleLabel failed:',
-                error
-            );
+    while (
+      Date.now() - started <
+      CONFIG.apiWaitTimeout
+    ) {
+      await new Promise(
+        function (resolve) {
+          setTimeout(
+            resolve,
+            CONFIG.apiWaitInterval
+          );
         }
+      );
 
-        return role || '—';
+      if (hasRequiredUserAPI()) {
+        return window.User;
+      }
     }
 
-    /* =========================================================
-       PERMISSIONS
-       ========================================================= */
+    throw new Error(
+      "لم يتم تحميل users.js أو User API."
+    );
+  }
 
-    const PERMISSIONS_LIST = [
+  async function initializeUserAPI() {
+    const api =
+      await waitForUserAPI();
 
-        {
-            key: 'dashboard.view',
-            title: 'عرض اللوحة',
-            desc: 'الوصول للوحة التحكم'
-        },
-
-        {
-            key: 'patients.view',
-            title: 'عرض المرضى',
-            desc: 'قراءة بيانات المرضى'
-        },
-
-        {
-            key: 'patients.create',
-            title: 'إضافة مريض',
-            desc: 'إنشاء ملف مريض جديد'
-        },
-
-        {
-            key: 'patients.edit',
-            title: 'تعديل المرضى',
-            desc: 'تحديث بيانات المرضى'
-        },
-
-        {
-            key: 'prescriptions.view',
-            title: 'عرض الوصفات',
-            desc: 'قراءة الوصفات الطبية'
-        },
-
-        {
-            key: 'prescriptions.create',
-            title: 'إنشاء وصفة',
-            desc: 'كتابة وصفات طبية'
-        },
-
-        {
-            key: 'prescriptions.dispense',
-            title: 'صرف الأدوية',
-            desc: 'صرف الأدوية من الصيدلية'
-        },
-
-        {
-            key: 'medications.view',
-            title: 'عرض الأدوية',
-            desc: 'الوصول لقائمة الأدوية'
-        },
-
-        {
-            key: 'bookings.view',
-            title: 'عرض الحجوزات',
-            desc: 'قراءة المواعيد والحجوزات'
-        },
-
-        {
-            key: 'bookings.create',
-            title: 'إنشاء حجز',
-            desc: 'إنشاء مواعيد جديدة'
-        },
-
-        {
-            key: 'users.view',
-            title: 'عرض المستخدمين',
-            desc: 'قراءة قائمة المستخدمين'
-        },
-
-        {
-            key: 'users.manage',
-            title: 'إدارة المستخدمين',
-            desc: 'إضافة وتعديل وحذف المستخدمين'
-        }
-
-    ];
-
-    function renderPermissions(selected = []) {
-
-        const grid = $('#permissions-grid');
-
-        if (!grid) {
-            return;
-        }
-
-        const selectedSet = new Set(
-            (Array.isArray(selected)
-                ? selected
-                : []
-            ).map(value =>
-                String(value).toLowerCase()
-            )
+    if (
+      typeof api.init ===
+      "function"
+    ) {
+      try {
+        await api.init();
+      } catch (error) {
+        console.error(
+          "MediPrescribe: User.init failed",
+          error
         );
 
-        grid.innerHTML =
-            PERMISSIONS_LIST.map(permission => {
-
-                const checked =
-                    selectedSet.has(
-                        permission.key.toLowerCase()
-                    );
-
-                return `
-                    <label class="permission-item">
-
-                        <input
-                            type="checkbox"
-                            name="permissions"
-                            value="${escapeHTML(permission.key)}"
-                            ${checked ? 'checked' : ''}
-                        >
-
-                        <div>
-
-                            <span class="permission-title">
-                                ${escapeHTML(permission.title)}
-                            </span>
-
-                            <span class="permission-description">
-                                ${escapeHTML(permission.desc)}
-                            </span>
-
-                        </div>
-
-                    </label>
-                `;
-
-            }).join('');
+        /*
+         * إذا كان init موجوداً وفشل،
+         * نوقف التحميل حتى لا تظهر أخطاء
+         * مضللة لاحقاً.
+         */
+        throw error;
+      }
     }
 
-    function getSelectedPermissions() {
+    return api;
+  }
 
-        return $$(
-            '#permissions-grid input[name="permissions"]:checked'
-        ).map(input => input.value);
+  /* =========================================================
+     API CALL HELPER
+     ========================================================= */
+
+  async function callAPI(
+    method,
+    ...args
+  ) {
+    if (
+      !window.User ||
+      typeof window.User[method] !==
+        "function"
+    ) {
+      throw new Error(
+        "الدالة User." +
+        method +
+        " غير متوفرة."
+      );
     }
 
-    /* =========================================================
-       HOSPITALS
-       ========================================================= */
+    return await window.User[method](
+      ...args
+    );
+  }
 
-    const HOSPITALS = [
+  /* =========================================================
+     EXTRACT USERS
+     ========================================================= */
 
-        '',
-
-        'مستشفى الثورة العام',
-
-        'مستشفى الجمهورية',
-
-        'مستشفى الكويت',
-
-        'المركز الطبي الذكي',
-
-        'عيادات أخرى'
-
-    ];
-
-    function fillHospitals(selectedValue = '') {
-
-        const select = $('#u-hospital');
-
-        if (!select) {
-            return;
-        }
-
-        const selected =
-            String(selectedValue ?? '');
-
-        select.innerHTML =
-            HOSPITALS.map(hospital => {
-
-                return `
-                    <option value="${escapeHTML(hospital)}">
-                        ${escapeHTML(
-                            hospital ||
-                            '— غير محدد —'
-                        )}
-                    </option>
-                `;
-
-            }).join('');
-
-        if (HOSPITALS.includes(selected)) {
-
-            select.value = selected;
-
-        } else if (selected) {
-
-            const custom =
-                document.createElement('option');
-
-            custom.value = selected;
-            custom.textContent = selected;
-
-            select.appendChild(custom);
-
-            select.value = selected;
-
-        } else {
-
-            select.value = '';
-        }
+  function extractUsers(result) {
+    if (Array.isArray(result)) {
+      return result;
     }
 
-    /* =========================================================
-       LOAD USERS
-       ========================================================= */
+    if (
+      result &&
+      Array.isArray(result.users)
+    ) {
+      return result.users;
+    }
 
-    async function loadUsers() {
+    if (
+      result &&
+      Array.isArray(result.data)
+    ) {
+      return result.data;
+    }
 
-        if (state.loading) {
-            return;
-        }
+    if (
+      result &&
+      Array.isArray(result.items)
+    ) {
+      return result.items;
+    }
+
+    return [];
+  }
+
+  /* =========================================================
+     HOSPITALS
+     ========================================================= */
+
+  const DEFAULT_HOSPITALS = [
+    {
+      value: "",
+      label: "— غير محدد —"
+    },
+    {
+      value: "المستشفى الجمهوري",
+      label: "المستشفى الجمهوري"
+    },
+    {
+      value: "مستشفى الثورة",
+      label: "مستشفى الثورة"
+    },
+    {
+      value: "مستشفى الكويت",
+      label: "مستشفى الكويت"
+    },
+    {
+      value: "مستشفى السبعين",
+      label: "مستشفى السبعين"
+    },
+    {
+      value: "مستشفى خاص",
+      label: "منشأة صحية خاصة"
+    }
+  ];
+
+  function getHospitals() {
+    if (
+      window.HOSPITALS &&
+      Array.isArray(window.HOSPITALS)
+    ) {
+      return window.HOSPITALS;
+    }
+
+    if (
+      window.hospitals &&
+      Array.isArray(window.hospitals)
+    ) {
+      return window.hospitals;
+    }
+
+    if (
+      window.User &&
+      Array.isArray(window.User.hospitals)
+    ) {
+      return window.User.hospitals;
+    }
+
+    return DEFAULT_HOSPITALS;
+  }
+
+  function populateHospitals(
+    selectedValue
+  ) {
+    const select =
+      byId("u-hospital");
+
+    if (!select) {
+      return;
+    }
+
+    const current =
+      selectedValue !== undefined
+        ? String(selectedValue || "")
+        : String(select.value || "");
+
+    select.innerHTML = "";
+
+    const hospitals =
+      getHospitals();
+
+    hospitals.forEach(
+      function (hospital) {
+        let value = "";
+        let label = "";
 
         if (
-            !USER ||
-            typeof USER.getAllUsers !== 'function'
+          typeof hospital === "string"
         ) {
+          value = hospital;
+          label = hospital;
+        } else if (hospital) {
+          value =
+            hospital.value ??
+            hospital.id ??
+            hospital.name ??
+            "";
 
-            const error = new Error(
-                'User API غير متاح أو لم يتم تحميله'
-            );
-
-            console.error('[users-ui]', error);
-
-            toast(
-                error.message,
-                'error',
-                5000
-            );
-
-            renderEmpty(
-                'تعذر الاتصال بوحدة المستخدمين'
-            );
-
-            return;
+          label =
+            hospital.label ??
+            hospital.name ??
+            value;
         }
 
-        state.loading = true;
+        const option =
+          document.createElement("option");
 
-        try {
+        option.value =
+          String(value || "");
 
-            const raw =
-                await USER.getAllUsers();
+        option.textContent =
+          String(
+            label ||
+            "غير محدد"
+          );
 
-            state.users =
-                Array.isArray(raw)
-                    ? raw
-                    : [];
+        select.appendChild(
+          option
+        );
+      }
+    );
 
-            updateStats();
-            applyFilters();
+    /*
+     * إذا كانت قيمة المستخدم القديمة
+     * غير موجودة في القائمة، نضيفها.
+     */
+    if (
+      current &&
+      !Array.from(
+        select.options
+      ).some(
+        option =>
+          option.value === current
+      )
+    ) {
+      const option =
+        document.createElement("option");
 
-            console.log(
-                `✅ تم تحميل ${state.users.length} مستخدم`
-            );
+      option.value = current;
+      option.textContent =
+        current;
 
-        } catch (error) {
-
-            console.error(
-                '❌ loadUsers failed:',
-                error
-            );
-
-            state.users = [];
-            state.filtered = [];
-
-            updateStats();
-
-            renderEmpty(
-                'تعذر تحميل قائمة المستخدمين'
-            );
-
-            toast(
-                `فشل تحميل المستخدمين: ${
-                    error?.message ||
-                    'خطأ غير معروف'
-                }`,
-                'error',
-                6000
-            );
-
-        } finally {
-
-            state.loading = false;
-        }
+      select.appendChild(
+        option
+      );
     }
 
-    /* =========================================================
-       STATISTICS
-       ========================================================= */
+    select.value =
+      current;
+  }
 
-    function updateStats() {
+  /* =========================================================
+     PERMISSIONS
+     ========================================================= */
 
-        const counts = {
+  const PERMISSIONS = [
+    {
+      key: "users.manage",
+      title: "إدارة المستخدمين",
+      description:
+        "إنشاء وتعديل وحذف المستخدمين"
+    },
+    {
+      key: "dashboard.view",
+      title: "لوحة التحكم",
+      description:
+        "الوصول إلى لوحة التحكم"
+    },
+    {
+      key: "patients.view",
+      title: "عرض المرضى",
+      description:
+        "مشاهدة سجلات المرضى"
+    },
+    {
+      key: "patients.create",
+      title: "إضافة مرضى",
+      description:
+        "إنشاء سجل مريض جديد"
+    },
+    {
+      key: "patients.edit",
+      title: "تعديل المرضى",
+      description:
+        "تعديل بيانات المرضى"
+    },
+    {
+      key: "prescriptions.view",
+      title: "عرض الوصفات",
+      description:
+        "مشاهدة الوصفات الطبية"
+    },
+    {
+      key: "prescriptions.create",
+      title: "إنشاء وصفات",
+      description:
+        "إنشاء وصفة طبية"
+    },
+    {
+      key: "prescriptions.dispense",
+      title: "صرف الوصفات",
+      description:
+        "صرف الأدوية من الوصفة"
+    },
+    {
+      key: "medications.view",
+      title: "عرض الأدوية",
+      description:
+        "الوصول إلى الأدوية"
+    },
+    {
+      key: "bookings.view",
+      title: "عرض المواعيد",
+      description:
+        "مشاهدة المواعيد"
+    },
+    {
+      key: "bookings.create",
+      title: "إنشاء المواعيد",
+      description:
+        "إنشاء موعد جديد"
+    }
+  ];
 
-            admin: 0,
+  function getUserPermissions(user) {
+    if (!user) {
+      return [];
+    }
 
-            doctor: 0,
+    const permissions =
+      user.permissions ||
+      user.permission ||
+      [];
 
-            pharmacist: 0,
+    if (!Array.isArray(permissions)) {
+      return [];
+    }
 
-            nurse: 0,
+    return permissions.map(
+      permission =>
+        String(permission)
+    );
+  }
 
-            receptionist: 0
-        };
+  function renderPermissions(
+    selectedPermissions
+  ) {
+    const container =
+      byId("permissions-grid");
 
-        state.users.forEach(user => {
+    if (!container) {
+      return;
+    }
 
-            const role =
-                getUserRole(user);
+    const selected =
+      new Set(
+        Array.isArray(
+          selectedPermissions
+        )
+          ? selectedPermissions.map(
+              item => String(item)
+            )
+          : []
+      );
+
+    container.innerHTML =
+      PERMISSIONS.map(
+        function (permission) {
+          const checked =
+            selected.has(
+              permission.key
+            )
+              ? " checked"
+              : "";
+
+          return `
+            <label class="permission-item">
+              <input
+                type="checkbox"
+                value="${escapeHTML(permission.key)}"
+                data-permission="${escapeHTML(permission.key)}"
+                ${checked}>
+              <span>
+                <span class="permission-title">
+                  ${escapeHTML(permission.title)}
+                </span>
+                <span class="permission-description">
+                  ${escapeHTML(permission.description)}
+                </span>
+              </span>
+            </label>
+          `;
+        }
+      ).join("");
+  }
+
+  function getSelectedPermissions() {
+    return $$("#permissions-grid input[type='checkbox']:checked")
+      .map(
+        input =>
+          String(
+            input.value || ""
+          ).trim()
+      )
+      .filter(Boolean);
+  }
+
+  /* =========================================================
+     PERMISSION CHECK
+     ========================================================= */
+
+  async function checkPermission() {
+    let allowed = false;
+
+    try {
+      if (
+        window.User &&
+        typeof window.User.isAdmin ===
+          "function"
+      ) {
+        if (
+          await window.User.isAdmin()
+        ) {
+          allowed = true;
+        }
+      }
+    } catch (error) {
+      console.warn(
+        "MediPrescribe: isAdmin check failed",
+        error
+      );
+    }
+
+    if (!allowed) {
+      try {
+        if (
+          window.User &&
+          typeof window.User.hasPermission ===
+            "function"
+        ) {
+          allowed =
+            Boolean(
+              await window.User.hasPermission(
+                "users.manage"
+              )
+            );
+
+          if (!allowed) {
+            allowed =
+              Boolean(
+                await window.User.hasPermission(
+                  "*"
+                )
+              );
+          }
+        }
+      } catch (error) {
+        console.warn(
+          "MediPrescribe: permission check failed",
+          error
+        );
+      }
+    }
+
+    state.canManage =
+      Boolean(allowed);
+
+    updatePermissionUI();
+
+    return state.canManage;
+  }
+
+  function updatePermissionUI() {
+    const alert =
+      byId("permission-alert");
+
+    if (alert) {
+      alert.classList.toggle(
+        "hidden",
+        state.canManage
+      );
+    }
+
+    const addButton =
+      byId("add-user-btn");
+
+    if (addButton) {
+      addButton.disabled =
+        !state.canManage;
+
+      addButton.setAttribute(
+        "aria-disabled",
+        state.canManage
+          ? "false"
+          : "true"
+      );
+
+      if (!state.canManage) {
+        addButton.title =
+          "لا تملك صلاحية إدارة المستخدمين";
+      } else {
+        addButton.removeAttribute(
+          "title"
+        );
+      }
+    }
+  }
+
+  /* =========================================================
+     STATS
+     ========================================================= */
+
+  function updateStats() {
+    const roles = [
+      "admin",
+      "doctor",
+      "pharmacist",
+      "nurse",
+      "receptionist"
+    ];
+
+    roles.forEach(
+      function (role) {
+        const count =
+          state.users.filter(
+            user =>
+              getRole(user) === role
+          ).length;
+
+        setText(
+          "count-" + role,
+          count
+        );
+      }
+    );
+  }
+
+  /* =========================================================
+     FILTERS
+     ========================================================= */
+
+  function applyFilters() {
+    const search =
+      normalizeText(
+        state.search
+      );
+
+    state.filteredUsers =
+      state.users.filter(
+        function (user) {
+          const role =
+            getRole(user);
+
+          const status =
+            getUserStatus(user);
+
+          if (
+            state.filterRole &&
+            role !==
+              state.filterRole
+          ) {
+            return false;
+          }
+
+          if (
+            state.filterStatus &&
+            status !==
+              state.filterStatus
+          ) {
+            return false;
+          }
+
+          if (search) {
+            const haystack =
+              [
+                getUserName(user),
+                getUsername(user),
+                getEmail(user),
+                getPhone(user),
+                user.hospital || "",
+                getRoleLabel(role)
+              ]
+                .join(" ")
+                .toLowerCase();
 
             if (
-                Object.prototype
-                    .hasOwnProperty
-                    .call(counts, role)
+              !haystack.includes(
+                search
+              )
             ) {
-
-                counts[role]++;
+              return false;
             }
-        });
+          }
 
-        setElementText(
-            'count-admin',
-            counts.admin
-        );
+          return true;
+        }
+      );
 
-        setElementText(
-            'count-doctor',
-            counts.doctor
-        );
+    renderUsers();
+  }
 
-        setElementText(
-            'count-pharmacist',
-            counts.pharmacist
-        );
+  /* =========================================================
+     LOADING
+     ========================================================= */
 
-        setElementText(
-            'count-nurse',
-            counts.nurse
-        );
+  function renderLoading() {
+    const grid =
+      byId("users-view-grid");
 
-        setElementText(
-            'count-receptionist',
-            counts.receptionist
-        );
+    const tbody =
+      byId("users-tbody");
 
-        setElementText(
-            'users-count',
-            state.users.length
-        );
+    if (grid) {
+      grid.innerHTML = `
+        <div class="users-empty">
+          <div class="users-empty-icon">
+            ⏳
+          </div>
+
+          <h3>
+            جاري تحميل المستخدمين...
+          </h3>
+
+          <p>
+            يرجى الانتظار قليلاً.
+          </p>
+        </div>
+      `;
     }
 
-    /* =========================================================
-       FILTERS
-       ========================================================= */
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td
+            colspan="7"
+            style="text-align:center;padding:40px;">
+            ⏳ جاري تحميل المستخدمين...
+          </td>
+        </tr>
+      `;
+    }
+  }
 
-    function applyFilters() {
+  /* =========================================================
+     ERROR STATE
+     ========================================================= */
 
-        const query =
-            normalizeText(state.search);
+  function renderLoadError(error) {
+    const message =
+      error &&
+      error.message
+        ? error.message
+        : "تعذر تحميل المستخدمين.";
 
-        const roleFilter =
-            normalizeText(state.filterRole);
+    const grid =
+      byId("users-view-grid");
 
-        const statusFilter =
-            state.filterStatus;
+    const tbody =
+      byId("users-tbody");
 
-        state.filtered =
-            state.users.filter(user => {
+    if (grid) {
+      grid.innerHTML = `
+        <div class="users-empty">
+          <div class="users-empty-icon">
+            ⚠️
+          </div>
 
-                const role =
-                    getUserRole(user);
+          <h3>
+            فشل تحميل المستخدمين
+          </h3>
 
-                const status =
-                    getStatus(user);
+          <p>
+            ${escapeHTML(message)}
+          </p>
 
-                if (
-                    roleFilter &&
-                    role !== roleFilter
-                ) {
-
-                    return false;
-                }
-
-                if (
-                    statusFilter &&
-                    status !== statusFilter
-                ) {
-
-                    return false;
-                }
-
-                if (!query) {
-                    return true;
-                }
-
-                const haystack = [
-
-                    user?.name,
-
-                    user?.fullName,
-
-                    user?.username,
-
-                    user?.email,
-
-                    user?.phone,
-
-                    user?.hospital,
-
-                    user?.role
-
-                ]
-                    .filter(
-                        value =>
-                            value !== undefined &&
-                            value !== null
-                    )
-                    .map(normalizeText)
-                    .join(' ');
-
-                return haystack.includes(query);
-            });
-
-        renderAll();
+          <button
+            type="button"
+            class="btn btn-gold"
+            data-action="retry-load"
+            style="margin-top:15px;">
+            🔄 إعادة المحاولة
+          </button>
+        </div>
+      `;
     }
 
-    /* =========================================================
-       EMPTY
-       ========================================================= */
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td
+            colspan="7"
+            style="text-align:center;padding:35px;">
+            <div style="margin-bottom:12px;">
+              ⚠️ فشل تحميل المستخدمين
+            </div>
 
-    function renderEmpty(
-        message = 'لا يوجد مستخدمون'
+            <div
+              style="
+                color:var(--mp-text-muted);
+                margin-bottom:15px;
+              ">
+              ${escapeHTML(message)}
+            </div>
+
+            <button
+              type="button"
+              class="btn btn-gold btn-sm"
+              data-action="retry-load">
+              🔄 إعادة المحاولة
+            </button>
+          </td>
+        </tr>
+      `;
+    }
+  }
+
+  /* =========================================================
+     EMPTY
+     ========================================================= */
+
+  function renderEmpty() {
+    const grid =
+      byId("users-view-grid");
+
+    const tbody =
+      byId("users-tbody");
+
+    const hasFilters =
+      Boolean(
+        state.search ||
+        state.filterRole ||
+        state.filterStatus
+      );
+
+    if (grid) {
+      grid.innerHTML = `
+        <div class="users-empty">
+          <div class="users-empty-icon">
+            ${
+              hasFilters
+                ? "🔎"
+                : "👥"
+            }
+          </div>
+
+          <h3>
+            ${
+              hasFilters
+                ? "لا توجد نتائج"
+                : "لا يوجد مستخدمون"
+            }
+          </h3>
+
+          <p>
+            ${
+              hasFilters
+                ? "لم يتم العثور على مستخدم يطابق معايير البحث والفلترة."
+                : "لم تتم إضافة أي مستخدمين بعد."
+            }
+          </p>
+
+          ${
+            hasFilters
+              ? `
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-sm"
+                  data-action="clear-filters"
+                  style="margin-top:15px;">
+                  مسح الفلاتر
+                </button>
+              `
+              : ""
+          }
+        </div>
+      `;
+    }
+
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td
+            colspan="7"
+            style="
+              text-align:center;
+              padding:40px;
+              color:var(--mp-text-muted);
+            ">
+            ${
+              hasFilters
+                ? "لا توجد نتائج مطابقة."
+                : "لا يوجد مستخدمون."
+            }
+          </td>
+        </tr>
+      `;
+    }
+  }
+
+  /* =========================================================
+     GRID RENDER
+     ========================================================= */
+
+  function renderGrid() {
+    const grid =
+      byId("users-view-grid");
+
+    if (!grid) {
+      return;
+    }
+
+    if (
+      state.filteredUsers.length ===
+      0
     ) {
+      renderEmpty();
+      return;
+    }
 
-        const grid =
-            $('#users-view-grid');
+    grid.innerHTML =
+      state.filteredUsers
+        .map(
+          function (user) {
+            const id =
+              getUserId(user);
 
-        if (grid) {
+            const name =
+              getUserName(user);
 
-            grid.innerHTML = `
+            const username =
+              getUsername(user);
 
-                <div class="users-empty">
+            const role =
+              getRole(user);
 
-                    <div
-                        class="users-empty-icon"
-                        aria-hidden="true"
-                    >
-                        👥
-                    </div>
+            const roleLabel =
+              getRoleLabel(role);
 
-                    <h3>
-                        ${escapeHTML(message)}
+            const hospital =
+              user.hospital ||
+              user.facility ||
+              "—";
+
+            const phone =
+              getPhone(user) ||
+              "—";
+
+            const email =
+              getEmail(user) ||
+              "—";
+
+            const status =
+              getUserStatus(user);
+
+            const lastLogin =
+              user.lastLogin ||
+              user.lastLoginAt ||
+              user.lastSeen;
+
+            const actionButtons =
+              state.canManage
+                ? `
+                  <div class="user-card-actions">
+
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-sm"
+                      data-action="edit"
+                      data-id="${escapeHTML(id)}">
+
+                      ✏️ تعديل
+
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn btn-danger btn-sm"
+                      data-action="delete"
+                      data-id="${escapeHTML(id)}">
+
+                      🗑️ حذف
+
+                    </button>
+
+                  </div>
+                `
+                : "";
+
+            return `
+              <article
+                class="user-card"
+                data-user-id="${escapeHTML(id)}">
+
+                <div class="user-card-header">
+
+                  <div class="user-avatar">
+                    ${escapeHTML(
+                      getInitials(user)
+                    )}
+                  </div>
+
+                  <div style="min-width:0;">
+
+                    <h3 class="user-card-name">
+                      ${escapeHTML(name)}
                     </h3>
 
-                    <p>
-                        يمكنك الضغط على
-                        «مستخدم جديد»
-                        لإضافة مستخدم.
-                    </p>
+                    <div class="user-card-username">
+                      @${escapeHTML(username || "—")}
+                    </div>
+
+                    <div class="user-card-role">
+                      ${escapeHTML(
+                        getRoleIcon(role)
+                      )}
+                      &nbsp;
+                      ${escapeHTML(roleLabel)}
+                    </div>
+
+                  </div>
 
                 </div>
 
+                <div class="user-info-list">
+
+                  <div class="user-info-row">
+                    <span class="user-info-label">
+                      البريد
+                    </span>
+
+                    <span class="user-info-value">
+                      ${escapeHTML(email)}
+                    </span>
+                  </div>
+
+                  <div class="user-info-row">
+                    <span class="user-info-label">
+                      الهاتف
+                    </span>
+
+                    <span class="user-info-value">
+                      ${escapeHTML(phone)}
+                    </span>
+                  </div>
+
+                  <div class="user-info-row">
+                    <span class="user-info-label">
+                      المنشأة
+                    </span>
+
+                    <span class="user-info-value">
+                      ${escapeHTML(hospital)}
+                    </span>
+                  </div>
+
+                  <div class="user-info-row">
+                    <span class="user-info-label">
+                      الحالة
+                    </span>
+
+                    <span class="user-info-value">
+
+                      <span
+                        class="status-badge status-${escapeHTML(status)}">
+
+                        ${escapeHTML(
+                          getStatusLabel(status)
+                        )}
+
+                      </span>
+
+                    </span>
+                  </div>
+
+                  <div class="user-info-row">
+                    <span class="user-info-label">
+                      آخر دخول
+                    </span>
+
+                    <span class="user-info-value">
+                      ${escapeHTML(
+                        formatDate(lastLogin)
+                      )}
+                    </span>
+                  </div>
+
+                </div>
+
+                ${actionButtons}
+
+              </article>
             `;
-        }
+          }
+        )
+        .join("");
+  }
 
-        const tbody =
-            $('#users-tbody');
+  /* =========================================================
+     TABLE RENDER
+     ========================================================= */
 
-        if (tbody) {
+  function renderTable() {
+    const tbody =
+      byId("users-tbody");
 
-            tbody.innerHTML = `
-
-                <tr>
-
-                    <td
-                        colspan="7"
-                        style="
-                            text-align:center;
-                            color:var(--mp-text-muted);
-                            padding:40px;
-                        "
-                    >
-                        ${escapeHTML(message)}
-                    </td>
-
-                </tr>
-
-            `;
-        }
+    if (!tbody) {
+      return;
     }
-
-    /* =========================================================
-       RENDER ALL
-       ========================================================= */
-
-    function renderAll() {
-
-        renderGrid();
-
-        renderTable();
-    }
-
-    /* =========================================================
-       GRID
-       ========================================================= */
-
-    function renderGrid() {
-
-        const grid =
-            $('#users-view-grid');
-
-        if (!grid) {
-            return;
-        }
-
-        if (!state.filtered.length) {
-
-            renderEmpty(
-                state.users.length
-                    ? 'لا توجد نتائج مطابقة'
-                    : 'لا يوجد مستخدمون بعد'
-            );
-
-            return;
-        }
-
-        grid.innerHTML =
-            state.filtered.map(user => {
-
-                const id =
-                    getUserId(user);
-
-                const name =
-                    getUserName(user);
-
-                const role =
-                    getUserRole(user);
-
-                const roleLabel =
-                    getRoleLabel(role);
-
-                const status =
-                    getStatus(user);
-
-                return `
-
-                    <article
-                        class="user-card"
-                        data-user-id="${escapeHTML(id)}"
-                    >
-
-                        <header
-                            class="user-card-header"
-                        >
-
-                            <div
-                                class="user-avatar"
-                                aria-hidden="true"
-                            >
-                                ${escapeHTML(
-                                    getInitials(name)
-                                )}
-                            </div>
-
-                            <div
-                                style="
-                                    min-width:0;
-                                    flex:1;
-                                "
-                            >
-
-                                <h3
-                                    class="user-card-name"
-                                >
-                                    ${escapeHTML(name)}
-                                </h3>
-
-                                <div
-                                    class="user-card-username"
-                                >
-                                    @${escapeHTML(
-                                        user?.username ||
-                                        '—'
-                                    )}
-                                </div>
-
-                                <span
-                                    class="user-card-role"
-                                >
-                                    ${escapeHTML(
-                                        roleLabel
-                                    )}
-                                </span>
-
-                            </div>
-
-                        </header>
-
-                        <div
-                            class="user-info-list"
-                        >
-
-                            <div
-                                class="user-info-row"
-                            >
-
-                                <span
-                                    class="user-info-label"
-                                >
-                                    البريد:
-                                </span>
-
-                                <span
-                                    class="user-info-value"
-                                >
-                                    ${escapeHTML(
-                                        user?.email ||
-                                        '—'
-                                    )}
-                                </span>
-
-                            </div>
-
-                            <div
-                                class="user-info-row"
-                            >
-
-                                <span
-                                    class="user-info-label"
-                                >
-                                    الهاتف:
-                                </span>
-
-                                <span
-                                    class="user-info-value"
-                                >
-                                    ${escapeHTML(
-                                        user?.phone ||
-                                        '—'
-                                    )}
-                                </span>
-
-                            </div>
-
-                            <div
-                                class="user-info-row"
-                            >
-
-                                <span
-                                    class="user-info-label"
-                                >
-                                    المستشفى:
-                                </span>
-
-                                <span
-                                    class="user-info-value"
-                                >
-                                    ${escapeHTML(
-                                        user?.hospital ||
-                                        '—'
-                                    )}
-                                </span>
-
-                            </div>
-
-                            <div
-                                class="user-info-row"
-                            >
-
-                                <span
-                                    class="user-info-label"
-                                >
-                                    الحالة:
-                                </span>
-
-                                <span
-                                    class="status-badge
-                                    ${getStatusClass(status)}"
-                                >
-                                    ${escapeHTML(
-                                        getStatusLabel(
-                                            status
-                                        )
-                                    )}
-                                </span>
-
-                            </div>
-
-                        </div>
-
-                        <div
-                            class="user-card-actions"
-                        >
-
-                            <button
-                                type="button"
-                                class="btn btn-gold btn-sm"
-                                data-action="edit"
-                                data-id="${escapeHTML(id)}"
-                                ${state.canManage
-                                    ? ''
-                                    : 'disabled'}
-                            >
-                                ✏️ تعديل
-                            </button>
-
-                            <button
-                                type="button"
-                                class="btn btn-danger btn-sm"
-                                data-action="delete"
-                                data-id="${escapeHTML(id)}"
-                                ${state.canManage
-                                    ? ''
-                                    : 'disabled'}
-                            >
-                                🗑️ حذف
-                            </button>
-
-                        </div>
-
-                    </article>
-
-                `;
-
-            }).join('');
-    }
-
-    /* =========================================================
-       TABLE
-       ========================================================= */
-
-    function renderTable() {
-
-        const tbody =
-            $('#users-tbody');
-
-        if (!tbody) {
-            return;
-        }
-
-        if (!state.filtered.length) {
-
-            tbody.innerHTML = `
-
-                <tr>
-
-                    <td
-                        colspan="7"
-                        style="
-                            text-align:center;
-                            color:var(--mp-text-muted);
-                            padding:40px;
-                        "
-                    >
-                        لا توجد نتائج
-                    </td>
-
-                </tr>
-
-            `;
-
-            return;
-        }
-
-        tbody.innerHTML =
-            state.filtered.map(user => {
-
-                const id =
-                    getUserId(user);
-
-                const name =
-                    getUserName(user);
-
-                const role =
-                    getUserRole(user);
-
-                const roleLabel =
-                    getRoleLabel(role);
-
-                const status =
-                    getStatus(user);
-
-                return `
-
-                    <tr>
-
-                        <td>
-
-                            <div
-                                class="table-user"
-                            >
-
-                                <div
-                                    class="table-avatar"
-                                    aria-hidden="true"
-                                >
-                                    ${escapeHTML(
-                                        getInitials(name)
-                                    )}
-                                </div>
-
-                                <div>
-
-                                    <div
-                                        class="table-user-name"
-                                    >
-                                        ${escapeHTML(name)}
-                                    </div>
-
-                                    <div
-                                        class="table-user-username"
-                                    >
-                                        @${escapeHTML(
-                                            user?.username ||
-                                            '—'
-                                        )}
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-                        </td>
-
-                        <td>
-                            ${escapeHTML(
-                                roleLabel
-                            )}
-                        </td>
-
-                        <td>
-                            ${escapeHTML(
-                                user?.hospital ||
-                                '—'
-                            )}
-                        </td>
-
-                        <td dir="ltr">
-                            ${escapeHTML(
-                                user?.phone ||
-                                '—'
-                            )}
-                        </td>
-
-                        <td>
-
-                            <span
-                                class="status-badge
-                                ${getStatusClass(status)}"
-                            >
-                                ${escapeHTML(
-                                    getStatusLabel(
-                                        status
-                                    )
-                                )}
-                            </span>
-
-                        </td>
-
-                        <td>
-                            ${escapeHTML(
-                                formatDate(
-                                    user?.lastLogin
-                                )
-                            )}
-                        </td>
-
-                        <td>
-
-                            <div
-                                class="table-actions"
-                            >
-
-                                <button
-                                    type="button"
-                                    class="btn btn-gold btn-sm"
-                                    data-action="edit"
-                                    data-id="${escapeHTML(id)}"
-                                    ${state.canManage
-                                        ? ''
-                                        : 'disabled'}
-                                >
-                                    ✏️
-                                </button>
-
-                                <button
-                                    type="button"
-                                    class="btn btn-danger btn-sm"
-                                    data-action="delete"
-                                    data-id="${escapeHTML(id)}"
-                                    ${state.canManage
-                                        ? ''
-                                        : 'disabled'}
-                                >
-                                    🗑️
-                                </button>
-
-                            </div>
-
-                        </td>
-
-                    </tr>
-
-                `;
-
-            }).join('');
-    }
-
-    /* =========================================================
-       MODAL
-       ========================================================= */
-
-    function openUserModal(user = null) {
-
-        const modal =
-            $('#user-modal');
-
-        if (!modal) {
-
-            toast(
-                'نافذة المستخدم غير موجودة في الصفحة',
-                'error'
-            );
-
-            return;
-        }
-
-        const isEdit =
-            Boolean(
-                user &&
-                getUserId(user)
-            );
-
-        const id =
-            isEdit
-                ? getUserId(user)
-                : '';
-
-        setFieldValue(
-            'u-id',
-            id
-        );
-
-        setFieldValue(
-            'u-fullname',
-            isEdit
-                ? (
-                    user.name ||
-                    user.fullName ||
-                    ''
-                )
-                : ''
-        );
-
-        setFieldValue(
-            'u-username',
-            isEdit
-                ? user.username || ''
-                : ''
-        );
-
-        setFieldValue(
-            'u-email',
-            isEdit
-                ? user.email || ''
-                : ''
-        );
-
-        setFieldValue(
-            'u-role',
-            isEdit
-                ? user.role || ''
-                : ''
-        );
-
-        setFieldValue(
-            'u-phone',
-            isEdit
-                ? user.phone || ''
-                : ''
-        );
-
-        setFieldValue(
-            'u-status',
-            isEdit
-                ? getStatus(user)
-                : 'active'
-        );
-
-        fillHospitals(
-            isEdit
-                ? user.hospital || ''
-                : ''
-        );
-
-        const password =
-            $('#u-password');
-
-        if (password) {
-
-            password.value = '';
-
-            password.required =
-                !isEdit;
-        }
-
-        const hint =
-            $('#pass-hint');
-
-        if (hint) {
-
-            hint.style.display =
-                isEdit
-                    ? 'block'
-                    : 'none';
-        }
-
-        const title =
-            $('#modal-title');
-
-        if (title) {
-
-            title.textContent =
-                isEdit
-                    ? '✏️ تعديل مستخدم'
-                    : '➕ مستخدم جديد';
-        }
-
-        clearErrors();
-
-        renderPermissions(
-            isEdit
-                ? user.permissions
-                : []
-        );
-
-        modal.classList.remove(
-            'hidden'
-        );
-
-        document.body.classList.add(
-            'modal-open'
-        );
-
-        window.setTimeout(() => {
-
-            $('#u-fullname')?.focus();
-
-        }, 100);
-    }
-
-    function closeUserModal() {
-
-        const modal =
-            $('#user-modal');
-
-        if (!modal) {
-            return;
-        }
-
-        modal.classList.add(
-            'hidden'
-        );
-
-        document.body.classList.remove(
-            'modal-open'
-        );
-
-        clearErrors();
-    }
-
-    /* =========================================================
-       VALIDATION
-       ========================================================= */
-
-    function showError(
-        fieldId,
-        message
-    ) {
-
-        const suffix =
-            fieldId.replace(/^u-/, '');
-
-        const errorElement =
-            document.getElementById(
-                `err-${suffix}`
-            );
-
-        const input =
-            document.getElementById(
-                fieldId
-            );
-
-        if (errorElement) {
-
-            errorElement.textContent =
-                message;
-
-            errorElement.classList.add(
-                'visible'
-            );
-        }
-
-        if (input) {
-
-            input.classList.add(
-                'invalid'
-            );
-
-            input.setAttribute(
-                'aria-invalid',
-                'true'
-            );
-        }
-    }
-
-    function clearErrors() {
-
-        [
-
-            'u-fullname',
-
-            'u-username',
-
-            'u-password',
-
-            'u-email',
-
-            'u-role',
-
-            'u-phone'
-
-        ].forEach(id => {
-
-            const suffix =
-                id.replace(/^u-/, '');
-
-            const errorElement =
-                document.getElementById(
-                    `err-${suffix}`
-                );
-
-            const input =
-                document.getElementById(id);
-
-            if (errorElement) {
-
-                errorElement.textContent =
-                    '';
-
-                errorElement.classList.remove(
-                    'visible'
-                );
-            }
-
-            if (input) {
-
-                input.classList.remove(
-                    'invalid'
-                );
-
-                input.removeAttribute(
-                    'aria-invalid'
-                );
-            }
-
-        });
-    }
-
-    function validateForm() {
-
-        clearErrors();
-
-        let valid = true;
-
-        const id =
-            getFieldValue(
-                'u-id'
-            ).trim();
-
-        const fullname =
-            getFieldValue(
-                'u-fullname'
-            ).trim();
-
-        const username =
-            getFieldValue(
-                'u-username'
-            ).trim();
-
-        const password =
-            document.getElementById(
-                'u-password'
-            )?.value || '';
-
-        const email =
-            getFieldValue(
-                'u-email'
-            ).trim();
-
-        const role =
-            getFieldValue(
-                'u-role'
-            ).trim();
-
-        const phone =
-            getFieldValue(
-                'u-phone'
-            ).trim();
-
-        if (fullname.length < 3) {
-
-            showError(
-                'u-fullname',
-                'الاسم الكامل مطلوب (3 أحرف على الأقل)'
-            );
-
-            valid = false;
-        }
-
-        if (
-            !/^[a-zA-Z0-9._-]{3,60}$/
-                .test(username)
-        ) {
-
-            showError(
-                'u-username',
-                'اسم المستخدم يجب أن يكون 3-60 حرفاً من A-Z أو الأرقام أو . _ -'
-            );
-
-            valid = false;
-        }
-
-        if (
-            !id &&
-            password.length < 6
-        ) {
-
-            showError(
-                'u-password',
-                'كلمة المرور مطلوبة (6 أحرف على الأقل)'
-            );
-
-            valid = false;
-        }
-
-        if (
-            id &&
-            password &&
-            password.length < 6
-        ) {
-
-            showError(
-                'u-password',
-                'كلمة المرور يجب أن تكون 6 أحرف على الأقل'
-            );
-
-            valid = false;
-        }
-
-        if (
-            email &&
-            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/
-                .test(email)
-        ) {
-
-            showError(
-                'u-email',
-                'البريد الإلكتروني غير صالح'
-            );
-
-            valid = false;
-        }
-
-        if (!role) {
-
-            showError(
-                'u-role',
-                'يرجى اختيار الدور'
-            );
-
-            valid = false;
-        }
-
-        if (
-            phone &&
-            !/^[\d+\-\s()]{6,20}$/
-                .test(phone)
-        ) {
-
-            showError(
-                'u-phone',
-                'رقم الهاتف غير صالح'
-            );
-
-            valid = false;
-        }
-
-        if (!valid) {
-
-            document.querySelector(
-                '#user-form .invalid'
-            )?.focus();
-        }
-
-        return valid;
-    }
-
-    /* =========================================================
-       SAVE
-       ========================================================= */
-
-    async function handleSubmit(event) {
-
-        event.preventDefault();
-
-        if (state.saving) {
-            return;
-        }
-
-        if (!state.canManage) {
-
-            toast(
-                'ليس لديك صلاحية لإدارة المستخدمين',
-                'error'
-            );
-
-            return;
-        }
-
-        if (!validateForm()) {
-
-            toast(
-                'يرجى تصحيح الأخطاء أولاً',
-                'error'
-            );
-
-            return;
-        }
-
-        if (!USER) {
-
-            toast(
-                'User API غير متاح',
-                'error'
-            );
-
-            return;
-        }
-
-        const form =
-            event.currentTarget;
-
-        const submitButton =
-            form.querySelector(
-                'button[type="submit"]'
-            );
-
-        state.saving = true;
-
-        setButtonBusy(
-            submitButton,
-            true,
-            'جاري الحفظ...'
-        );
-
-        try {
-
-            const id =
-                getFieldValue(
-                    'u-id'
-                ).trim();
-
-            const password =
-                document.getElementById(
-                    'u-password'
-                )?.value || '';
-
-            const status =
-                getFieldValue(
-                    'u-status'
-                );
-
-            const fullname =
-                getFieldValue(
-                    'u-fullname'
-                ).trim();
-
-            const username =
-                getFieldValue(
-                    'u-username'
-                ).trim();
-
-            const email =
-                getFieldValue(
-                    'u-email'
-                ).trim();
-
-            const role =
-                getFieldValue(
-                    'u-role'
-                ).trim();
-
-            const hospital =
-                getFieldValue(
-                    'u-hospital'
-                ).trim();
-
-            const phone =
-                getFieldValue(
-                    'u-phone'
-                ).trim();
-
-            const data = {
-
-                name: fullname,
-
-                fullName: fullname,
-
-                username,
-
-                email,
-
-                role,
-
-                hospital,
-
-                phone,
-
-                active:
-                    status !== 'inactive',
-
-                permissions:
-                    getSelectedPermissions()
-            };
-
-            if (status === 'suspended') {
-
-                data.suspended = true;
-
-                data.active = true;
-
-                data.status =
-                    'suspended';
-
-            } else {
-
-                data.suspended = false;
-
-                data.status =
-                    status || 'active';
-            }
-
-            if (password) {
-
-                data.password =
-                    password;
-            }
-
-            if (id) {
-
-                if (
-                    typeof USER.updateUser !==
-                    'function'
-                ) {
-
-                    throw new Error(
-                        'updateUser غير متاح في User API'
-                    );
-                }
-
-                await USER.updateUser(
-                    id,
-                    data
-                );
-
-                toast(
-                    '✅ تم تحديث المستخدم بنجاح',
-                    'success'
-                );
-
-            } else {
-
-                if (
-                    typeof USER.createUser !==
-                    'function'
-                ) {
-
-                    throw new Error(
-                        'createUser غير متاح في User API'
-                    );
-                }
-
-                await USER.createUser(
-                    data
-                );
-
-                toast(
-                    '✅ تم إنشاء المستخدم بنجاح',
-                    'success'
-                );
-            }
-
-            closeUserModal();
-
-            await loadUsers();
-
-        } catch (error) {
-
-            console.error(
-                '❌ Save failed:',
-                error
-            );
-
-            const message =
-                String(
-                    error?.message ||
-                    'خطأ غير معروف'
-                );
-
-            const lower =
-                message.toLowerCase();
-
-            if (
-                message.includes(
-                    'اسم المستخدم'
-                ) ||
-                lower.includes(
-                    'username'
-                )
-            ) {
-
-                showError(
-                    'u-username',
-                    message
-                );
-
-            } else if (
-                message.includes(
-                    'كلمة المرور'
-                ) ||
-                lower.includes(
-                    'password'
-                )
-            ) {
-
-                showError(
-                    'u-password',
-                    message
-                );
-
-            } else if (
-                message.includes(
-                    'الاسم'
-                ) ||
-                lower.includes(
-                    'name'
-                )
-            ) {
-
-                showError(
-                    'u-fullname',
-                    message
-                );
-            }
-
-            toast(
-                `❌ ${message}`,
-                'error',
-                6000
-            );
-
-        } finally {
-
-            state.saving = false;
-
-            setButtonBusy(
-                submitButton,
-                false
-            );
-        }
-    }
-
-    /* =========================================================
-       DELETE
-       ========================================================= */
-
-    function openConfirmDelete(
-        userId
-    ) {
-
-        if (!userId) {
-            return;
-        }
-
-        state.pendingDeleteId =
-            String(userId);
-
-        const modal =
-            $('#confirm-modal');
-
-        if (!modal) {
-
-            toast(
-                'نافذة تأكيد الحذف غير موجودة',
-                'error'
-            );
-
-            return;
-        }
-
-        modal.classList.remove(
-            'hidden'
-        );
-
-        window.setTimeout(() => {
-
-            $('#confirm-yes')?.focus();
-
-        }, 100);
-    }
-
-    function closeConfirmDelete() {
-
-        state.pendingDeleteId =
-            null;
-
-        $('#confirm-modal')
-            ?.classList.add(
-                'hidden'
-            );
-    }
-
-    async function handleConfirmDelete() {
-
-        const id =
-            state.pendingDeleteId;
-
-        if (
-            !id ||
-            state.deleting
-        ) {
-            return;
-        }
-
-        if (!state.canManage) {
-
-            toast(
-                'ليس لديك صلاحية حذف المستخدمين',
-                'error'
-            );
-
-            closeConfirmDelete();
-
-            return;
-        }
-
-        if (
-            !USER ||
-            typeof USER.deleteUser !==
-            'function'
-        ) {
-
-            toast(
-                'deleteUser غير متاح في User API',
-                'error'
-            );
-
-            return;
-        }
-
-        const user =
-            state.users.find(item =>
-                String(
-                    getUserId(item)
-                ) === String(id)
-            );
-
-        const userName =
-            user
-                ? getUserName(user)
-                : id;
-
-        const button =
-            $('#confirm-yes');
-
-        state.deleting = true;
-
-        setButtonBusy(
-            button,
-            true,
-            'جاري الحذف...'
-        );
-
-        try {
-
-            await USER.deleteUser(id);
-
-            toast(
-                `✅ تم حذف المستخدم: ${userName}`,
-                'success'
-            );
-
-            closeConfirmDelete();
-
-            await loadUsers();
-
-        } catch (error) {
-
-            console.error(
-                '❌ Delete failed:',
-                error
-            );
-
-            toast(
-                `❌ ${
-                    String(
-                        error?.message ||
-                        'فشل حذف المستخدم'
-                    )
-                }`,
-                'error',
-                6000
-            );
-
-        } finally {
-
-            state.deleting = false;
-
-            setButtonBusy(
-                button,
-                false
-            );
-        }
-    }
-
-    /* =========================================================
-       ACTIONS
-       ========================================================= */
-
-    async function handleAction(
-        action,
-        id
-    ) {
-
-        if (!state.canManage) {
-
-            toast(
-                'ليس لديك صلاحية لتنفيذ هذا الإجراء',
-                'error'
-            );
-
-            return;
-        }
-
-        const user =
-            state.users.find(item =>
-                String(
-                    getUserId(item)
-                ) === String(id)
-            );
-
-        if (!user) {
-
-            toast(
-                'المستخدم غير موجود',
-                'error'
-            );
-
-            return;
-        }
-
-        if (action === 'edit') {
-
-            openUserModal(user);
-
-        } else if (
-            action === 'delete'
-        ) {
-
-            openConfirmDelete(id);
-        }
-    }
-
-    /* =========================================================
-       VIEW
-       ========================================================= */
-
-    function setView(view) {
-
-        state.currentView =
-            view === 'table'
-                ? 'table'
-                : 'grid';
-
-        const grid =
-            $('#users-view-grid');
-
-        const table =
-            $('#users-view-table');
-
-        grid?.classList.toggle(
-            'hidden',
-            state.currentView !== 'grid'
-        );
-
-        table?.classList.toggle(
-            'hidden',
-            state.currentView !== 'table'
-        );
-
-        $$('#view-toggle button')
-            .forEach(button => {
-
-                const active =
-                    button.dataset.view ===
-                    state.currentView;
-
-                button.classList.toggle(
-                    'active',
-                    active
-                );
-
-                button.setAttribute(
-                    'aria-pressed',
-                    String(active)
-                );
-            });
-    }
-
-    /* =========================================================
-       PERMISSION CHECK
-       ========================================================= */
-
-    async function checkPermission() {
-
-        try {
-
-            let allowed = false;
-
-            if (
-                USER &&
-                typeof USER.isAdmin ===
-                'function'
-            ) {
-
-                allowed =
-                    Boolean(
-                        await USER.isAdmin()
-                    );
-            }
-
-            if (
-                !allowed &&
-                USER &&
-                typeof USER.hasPermission ===
-                'function'
-            ) {
-
-                allowed =
-                    Boolean(
-                        await USER.hasPermission(
-                            'users.manage'
-                        )
-                    );
-            }
-
-            if (
-                !allowed &&
-                USER &&
-                typeof USER.hasPermission ===
-                'function'
-            ) {
-
-                allowed =
-                    Boolean(
-                        await USER.hasPermission(
-                            '*'
-                        )
-                    );
-            }
-
-            state.canManage =
-                allowed;
-
-            const alert =
-                $('#permission-alert');
-
-            const addButton =
-                $('#add-user-btn');
-
-            alert?.classList.toggle(
-                'hidden',
-                allowed
-            );
-
-            if (addButton) {
-
-                addButton.disabled =
-                    !allowed;
-
-                if (allowed) {
-
-                    addButton.removeAttribute(
-                        'title'
-                    );
-
-                } else {
-
-                    addButton.title =
-                        'لا تملك صلاحية إدارة المستخدمين';
-                }
-            }
-
-            console.log(
-                `[users-ui] canManage: ${
-                    state.canManage
-                }`
-            );
-
-            return allowed;
-
-        } catch (error) {
-
-            console.warn(
-                '[users-ui] Permission check failed:',
-                error
-            );
-
-            state.canManage = false;
-
-            $('#permission-alert')
-                ?.classList.remove(
-                    'hidden'
-                );
-
-            const addButton =
-                $('#add-user-btn');
-
-            if (addButton) {
-
-                addButton.disabled = true;
-
-                addButton.title =
-                    'تعذر التحقق من الصلاحيات';
-            }
-
-            return false;
-        }
-    }
-
-    /* =========================================================
-       USER BADGE
-       ========================================================= */
-
-    async function updateUserBadge() {
-
-        if (
-            !USER ||
-            typeof USER.getCurrentUser !==
-            'function'
-        ) {
-            return;
-        }
-
-        try {
-
-            const user =
-                await USER.getCurrentUser();
-
-            const badge =
-                $('#user-badge');
-
-            if (!badge) {
-                return;
-            }
-
-            if (!user) {
-
-                badge.textContent =
-                    'زائر';
-
-                return;
-            }
-
-            const name =
-                getUserName(user);
-
-            const role =
-                getRoleLabel(
-                    getUserRole(user)
-                );
-
-            badge.textContent =
-                `${name} · ${role}`;
-
-        } catch (error) {
-
-            console.warn(
-                '[users-ui] Badge update failed:',
-                error
-            );
-        }
-    }
-
-    /* =========================================================
-       EVENTS
-       ========================================================= */
-
-    function bindEvents() {
-
-        /* Add user */
-
-        $('#add-user-btn')
-            ?.addEventListener(
-                'click',
-                event => {
-
-                    event.preventDefault();
-
-                    if (!state.canManage) {
-
-                        toast(
-                            'ليس لديك صلاحية لإضافة مستخدمين',
-                            'error'
-                        );
-
-                        return;
-                    }
-
-                    openUserModal();
-                }
-            );
-
-        /* Form */
-
-        $('#user-form')
-            ?.addEventListener(
-                'submit',
-                handleSubmit
-            );
-
-        /* Modal */
-
-        $('#cancel-btn')
-            ?.addEventListener(
-                'click',
-                closeUserModal
-            );
-
-        $('#modal-close')
-            ?.addEventListener(
-                'click',
-                closeUserModal
-            );
-
-        /* Delete */
-
-        $('#confirm-yes')
-            ?.addEventListener(
-                'click',
-                handleConfirmDelete
-            );
-
-        $('#confirm-no')
-            ?.addEventListener(
-                'click',
-                closeConfirmDelete
-            );
-
-        /* Delegated actions */
-
-        const delegatedAction =
-            event => {
-
-                const button =
-                    event.target.closest?.(
-                        '[data-action]'
-                    );
-
-                if (!button) {
-                    return;
-                }
-
-                const action =
-                    button.dataset.action;
-
-                const id =
-                    button.dataset.id;
-
-                if (
-                    action &&
-                    id
-                ) {
-
-                    void handleAction(
-                        action,
-                        id
-                    );
-                }
-            };
-
-        $('#users-view-grid')
-            ?.addEventListener(
-                'click',
-                delegatedAction
-            );
-
-        $('#users-tbody')
-            ?.addEventListener(
-                'click',
-                delegatedAction
-            );
-
-        /* Search */
-
-        $('#users-search')
-            ?.addEventListener(
-                'input',
-                debounce(event => {
-
-                    state.search =
-                        event.target.value ||
-                        '';
-
-                    applyFilters();
-
-                }, 250)
-            );
-
-        /* Filters */
-
-        $('#filter-role')
-            ?.addEventListener(
-                'change',
-                event => {
-
-                    state.filterRole =
-                        event.target.value ||
-                        '';
-
-                    applyFilters();
-                }
-            );
-
-        $('#filter-status')
-            ?.addEventListener(
-                'change',
-                event => {
-
-                    state.filterStatus =
-                        event.target.value ||
-                        '';
-
-                    applyFilters();
-                }
-            );
-
-        /* View */
-
-        $$('#view-toggle button')
-            .forEach(button => {
-
-                button.addEventListener(
-                    'click',
-                    () => {
-
-                        setView(
-                            button.dataset.view
-                        );
-                    }
-                );
-            });
-
-        /* Logout */
-
-        $('#logout-btn')
-            ?.addEventListener(
-                'click',
-                async event => {
-
-                    event.preventDefault();
-
-                    try {
-
-                        if (
-                            USER &&
-                            typeof USER.logout ===
-                            'function'
-                        ) {
-
-                            await USER.logout();
-                        }
-
-                    } catch (error) {
-
-                        console.warn(
-                            '[users-ui] logout failed:',
-                            error
-                        );
-
-                    } finally {
-
-                        try {
-
-                            localStorage.removeItem(
-                                'medi_session'
-                            );
-
-                        } catch (_) {}
-
-                        window.location.href =
-                            'index.html';
-                    }
-                }
-            );
-
-        /* Keyboard */
-
-        document.addEventListener(
-            'keydown',
-            event => {
-
-                /* Escape */
-
-                if (
-                    event.key ===
-                    'Escape'
-                ) {
-
-                    const confirmModal =
-                        $('#confirm-modal');
-
-                    const userModal =
-                        $('#user-modal');
-
-                    if (
-                        confirmModal &&
-                        !confirmModal.classList
-                            .contains('hidden')
-                    ) {
-
-                        closeConfirmDelete();
-
-                        return;
-                    }
-
-                    if (
-                        userModal &&
-                        !userModal.classList
-                            .contains('hidden')
-                    ) {
-
-                        closeUserModal();
-
-                        return;
-                    }
-                }
-
-                /* Ctrl + K */
-
-                if (
-                    (
-                        event.ctrlKey ||
-                        event.metaKey
-                    ) &&
-                    event.key.toLowerCase() ===
-                    'k'
-                ) {
-
-                    const target =
-                        event.target;
-
-                    const tag =
-                        target?.tagName
-                            ?.toLowerCase();
-
-                    if (
-                        tag === 'input' ||
-                        tag === 'textarea' ||
-                        target?.isContentEditable
-                    ) {
-                        return;
-                    }
-
-                    event.preventDefault();
-
-                    const search =
-                        $('#users-search');
-
-                    search?.focus();
-                    search?.select();
-                }
-
-            }
-        );
-
-        /* Click outside modal */
-
-        $('#user-modal')
-            ?.addEventListener(
-                'mousedown',
-                event => {
-
-                    if (
-                        event.target.id ===
-                        'user-modal'
-                    ) {
-
-                        closeUserModal();
-                    }
-                }
-            );
-
-        $('#confirm-modal')
-            ?.addEventListener(
-                'mousedown',
-                event => {
-
-                    if (
-                        event.target.id ===
-                        'confirm-modal'
-                    ) {
-
-                        closeConfirmDelete();
-                    }
-                }
-            );
-
-        /* Clear errors */
-
-        [
-
-            'u-fullname',
-
-            'u-username',
-
-            'u-password',
-
-            'u-email',
-
-            'u-role',
-
-            'u-phone'
-
-        ].forEach(id => {
-
-            const input =
-                document.getElementById(id);
-
-            input?.addEventListener(
-                'input',
-                () => {
-
-                    const suffix =
-                        id.replace(
-                            /^u-/,
-                            ''
-                        );
-
-                    const errorElement =
-                        document.getElementById(
-                            `err-${suffix}`
-                        );
-
-                    errorElement
-                        ?.classList.remove(
-                            'visible'
-                        );
-
-                    input.classList.remove(
-                        'invalid'
-                    );
-
-                    input.removeAttribute(
-                        'aria-invalid'
-                    );
-                }
-            );
-        });
-
-        console.log(
-            '✅ users-ui events bound'
-        );
-    }
-
-    /* =========================================================
-       INIT
-       ========================================================= */
-
-    async function init() {
-
-        console.log(
-            `🚀 users-ui.js v${VERSION} initializing...`
-        );
-
-        try {
-
-            if (
-                USER &&
-                typeof USER.init ===
-                'function'
-            ) {
-
-                await USER.init();
-            }
-
-            fillHospitals();
-
-            await checkPermission();
-
-            bindEvents();
-
-            setView('grid');
-
-            await updateUserBadge();
-
-            await loadUsers();
-
-            /* Public API */
-
-            window.loadUsers =
-                loadUsers;
-
-            window.openUserModal =
-                openUserModal;
-
-            window.renderUsers =
-                renderAll;
-
-            window.usersUI = {
-
-                version: VERSION,
-
-                state,
-
-                reload:
-                    loadUsers,
-
-                setView,
-
-                openUserModal,
-
-                closeUserModal
-
-            };
-
-            console.log(
-                `✅ users-ui.js v${VERSION} ready`
-            );
-
-            console.log(
-                `   - Loaded: ${state.users.length} users`
-            );
-
-            console.log(
-                `   - canManage: ${state.canManage}`
-            );
-
-        } catch (error) {
-
-            console.error(
-                '❌ users-ui init failed:',
-                error
-            );
-
-            toast(
-                `فشل تهيئة صفحة المستخدمين: ${
-                    error?.message ||
-                    'خطأ غير معروف'
-                }`,
-                'error',
-                6000
-            );
-        }
-    }
-
-    /* =========================================================
-       START
-       ========================================================= */
 
     if (
-        document.readyState ===
-        'loading'
+      state.filteredUsers.length ===
+      0
     ) {
+      renderEmpty();
+      return;
+    }
 
-        document.addEventListener(
-            'DOMContentLoaded',
-            init,
-            {
-                once: true
-            }
+    tbody.innerHTML =
+      state.filteredUsers
+        .map(
+          function (user) {
+            const id =
+              getUserId(user);
+
+            const name =
+              getUserName(user);
+
+            const username =
+              getUsername(user);
+
+            const role =
+              getRole(user);
+
+            const status =
+              getUserStatus(user);
+
+            const hospital =
+              user.hospital ||
+              user.facility ||
+              "—";
+
+            const phone =
+              getPhone(user) ||
+              "—";
+
+            const lastLogin =
+              user.lastLogin ||
+              user.lastLoginAt ||
+              user.lastSeen;
+
+            const actions =
+              state.canManage
+                ? `
+                  <div class="table-actions">
+
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-sm"
+                      data-action="edit"
+                      data-id="${escapeHTML(id)}"
+                      title="تعديل">
+
+                      ✏️
+
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn btn-danger btn-sm"
+                      data-action="delete"
+                      data-id="${escapeHTML(id)}"
+                      title="حذف">
+
+                      🗑️
+
+                    </button>
+
+                  </div>
+                `
+                : "—";
+
+            return `
+              <tr data-user-id="${escapeHTML(id)}">
+
+                <td>
+
+                  <div class="table-user">
+
+                    <div class="table-avatar">
+                      ${escapeHTML(
+                        getInitials(user)
+                      )}
+                    </div>
+
+                    <div>
+
+                      <div class="table-user-name">
+                        ${escapeHTML(name)}
+                      </div>
+
+                      <div class="table-user-username">
+                        @${escapeHTML(username || "—")}
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                </td>
+
+                <td>
+                  ${escapeHTML(
+                    getRoleIcon(role)
+                  )}
+                  ${escapeHTML(
+                    getRoleLabel(role)
+                  )}
+                </td>
+
+                <td>
+                  ${escapeHTML(hospital)}
+                </td>
+
+                <td dir="ltr">
+                  ${escapeHTML(phone)}
+                </td>
+
+                <td>
+
+                  <span
+                    class="status-badge status-${escapeHTML(status)}">
+
+                    ${escapeHTML(
+                      getStatusLabel(status)
+                    )}
+
+                  </span>
+
+                </td>
+
+                <td>
+                  ${escapeHTML(
+                    formatDate(lastLogin)
+                  )}
+                </td>
+
+                <td>
+                  ${actions}
+                </td>
+
+              </tr>
+            `;
+          }
+        )
+        .join("");
+  }
+
+  /* =========================================================
+     RENDER ALL
+     ========================================================= */
+
+  function renderUsers() {
+    updateStats();
+
+    renderGrid();
+    renderTable();
+
+    setView(
+      state.currentView,
+      false
+    );
+  }
+
+  /* =========================================================
+     LOAD USERS
+     ========================================================= */
+
+  async function loadUsers(
+    options
+  ) {
+    const opts =
+      options || {};
+
+    const currentRequest =
+      ++state.requestId;
+
+    if (
+      !opts.silent
+    ) {
+      renderLoading();
+    }
+
+    state.loading = true;
+
+    try {
+      await waitForUserAPI();
+
+      const result =
+        await callAPI(
+          "getAllUsers"
         );
 
-    } else {
+      if (
+        currentRequest !==
+        state.requestId
+      ) {
+        return false;
+      }
 
-        void init();
+      state.users =
+        extractUsers(result)
+          .filter(Boolean)
+          .map(
+            function (user) {
+              return {
+                ...user
+              };
+            }
+          );
+
+      state.loading = false;
+
+      applyFilters();
+
+      return true;
+
+    } catch (error) {
+      state.loading = false;
+
+      console.error(
+        "MediPrescribe: loadUsers failed",
+        error
+      );
+
+      renderLoadError(error);
+
+      showToast(
+        "فشل تحميل المستخدمين: " +
+        (
+          error &&
+          error.message
+            ? error.message
+            : "خطأ غير معروف"
+        ),
+        "error"
+      );
+
+      return false;
     }
+  }
+
+  /* =========================================================
+     MODAL
+     ========================================================= */
+
+  function openModal(id) {
+    const modal =
+      byId(id);
+
+    if (!modal) {
+      return;
+    }
+
+    modal.classList.remove(
+      "hidden"
+    );
+
+    document.body.classList.add(
+      "modal-open"
+    );
+  }
+
+  function closeModal(id) {
+    const modal =
+      byId(id);
+
+    if (!modal) {
+      return;
+    }
+
+    modal.classList.add(
+      "hidden"
+    );
+
+    const userModal =
+      byId("user-modal");
+
+    const confirmModal =
+      byId("confirm-modal");
+
+    const userOpen =
+      userModal &&
+      !userModal.classList.contains(
+        "hidden"
+      );
+
+    const confirmOpen =
+      confirmModal &&
+      !confirmModal.classList.contains(
+        "hidden"
+      );
+
+    if (
+      !userOpen &&
+      !confirmOpen
+    ) {
+      document.body.classList.remove(
+        "modal-open"
+      );
+    }
+  }
+
+  function resetUserForm() {
+    const form =
+      byId("user-form");
+
+    if (form) {
+      form.reset();
+    }
+
+    setValue(
+      "u-id",
+      ""
+    );
+
+    populateHospitals(
+      ""
+    );
+
+    renderPermissions(
+      []
+    );
+
+    const password =
+      byId("u-password");
+
+    if (password) {
+      password.required = true;
+    }
+
+    const hint =
+      byId("pass-hint");
+
+    if (hint) {
+      hint.style.display =
+        "none";
+    }
+  }
+
+  /* =========================================================
+     OPEN ADD
+     ========================================================= */
+
+  function openCreateUserModal() {
+    if (!state.canManage) {
+      showToast(
+        "لا تملك صلاحية إدارة المستخدمين.",
+        "warning"
+      );
+      return;
+    }
+
+    resetUserForm();
+
+    setText(
+      "modal-title",
+      "➕ مستخدم جديد"
+    );
+
+    openModal(
+      "user-modal"
+    );
+
+    window.setTimeout(
+      function () {
+        const fullname =
+          byId("u-fullname");
+
+        if (fullname) {
+          fullname.focus();
+        }
+      },
+      50
+    );
+  }
+
+  /* =========================================================
+     OPEN EDIT
+     ========================================================= */
+
+  function findUserById(id) {
+    const normalized =
+      normalizeId(id);
+
+    return (
+      state.users.find(
+        function (user) {
+          return (
+            getUserId(user) ===
+            normalized
+          );
+        }
+      ) ||
+      null
+    );
+  }
+
+  function openUserModal(
+    userOrId
+  ) {
+    if (!state.canManage) {
+      showToast(
+        "لا تملك صلاحية تعديل المستخدمين.",
+        "warning"
+      );
+      return;
+    }
+
+    const user =
+      typeof userOrId === "object"
+        ? userOrId
+        : findUserById(
+            userOrId
+          );
+
+    if (!user) {
+      showToast(
+        "لم يتم العثور على المستخدم.",
+        "error"
+      );
+      return;
+    }
+
+    setValue(
+      "u-id",
+      getUserId(user)
+    );
+
+    setValue(
+      "u-fullname",
+      user.fullName ||
+      user.name ||
+      ""
+    );
+
+    setValue(
+      "u-username",
+      getUsername(user)
+    );
+
+    setValue(
+      "u-email",
+      getEmail(user)
+    );
+
+    setValue(
+      "u-role",
+      getRole(user)
+    );
+
+    setValue(
+      "u-phone",
+      getPhone(user)
+    );
+
+    setValue(
+      "u-status",
+      getUserStatus(user)
+    );
+
+    populateHospitals(
+      user.hospital ||
+      user.facility ||
+      ""
+    );
+
+    setValue(
+      "u-password",
+      ""
+    );
+
+    const password =
+      byId("u-password");
+
+    if (password) {
+      password.required = false;
+    }
+
+    const hint =
+      byId("pass-hint");
+
+    if (hint) {
+      hint.style.display =
+        "block";
+    }
+
+    renderPermissions(
+      getUserPermissions(user)
+    );
+
+    setText(
+      "modal-title",
+      "✏️ تعديل المستخدم"
+    );
+
+    openModal(
+      "user-modal"
+    );
+  }
+
+  /* =========================================================
+     VALIDATION
+     ========================================================= */
+
+  function clearValidation() {
+    $$(".input-dark").forEach(
+      function (input) {
+        input.classList.remove(
+          "invalid"
+        );
+
+        input.removeAttribute(
+          "aria-invalid"
+        );
+      }
+    );
+  }
+
+  function invalidate(
+    element,
+    message
+  ) {
+    if (element) {
+      element.classList.add(
+        "invalid"
+      );
+
+      element.setAttribute(
+        "aria-invalid",
+        "true"
+      );
+
+      try {
+        element.focus();
+      } catch (_) {}
+    }
+
+    showToast(
+      message,
+      "error"
+    );
+
+    return false;
+  }
+
+  function validateForm() {
+    clearValidation();
+
+    const fullName =
+      getValue(
+        "u-fullname"
+      ).trim();
+
+    const username =
+      getValue(
+        "u-username"
+      ).trim();
+
+    const password =
+      getValue(
+        "u-password"
+      );
+
+    const email =
+      getValue(
+        "u-email"
+      ).trim();
+
+    const role =
+      getValue(
+        "u-role"
+      ).trim();
+
+    const phone =
+      getValue(
+        "u-phone"
+      ).trim();
+
+    const id =
+      getValue(
+        "u-id"
+      ).trim();
+
+    if (
+      fullName.length <
+      CONFIG.minFullNameLength
+    ) {
+      return invalidate(
+        byId("u-fullname"),
+        "يرجى إدخال الاسم الكامل."
+      );
+    }
+
+    if (
+      !new RegExp(
+        "^[a-zA-Z0-9._-]{" +
+        CONFIG.minUsernameLength +
+        ",60}$"
+      ).test(username)
+    ) {
+      return invalidate(
+        byId("u-username"),
+        "اسم المستخدم يجب أن يحتوي على أحرف إنجليزية أو أرقام أو . _ - فقط."
+      );
+    }
+
+    if (!id) {
+      if (
+        password.length <
+        CONFIG.minPasswordLength
+      ) {
+        return invalidate(
+          byId("u-password"),
+          "كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل."
+        );
+      }
+    } else if (
+      password &&
+      password.length <
+        CONFIG.minPasswordLength
+    ) {
+      return invalidate(
+        byId("u-password"),
+        "كلمة المرور الجديدة يجب أن تحتوي على 8 أحرف على الأقل."
+      );
+    }
+
+    if (
+      email &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        email
+      )
+    ) {
+      return invalidate(
+        byId("u-email"),
+        "صيغة البريد الإلكتروني غير صحيحة."
+      );
+    }
+
+    if (!role) {
+      return invalidate(
+        byId("u-role"),
+        "يرجى اختيار الدور."
+      );
+    }
+
+    if (
+      phone &&
+      !/^[\d+\-\s()]{6,20}$/.test(
+        phone
+      )
+    ) {
+      return invalidate(
+        byId("u-phone"),
+        "رقم الهاتف غير صحيح."
+      );
+    }
+
+    return true;
+  }
+
+  /* =========================================================
+     BUILD USER DATA
+     ========================================================= */
+
+  function buildUserData() {
+    const id =
+      getValue(
+        "u-id"
+      ).trim();
+
+    const password =
+      getValue(
+        "u-password"
+      );
+
+    const status =
+      getValue(
+        "u-status"
+      ) || "active";
+
+    const data = {
+      name:
+        getValue(
+          "u-fullname"
+        ).trim(),
+
+      fullName:
+        getValue(
+          "u-fullname"
+        ).trim(),
+
+      username:
+        getValue(
+          "u-username"
+        ).trim(),
+
+      email:
+        getValue(
+          "u-email"
+        ).trim(),
+
+      role:
+        getValue(
+          "u-role"
+        ).trim(),
+
+      hospital:
+        getValue(
+          "u-hospital"
+        ).trim(),
+
+      phone:
+        getValue(
+          "u-phone"
+        ).trim(),
+
+      active:
+        status === "active",
+
+      status:
+        status,
+
+      suspended:
+        status === "suspended",
+
+      permissions:
+        getSelectedPermissions()
+    };
+
+    if (password) {
+      data.password =
+        password;
+    }
+
+    if (id) {
+      data.id = id;
+    }
+
+    return {
+      id,
+      data
+    };
+  }
+
+  /* =========================================================
+     SUBMIT
+     ========================================================= */
+
+  async function handleSubmit(
+    event
+  ) {
+    event.preventDefault();
+
+    if (!state.canManage) {
+      showToast(
+        "لا تملك صلاحية إدارة المستخدمين.",
+        "error"
+      );
+      return;
+    }
+
+    if (state.loading) {
+      return;
+    }
+
+    if (!validateForm()) {
+      return;
+    }
+
+    const submitButton =
+      event.target.querySelector(
+        'button[type="submit"]'
+      );
+
+    if (
+      submitButton &&
+      submitButton.dataset.saving ===
+        "true"
+    ) {
+      return;
+    }
+
+    if (submitButton) {
+      submitButton.dataset.saving =
+        "true";
+
+      submitButton.disabled =
+        true;
+
+      submitButton.dataset.originalText =
+        submitButton.innerHTML;
+
+      submitButton.innerHTML =
+        "⏳ جارٍ الحفظ...";
+    }
+
+    state.loading = true;
+
+    try {
+      await waitForUserAPI();
+
+      const {
+        id,
+        data
+      } =
+        buildUserData();
+
+      if (id) {
+        await callAPI(
+          "updateUser",
+          id,
+          data
+        );
+
+        showToast(
+          "تم تحديث بيانات المستخدم بنجاح.",
+          "success"
+        );
+
+      } else {
+        await callAPI(
+          "createUser",
+          data
+        );
+
+        showToast(
+          "تم إنشاء المستخدم بنجاح.",
+          "success"
+        );
+      }
+
+      closeModal(
+        "user-modal"
+      );
+
+      await loadUsers({
+        silent: true
+      });
+
+    } catch (error) {
+      console.error(
+        "MediPrescribe: save user failed",
+        error
+      );
+
+      showToast(
+        "فشل حفظ المستخدم: " +
+        (
+          error &&
+          error.message
+            ? error.message
+            : "خطأ غير معروف"
+        ),
+        "error"
+      );
+
+    } finally {
+      state.loading = false;
+
+      if (submitButton) {
+        submitButton.dataset.saving =
+          "false";
+
+        submitButton.disabled =
+          false;
+
+        submitButton.innerHTML =
+          submitButton.dataset.originalText ||
+          "💾 حفظ";
+      }
+    }
+  }
+
+  /* =========================================================
+     DELETE
+     ========================================================= */
+
+  function openDeleteConfirm(
+    id
+  ) {
+    if (!state.canManage) {
+      showToast(
+        "لا تملك صلاحية حذف المستخدمين.",
+        "warning"
+      );
+      return;
+    }
+
+    const user =
+      findUserById(id);
+
+    if (!user) {
+      showToast(
+        "المستخدم غير موجود.",
+        "error"
+      );
+      return;
+    }
+
+    state.pendingDeleteId =
+      normalizeId(id);
+
+    const name =
+      getUserName(user);
+
+    const text =
+      byId("confirm-text");
+
+    if (text) {
+      text.textContent =
+        "هل أنت متأكد من حذف المستخدم " +
+        name +
+        "؟ لا يمكن التراجع عن هذه العملية.";
+    }
+
+    openModal(
+      "confirm-modal"
+    );
+  }
+
+  async function confirmDelete() {
+    if (!state.canManage) {
+      closeModal(
+        "confirm-modal"
+      );
+      return;
+    }
+
+    const id =
+      normalizeId(
+        state.pendingDeleteId
+      );
+
+    if (!id) {
+      closeModal(
+        "confirm-modal"
+      );
+      return;
+    }
+
+    const button =
+      byId("confirm-yes");
+
+    if (
+      button &&
+      button.dataset.deleting ===
+        "true"
+    ) {
+      return;
+    }
+
+    if (button) {
+      button.dataset.deleting =
+        "true";
+
+      button.disabled =
+        true;
+
+      button.dataset.originalText =
+        button.innerHTML;
+
+      button.innerHTML =
+        "⏳ جارٍ الحذف...";
+    }
+
+    try {
+      await waitForUserAPI();
+
+      await callAPI(
+        "deleteUser",
+        id
+      );
+
+      showToast(
+        "تم حذف المستخدم بنجاح.",
+        "success"
+      );
+
+      state.pendingDeleteId =
+        null;
+
+      closeModal(
+        "confirm-modal"
+      );
+
+      await loadUsers({
+        silent: true
+      });
+
+    } catch (error) {
+      console.error(
+        "MediPrescribe: delete user failed",
+        error
+      );
+
+      showToast(
+        "فشل حذف المستخدم: " +
+        (
+          error &&
+          error.message
+            ? error.message
+            : "خطأ غير معروف"
+        ),
+        "error"
+      );
+
+    } finally {
+      if (button) {
+        button.dataset.deleting =
+          "false";
+
+        button.disabled =
+          false;
+
+        button.innerHTML =
+          button.dataset.originalText ||
+          "🗑️ نعم، احذف";
+      }
+    }
+  }
+
+  /* =========================================================
+     VIEW
+     ========================================================= */
+
+  function setView(
+    view,
+    saveState
+  ) {
+    const normalized =
+      view === "table"
+        ? "table"
+        : "grid";
+
+    state.currentView =
+      normalized;
+
+    const grid =
+      byId("users-view-grid");
+
+    const table =
+      byId("users-view-table");
+
+    if (grid) {
+      grid.classList.toggle(
+        "hidden",
+        normalized !== "grid"
+      );
+    }
+
+    if (table) {
+      table.classList.toggle(
+        "hidden",
+        normalized !== "table"
+      );
+    }
+
+    $$("#view-toggle button[data-view]")
+      .forEach(
+        function (button) {
+          const active =
+            button.dataset.view ===
+            normalized;
+
+          button.classList.toggle(
+            "active",
+            active
+          );
+
+          button.setAttribute(
+            "aria-pressed",
+            active
+              ? "true"
+              : "false"
+          );
+        }
+      );
+
+    if (saveState !== false) {
+      try {
+        localStorage.setItem(
+          "mp_users_view",
+          normalized
+        );
+      } catch (_) {}
+    }
+  }
+
+  function restoreView() {
+    let saved = "grid";
+
+    try {
+      saved =
+        localStorage.getItem(
+          "mp_users_view"
+        ) || "grid";
+    } catch (_) {}
+
+    setView(
+      saved === "table"
+        ? "table"
+        : "grid",
+      false
+    );
+  }
+
+  /* =========================================================
+     FILTER CLEAR
+     ========================================================= */
+
+  function clearFilters() {
+    state.search = "";
+    state.filterRole = "";
+    state.filterStatus = "";
+
+    setValue(
+      "users-search",
+      ""
+    );
+
+    setValue(
+      "filter-role",
+      ""
+    );
+
+    setValue(
+      "filter-status",
+      ""
+    );
+
+    applyFilters();
+  }
+
+  /* =========================================================
+     ACTION HANDLER
+     ========================================================= */
+
+  function handleAction(
+    action,
+    id
+  ) {
+    const normalized =
+      normalizeId(id);
+
+    switch (action) {
+      case "edit":
+        openUserModal(
+          normalized
+        );
+        break;
+
+      case "delete":
+        openDeleteConfirm(
+          normalized
+        );
+        break;
+
+      case "retry-load":
+        loadUsers();
+        break;
+
+      case "clear-filters":
+        clearFilters();
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  /* =========================================================
+     EVENTS
+     ========================================================= */
+
+  function bindEvents() {
+    if (state.eventsBound) {
+      return;
+    }
+
+    state.eventsBound =
+      true;
+
+    /* Add */
+
+    const addButton =
+      byId("add-user-btn");
+
+    if (addButton) {
+      addButton.addEventListener(
+        "click",
+        openCreateUserModal
+      );
+    }
+
+    /* Form */
+
+    const form =
+      byId("user-form");
+
+    if (form) {
+      form.addEventListener(
+        "submit",
+        handleSubmit
+      );
+    }
+
+    /* Close */
+
+    const closeButton =
+      byId("modal-close");
+
+    if (closeButton) {
+      closeButton.addEventListener(
+        "click",
+        function () {
+          closeModal(
+            "user-modal"
+          );
+        }
+      );
+    }
+
+    /* Cancel */
+
+    const cancelButton =
+      byId("cancel-btn");
+
+    if (cancelButton) {
+      cancelButton.addEventListener(
+        "click",
+        function () {
+          closeModal(
+            "user-modal"
+          );
+        }
+      );
+    }
+
+    /* Confirm yes */
+
+    const confirmYes =
+      byId("confirm-yes");
+
+    if (confirmYes) {
+      confirmYes.addEventListener(
+        "click",
+        confirmDelete
+      );
+    }
+
+    /* Confirm no */
+
+    const confirmNo =
+      byId("confirm-no");
+
+    if (confirmNo) {
+      confirmNo.addEventListener(
+        "click",
+        function () {
+          state.pendingDeleteId =
+            null;
+
+          closeModal(
+            "confirm-modal"
+          );
+        }
+      );
+    }
+
+    /* Search */
+
+    const search =
+      byId("users-search");
+
+    if (search) {
+      search.addEventListener(
+        "input",
+        debounce(
+          function () {
+            state.search =
+              this.value.trim();
+
+            applyFilters();
+          },
+          CONFIG.debounceDelay
+        )
+      );
+    }
+
+    /* Role filter */
+
+    const roleFilter =
+      byId("filter-role");
+
+    if (roleFilter) {
+      roleFilter.addEventListener(
+        "change",
+        function () {
+          state.filterRole =
+            this.value;
+
+          applyFilters();
+        }
+      );
+    }
+
+    /* Status filter */
+
+    const statusFilter =
+      byId("filter-status");
+
+    if (statusFilter) {
+      statusFilter.addEventListener(
+        "change",
+        function () {
+          state.filterStatus =
+            this.value;
+
+          applyFilters();
+        }
+      );
+    }
+
+    /* View */
+
+    const viewToggle =
+      byId("view-toggle");
+
+    if (viewToggle) {
+      viewToggle.addEventListener(
+        "click",
+        function (event) {
+          const button =
+            event.target.closest(
+              "button[data-view]"
+            );
+
+          if (!button) {
+            return;
+          }
+
+          setView(
+            button.dataset.view
+          );
+        }
+      );
+    }
+
+    /* Delegated actions */
+
+    document.addEventListener(
+      "click",
+      function (event) {
+        const button =
+          event.target.closest(
+            "[data-action]"
+          );
+
+        if (!button) {
+          return;
+        }
+
+        const action =
+          button.dataset.action;
+
+        const id =
+          button.dataset.id ||
+          "";
+
+        handleAction(
+          action,
+          id
+        );
+      }
+    );
+
+    /* Keyboard */
+
+    document.addEventListener(
+      "keydown",
+      function (event) {
+        if (
+          event.key === "Escape"
+        ) {
+          const confirmModal =
+            byId("confirm-modal");
+
+          const userModal =
+            byId("user-modal");
+
+          if (
+            confirmModal &&
+            !confirmModal.classList.contains(
+              "hidden"
+            )
+          ) {
+            closeModal(
+              "confirm-modal"
+            );
+            return;
+          }
+
+          if (
+            userModal &&
+            !userModal.classList.contains(
+              "hidden"
+            )
+          ) {
+            closeModal(
+              "user-modal"
+            );
+          }
+        }
+
+        if (
+          (event.ctrlKey ||
+            event.metaKey) &&
+          event.key.toLowerCase() ===
+            "k"
+        ) {
+          event.preventDefault();
+
+          const search =
+            byId("users-search");
+
+          if (search) {
+            search.focus();
+            search.select();
+          }
+        }
+      }
+    );
+
+    /* Click outside */
+
+    $$(".modal").forEach(
+      function (modal) {
+        modal.addEventListener(
+          "mousedown",
+          function (event) {
+            if (
+              event.target !==
+              modal
+            ) {
+              return;
+            }
+
+            if (
+              modal.id ===
+              "user-modal"
+            ) {
+              closeModal(
+                "user-modal"
+              );
+            }
+
+            if (
+              modal.id ===
+              "confirm-modal"
+            ) {
+              closeModal(
+                "confirm-modal"
+              );
+            }
+          }
+        );
+      }
+    );
+
+    /* Logout */
+
+    const logout =
+      byId("logout-btn");
+
+    if (logout) {
+      logout.addEventListener(
+        "click",
+        async function () {
+          try {
+            if (
+              window.User &&
+              typeof window.User.logout ===
+                "function"
+            ) {
+              await window.User.logout();
+            } else {
+              try {
+                localStorage.removeItem(
+                  "currentUser"
+                );
+
+                localStorage.removeItem(
+                  "mp_current_user"
+                );
+
+                sessionStorage.clear();
+              } catch (_) {}
+            }
+          } catch (error) {
+            console.error(
+              "Logout failed:",
+              error
+            );
+          }
+
+          window.location.href =
+            "index.html";
+        }
+      );
+    }
+
+    /* Phone */
+
+    const phone =
+      byId("u-phone");
+
+    if (phone) {
+      phone.addEventListener(
+        "input",
+        function () {
+          this.value =
+            this.value
+              .replace(
+                /[^\d+\-\s()]/g,
+                ""
+              )
+              .slice(
+                0,
+                20
+              );
+        }
+      );
+    }
+
+    /* Username */
+
+    const username =
+      byId("u-username");
+
+    if (username) {
+      username.addEventListener(
+        "input",
+        function () {
+          this.value =
+            this.value
+              .replace(
+                /\s+/g,
+                ""
+              )
+              .slice(
+                0,
+                60
+              );
+        }
+      );
+    }
+
+    /* Theme sync */
+
+    window.addEventListener(
+      "storage",
+      function (event) {
+        if (
+          event.key ===
+          "mp_theme"
+        ) {
+          applyTheme();
+        }
+      }
+    );
+  }
+
+  /* =========================================================
+     THEME
+     ========================================================= */
+
+  function applyTheme() {
+    try {
+      const theme =
+        localStorage.getItem(
+          "mp_theme"
+        );
+
+      document.documentElement.dataset.theme =
+        theme === "light"
+          ? "light"
+          : "dark";
+
+    } catch (_) {
+      document.documentElement.dataset.theme =
+        "dark";
+    }
+  }
+
+  /* =========================================================
+     CURRENT USER BADGE
+     ========================================================= */
+
+  async function updateUserBadge() {
+    const badge =
+      byId("user-badge");
+
+    if (!badge) {
+      return;
+    }
+
+    try {
+      if (
+        window.User &&
+        typeof window.User.getCurrentUser ===
+          "function"
+      ) {
+        const current =
+          await window.User.getCurrentUser();
+
+        if (current) {
+          const name =
+            getUserName(
+              current
+            );
+
+          const role =
+            getRoleLabel(
+              getRole(current)
+            );
+
+          badge.textContent =
+            name +
+            " · " +
+            role;
+
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn(
+        "MediPrescribe: current user unavailable",
+        error
+      );
+    }
+
+    badge.textContent =
+      "المستخدم الحالي";
+  }
+
+  /* =========================================================
+     INIT
+     ========================================================= */
+
+  async function init() {
+    if (state.initialized) {
+      return;
+    }
+
+    state.initialized =
+      true;
+
+    applyTheme();
+
+    bindEvents();
+
+    restoreView();
+
+    populateHospitals();
+
+    renderPermissions([]);
+
+    try {
+      await initializeUserAPI();
+
+      await checkPermission();
+
+      await updateUserBadge();
+
+      await loadUsers();
+
+    } catch (error) {
+      console.error(
+        "MediPrescribe: users page initialization failed",
+        error
+      );
+
+      const message =
+        error &&
+        error.message
+          ? error.message
+          : "تعذر تهيئة نظام المستخدمين.";
+
+      renderLoadError(
+        new Error(message)
+      );
+
+      showToast(
+        message,
+        "error"
+      );
+    }
+  }
+
+  /* =========================================================
+     PUBLIC API
+     ========================================================= */
+
+  window.loadUsers =
+    loadUsers;
+
+  window.renderUsers =
+    renderUsers;
+
+  window.openUserModal =
+    openUserModal;
+
+  window.openCreateUserModal =
+    openCreateUserModal;
+
+  window.refreshUsersPage =
+    function () {
+      return loadUsers();
+    };
+
+  window.MediPrescribeUsersUI = {
+    init,
+    loadUsers,
+    renderUsers,
+    openUserModal,
+    openCreateUserModal,
+    clearFilters,
+    state
+  };
+
+  /* =========================================================
+     START
+     ========================================================= */
+
+  function start() {
+    if (
+      document.readyState ===
+      "loading"
+    ) {
+      document.addEventListener(
+        "DOMContentLoaded",
+        init,
+        {
+          once: true
+        }
+      );
+    } else {
+      init();
+    }
+  }
+
+  start();
 
 })(window, document);
