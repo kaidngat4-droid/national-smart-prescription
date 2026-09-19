@@ -1,24 +1,29 @@
 /* ============================================================
  * MediPrescribe — User Management
- * users.js v5.0.0
+ * users.js v6.0.0
  *
  * متوافق مع:
- *   - db.js v2.x
+ *   - db.js
  *   - IndexedDB
  *   - localStorage fallback
  *   - Login / Logout
  *   - Roles / Permissions
  *   - users.html
+ *   - users-ui.js
  *   - Legacy APIs
  *
  * التخزين:
  *   settings -> key = "users"
  *
- * ملاحظات:
+ * الأمان:
  *   - الحسابات الجديدة تستخدم PBKDF2-SHA256.
  *   - يدعم كلمات المرور القديمة مؤقتاً.
- *   - عند نجاح الدخول بحساب legacy يتم ترقيته تلقائياً.
- *   - هذا نظام محلي/PWA وليس بديلاً عن Backend حقيقي.
+ *   - يتم ترقية Legacy Password بعد نجاح الدخول.
+ *   - لا يتم إرجاع password أو passwordHash عبر API العام.
+ *
+ * ملاحظة:
+ *   هذا نظام محلي/PWA.
+ *   ليس بديلاً عن Backend حقيقي للمستخدمين والصلاحيات.
  * ============================================================ */
 
 'use strict';
@@ -30,6 +35,8 @@
      * ========================================================= */
 
     const CONFIG = Object.freeze({
+
+        VERSION: '6.0.0',
 
         USERS_KEY: 'users',
 
@@ -47,11 +54,20 @@
         PBKDF2_SALT_BYTES:
             16,
 
+        PBKDF2_KEY_BITS:
+            256,
+
         MAX_FAILED_ATTEMPTS:
             5,
 
         LOCK_MINUTES:
-            10
+            10,
+
+        DEFAULT_ADMIN_USERNAME:
+            'admin',
+
+        DEFAULT_ADMIN_PASSWORD:
+            'admin123'
 
     });
 
@@ -192,6 +208,20 @@
     }
 
 
+    function normalizeId(id) {
+
+        if (
+            id === undefined ||
+            id === null
+        ) {
+            return '';
+        }
+
+        return String(id).trim();
+
+    }
+
+
     function normalizeUsername(username) {
 
         return String(username || '')
@@ -212,35 +242,92 @@
 
     function normalizeRole(role) {
 
-        role =
+        const value =
             String(role || '')
                 .trim()
                 .toLowerCase();
 
-        return ROLE_LABELS[role]
-            ? role
+        return ROLE_LABELS[value]
+            ? value
             : ROLES.DOCTOR;
 
     }
 
 
-    function normalizeBoolean(value, fallback = true) {
+    function normalizeBoolean(
+        value,
+        fallback = true
+    ) {
 
-        if (value === undefined || value === null) {
+        if (
+            value === undefined ||
+            value === null
+        ) {
+
             return fallback;
+
         }
 
-        if (typeof value === 'boolean') {
+
+        if (
+            typeof value === 'boolean'
+        ) {
+
             return value;
+
+        }
+
+
+        const text =
+            String(value)
+                .trim()
+                .toLowerCase();
+
+
+        if (
+            text === 'false' ||
+            text === '0' ||
+            text === 'inactive' ||
+            text === 'disabled' ||
+            text === 'suspended' ||
+            text === 'no'
+        ) {
+
+            return false;
+
+        }
+
+
+        return true;
+
+    }
+
+
+    function isUserActive(user) {
+
+        if (!user) {
+            return false;
         }
 
         if (
-            value === 'false' ||
-            value === '0' ||
-            value === 'inactive' ||
-            value === 'disabled'
+            user.active !== undefined
         ) {
-            return false;
+
+            return normalizeBoolean(
+                user.active,
+                true
+            );
+
+        }
+
+        if (
+            user.status !== undefined
+        ) {
+
+            return String(
+                user.status
+            ).toLowerCase() === 'active';
+
         }
 
         return true;
@@ -276,6 +363,11 @@
 
 
     function clone(value) {
+
+        if (value === undefined) {
+            return value;
+        }
+
 
         try {
 
@@ -322,11 +414,15 @@
 
     function hexToBytes(hex) {
 
-        hex =
-            String(hex || '');
+        const value =
+            String(hex || '')
+                .trim();
+
 
         if (
-            hex.length % 2 !== 0
+            !value ||
+            value.length % 2 !== 0 ||
+            !/^[0-9a-f]+$/i.test(value)
         ) {
 
             throw new Error(
@@ -335,10 +431,12 @@
 
         }
 
+
         const bytes =
             new Uint8Array(
-                hex.length / 2
+                value.length / 2
             );
+
 
         for (
             let i = 0;
@@ -348,7 +446,7 @@
 
             bytes[i] =
                 parseInt(
-                    hex.slice(
+                    value.slice(
                         i * 2,
                         i * 2 + 2
                     ),
@@ -357,7 +455,48 @@
 
         }
 
+
         return bytes;
+
+    }
+
+
+    function constantTimeEqual(
+        a,
+        b
+    ) {
+
+        a = String(a || '');
+        b = String(b || '');
+
+
+        if (
+            a.length !==
+            b.length
+        ) {
+
+            return false;
+
+        }
+
+
+        let result = 0;
+
+
+        for (
+            let i = 0;
+            i < a.length;
+            i++
+        ) {
+
+            result |=
+                a.charCodeAt(i) ^
+                b.charCodeAt(i);
+
+        }
+
+
+        return result === 0;
 
     }
 
@@ -366,7 +505,9 @@
      * LEGACY SHA-256
      * ========================================================= */
 
-    async function legacyHashPassword(password) {
+    async function legacyHashPassword(
+        password
+    ) {
 
         password =
             String(password || '');
@@ -374,18 +515,22 @@
 
         if (
             window.crypto &&
-            window.crypto.subtle
+            window.crypto.subtle &&
+            typeof TextEncoder !==
+            'undefined'
         ) {
 
             const data =
                 new TextEncoder()
                     .encode(password);
 
+
             const buffer =
                 await window.crypto.subtle.digest(
                     'SHA-256',
                     data
                 );
+
 
             return bytesToHex(
                 new Uint8Array(buffer)
@@ -395,11 +540,13 @@
 
 
         /*
-         * Fallback compatibility فقط.
-         * ليس hash تشفيرياً مناسباً للإنتاج.
+         * Fallback للتوافق مع بيئات قديمة.
+         *
+         * ليس بديلاً أمنياً عن Web Crypto.
          */
 
         let hash = 0;
+
 
         for (
             let i = 0;
@@ -415,6 +562,7 @@
 
         }
 
+
         return String(hash);
 
     }
@@ -424,7 +572,9 @@
      * PBKDF2
      * ========================================================= */
 
-    async function createPasswordHash(password) {
+    async function createPasswordHash(
+        password
+    ) {
 
         password =
             String(password || '');
@@ -445,6 +595,12 @@
             typeof window.crypto.getRandomValues !==
             'function'
         ) {
+
+            /*
+             * للتوافق فقط.
+             * الحسابات الجديدة يفضل إنشاؤها
+             * في متصفح يدعم Web Crypto.
+             */
 
             return {
 
@@ -491,8 +647,22 @@
 
     async function derivePBKDF2(
         password,
-        salt
+        salt,
+        iterations =
+            CONFIG.PBKDF2_ITERATIONS
     ) {
+
+        if (
+            !window.crypto ||
+            !window.crypto.subtle
+        ) {
+
+            throw new Error(
+                'Web Crypto غير متاح في هذا المتصفح'
+            );
+
+        }
+
 
         const key =
             await window.crypto.subtle.importKey(
@@ -530,6 +700,7 @@
                         hexToBytes(salt),
 
                     iterations:
+                        Number(iterations) ||
                         CONFIG.PBKDF2_ITERATIONS,
 
                     hash:
@@ -539,7 +710,7 @@
 
                 key,
 
-                256
+                CONFIG.PBKDF2_KEY_BITS
 
             );
 
@@ -550,6 +721,7 @@
                 'PBKDF2-SHA256',
 
             iterations:
+                Number(iterations) ||
                 CONFIG.PBKDF2_ITERATIONS,
 
             salt:
@@ -567,11 +739,6 @@
 
     /* =========================================================
      * VERIFY PASSWORD
-     *
-     * يدعم:
-     *   1. PBKDF2
-     *   2. SHA-256 القديم
-     *   3. plaintext القديم للتوافق فقط
      * ========================================================= */
 
     async function verifyPasswordHash(
@@ -583,8 +750,13 @@
             String(password || '');
 
 
-        if (!stored) {
+        if (
+            stored === undefined ||
+            stored === null
+        ) {
+
             return false;
+
         }
 
 
@@ -610,72 +782,26 @@
 
             try {
 
-                const key =
-                    await window.crypto.subtle.importKey(
+                const calculated =
+                    await derivePBKDF2(
 
-                        'raw',
+                        password,
 
-                        new TextEncoder()
-                            .encode(password),
+                        String(
+                            stored.salt || ''
+                        ),
 
-                        {
-                            name:
-                                'PBKDF2'
-                        },
-
-                        false,
-
-                        [
-                            'deriveBits'
-                        ]
+                        Number(
+                            stored.iterations
+                        ) ||
+                        CONFIG.PBKDF2_ITERATIONS
 
                     );
 
 
-                const bits =
-                    await window.crypto.subtle.deriveBits(
-
-                        {
-
-                            name:
-                                'PBKDF2',
-
-                            salt:
-                                hexToBytes(
-                                    String(
-                                        stored.salt || ''
-                                    )
-                                ),
-
-                            iterations:
-                                Number(
-                                    stored.iterations
-                                ) ||
-                                CONFIG.PBKDF2_ITERATIONS,
-
-                            hash:
-                                CONFIG.PBKDF2_HASH
-
-                        },
-
-                        key,
-
-                        256
-
-                    );
-
-
-                const hash =
-                    bytesToHex(
-                        new Uint8Array(bits)
-                    );
-
-
-                return (
-                    hash ===
-                    String(
-                        stored.hash || ''
-                    )
+                return constantTimeEqual(
+                    calculated.hash,
+                    stored.hash
                 );
 
             } catch (error) {
@@ -693,7 +819,38 @@
 
 
         /*
-         * SHA-256 أو plaintext قديم
+         * Legacy object
+         */
+
+        if (
+            typeof stored === 'object'
+        ) {
+
+            if (
+                stored.hash
+            ) {
+
+                const hash =
+                    await legacyHashPassword(
+                        password
+                    );
+
+
+                return constantTimeEqual(
+                    hash,
+                    stored.hash
+                );
+
+            }
+
+
+            return false;
+
+        }
+
+
+        /*
+         * Legacy string
          */
 
         if (
@@ -707,11 +864,14 @@
 
 
             /*
-             * SHA-256 legacy
+             * SHA-256 legacy.
              */
 
             if (
-                legacyHash === stored
+                constantTimeEqual(
+                    legacyHash,
+                    stored
+                )
             ) {
 
                 return true;
@@ -722,10 +882,12 @@
             /*
              * plaintext legacy.
              *
-             * يبقى للتوافق مع البيانات القديمة فقط.
+             * للتوافق فقط.
              */
 
-            return password === stored;
+            return (
+                password === stored
+            );
 
         }
 
@@ -739,27 +901,91 @@
      * USER STORAGE
      * ========================================================= */
 
+    function extractUsers(value) {
+
+        if (
+            Array.isArray(value)
+        ) {
+
+            return value;
+
+        }
+
+
+        if (
+            value &&
+            Array.isArray(value.users)
+        ) {
+
+            return value.users;
+
+        }
+
+
+        if (
+            value &&
+            Array.isArray(value.value)
+        ) {
+
+            return value.value;
+
+        }
+
+
+        if (
+            value &&
+            Array.isArray(value.data)
+        ) {
+
+            return value.data;
+
+        }
+
+
+        if (
+            value &&
+            Array.isArray(value.items)
+        ) {
+
+            return value.items;
+
+        }
+
+
+        return [];
+
+    }
+
+
     async function getAllUsers() {
 
         const DB =
             getDB();
 
 
+        /*
+         * API مخصص.
+         */
+
         if (
             typeof DB.getAllUsers ===
             'function'
         ) {
 
-            const users =
+            const result =
                 await DB.getAllUsers();
 
 
-            return Array.isArray(users)
-                ? users
-                : [];
+            return normalizeUsers(
+                extractUsers(result)
+            );
 
         }
 
+
+        /*
+         * IndexedDB generic API.
+         */
 
         if (
             typeof DB.get ===
@@ -773,14 +999,41 @@
                 );
 
 
-            if (
-                result &&
-                Array.isArray(result.value)
-            ) {
+            return normalizeUsers(
+                extractUsers(result)
+            );
 
-                return result.value;
+        }
+
+
+        /*
+         * localStorage fallback.
+         */
+
+        try {
+
+            const raw =
+                localStorage.getItem(
+                    CONFIG.USERS_KEY
+                );
+
+
+            if (raw) {
+
+                return normalizeUsers(
+                    extractUsers(
+                        JSON.parse(raw)
+                    )
+                );
 
             }
+
+        } catch (error) {
+
+            console.warn(
+                'تعذر قراءة users من localStorage:',
+                error
+            );
 
         }
 
@@ -790,7 +1043,131 @@
     }
 
 
-    async function saveAllUsers(users) {
+    function normalizeUsers(
+        users
+    ) {
+
+        if (
+            !Array.isArray(users)
+        ) {
+
+            return [];
+
+        }
+
+
+        return users
+            .filter(Boolean)
+            .map(normalizeStoredUser);
+
+    }
+
+
+    function normalizeStoredUser(
+        user
+    ) {
+
+        const item =
+            clone(user || {});
+
+
+        item.id =
+            normalizeId(
+                item.id
+            ) ||
+            generateId();
+
+
+        item.username =
+            normalizeUsername(
+                item.username
+            );
+
+
+        item.name =
+            cleanName(
+                item.name ||
+                item.fullName ||
+                item.username
+            );
+
+
+        item.fullName =
+            item.name;
+
+
+        item.role =
+            normalizeRole(
+                item.role
+            );
+
+
+        item.active =
+            isUserActive(item);
+
+
+        item.email =
+            String(
+                item.email || ''
+            )
+                .trim()
+                .toLowerCase();
+
+
+        item.phone =
+            String(
+                item.phone || ''
+            )
+                .trim();
+
+
+        item.hospital =
+            String(
+                item.hospital || ''
+            )
+                .trim();
+
+
+        item.permissions =
+            normalizePermissions(
+                item.permissions
+            );
+
+
+        item.failedLoginAttempts =
+            Number(
+                item.failedLoginAttempts || 0
+            );
+
+
+        item.lockedUntil =
+            item.lockedUntil ||
+            null;
+
+
+        item.createdAt =
+            item.createdAt ||
+            nowISO();
+
+
+        item.updatedAt =
+            item.updatedAt ||
+            nowISO();
+
+
+        item.lastLogin =
+            item.lastLogin ||
+            null;
+
+
+        return item;
+
+    }
+
+
+    async function saveAllUsers(
+        users
+    ) {
 
         const DB =
             getDB();
@@ -803,8 +1180,14 @@
 
 
         const cleanUsers =
-            clone(users);
+            users.map(
+                normalizeStoredUser
+            );
 
+
+        /*
+         * API مخصص.
+         */
 
         if (
             typeof DB.saveAllUsers ===
@@ -812,11 +1195,15 @@
         ) {
 
             return DB.saveAllUsers(
-                cleanUsers
+                clone(cleanUsers)
             );
 
         }
 
+
+        /*
+         * IndexedDB generic API.
+         */
 
         if (
             typeof DB.put ===
@@ -831,7 +1218,7 @@
                         CONFIG.USERS_KEY,
 
                     value:
-                        cleanUsers,
+                        clone(cleanUsers),
 
                     updatedAt:
                         nowISO()
@@ -842,9 +1229,34 @@
         }
 
 
-        throw new Error(
-            'لا توجد آلية لحفظ المستخدمين في DB'
-        );
+        /*
+         * localStorage fallback.
+         */
+
+        try {
+
+            localStorage.setItem(
+                CONFIG.USERS_KEY,
+                JSON.stringify(
+                    cleanUsers
+                )
+            );
+
+
+            return true;
+
+        } catch (error) {
+
+            console.error(
+                'تعذر حفظ users في localStorage:',
+                error
+            );
+
+            throw new Error(
+                'تعذر حفظ المستخدمين'
+            );
+
+        }
 
     }
 
@@ -853,7 +1265,9 @@
      * FIND
      * ========================================================= */
 
-    async function findUser(username) {
+    async function findUser(
+        username
+    ) {
 
         username =
             normalizeUsername(
@@ -875,14 +1289,29 @@
             'function'
         ) {
 
-            const user =
-                await DB.getUserByUsername(
-                    username
+            try {
+
+                const user =
+                    await DB.getUserByUsername(
+                        username
+                    );
+
+
+                if (user) {
+
+                    return normalizeStoredUser(
+                        user
+                    );
+
+                }
+
+            } catch (error) {
+
+                console.warn(
+                    'getUserByUsername failed:',
+                    error
                 );
 
-
-            if (user) {
-                return user;
             }
 
         }
@@ -904,9 +1333,15 @@
     }
 
 
-    async function findUserById(id) {
+    async function findUserById(
+        id
+    ) {
 
-        if (!id) {
+        const targetId =
+            normalizeId(id);
+
+
+        if (!targetId) {
             return null;
         }
 
@@ -918,7 +1353,9 @@
         return (
             users.find(
                 user =>
-                    user.id === id
+                    normalizeId(
+                        user.id
+                    ) === targetId
             ) || null
         );
 
@@ -929,7 +1366,9 @@
      * VALIDATION
      * ========================================================= */
 
-    function validateUsername(username) {
+    function validateUsername(
+        username
+    ) {
 
         username =
             normalizeUsername(
@@ -946,7 +1385,9 @@
         }
 
 
-        if (username.length < 3) {
+        if (
+            username.length < 3
+        ) {
 
             throw new Error(
                 'اسم المستخدم يجب أن يحتوي على 3 أحرف على الأقل'
@@ -955,7 +1396,9 @@
         }
 
 
-        if (username.length > 50) {
+        if (
+            username.length > 50
+        ) {
 
             throw new Error(
                 'اسم المستخدم طويل جداً'
@@ -1010,7 +1453,9 @@
         }
 
 
-        if (password.length < 6) {
+        if (
+            password.length < 6
+        ) {
 
             throw new Error(
                 'كلمة المرور يجب أن تحتوي على 6 أحرف على الأقل'
@@ -1019,7 +1464,9 @@
         }
 
 
-        if (password.length > 128) {
+        if (
+            password.length > 128
+        ) {
 
             throw new Error(
                 'كلمة المرور طويلة جداً'
@@ -1031,7 +1478,7 @@
 
 
     /* =========================================================
-     * USER NORMALIZATION
+     * PERMISSIONS
      * ========================================================= */
 
     function normalizePermissions(
@@ -1088,7 +1535,7 @@
 
 
         /*
-         * إذا لم توجد صلاحيات مخصصة:
+         * إذا لم توجد صلاحيات مخصصة،
          * استخدم صلاحيات الدور.
          */
 
@@ -1100,6 +1547,10 @@
 
         }
 
+
+        /*
+         * Admin دائماً كامل الصلاحيات.
+         */
 
         if (
             rolePermissions.includes('*')
@@ -1299,7 +1750,11 @@
         changes = {}
     ) {
 
-        if (!id) {
+        const targetId =
+            normalizeId(id);
+
+
+        if (!targetId) {
 
             throw new Error(
                 'معرف المستخدم مطلوب'
@@ -1315,7 +1770,9 @@
         const index =
             users.findIndex(
                 user =>
-                    user.id === id
+                    normalizeId(
+                        user.id
+                    ) === targetId
             );
 
 
@@ -1329,7 +1786,9 @@
 
 
         const current =
-            users[index];
+            normalizeStoredUser(
+                users[index]
+            );
 
 
         const next =
@@ -1361,7 +1820,9 @@
                 const duplicate =
                     users.find(
                         user =>
-                            user.id !== id &&
+                            normalizeId(
+                                user.id
+                            ) !== targetId &&
                             normalizeUsername(
                                 user.username
                             ) === username
@@ -1528,26 +1989,24 @@
                 );
 
 
-            /*
-             * منع تعطيل آخر مدير نشط.
-             */
-
             if (
                 requestedActive === false &&
                 normalizeRole(
                     current.role
                 ) === ROLES.ADMIN &&
-                current.active !== false
+                isUserActive(current)
             ) {
 
                 const otherActiveAdmins =
                     users.filter(
                         user =>
-                            user.id !== id &&
+                            normalizeId(
+                                user.id
+                            ) !== targetId &&
                             normalizeRole(
                                 user.role
                             ) === ROLES.ADMIN &&
-                            user.active !== false
+                            isUserActive(user)
                     ).length;
 
 
@@ -1579,7 +2038,7 @@
             undefined &&
             String(
                 changes.password || ''
-            ).length
+            ).length > 0
         ) {
 
             validatePassword(
@@ -1603,7 +2062,9 @@
 
 
         users[index] =
-            next;
+            normalizeStoredUser(
+                next
+            );
 
 
         await saveAllUsers(
@@ -1611,10 +2072,9 @@
         );
 
 
-        /*
-         * تحديث الجلسة إذا كان المستخدم
-         * المعدل هو المستخدم الحالي.
-         */
+        /* -----------------------------------------------------
+         * Update session
+         * ----------------------------------------------------- */
 
         const session =
             getSession();
@@ -1622,8 +2082,15 @@
 
         if (
             session &&
-            session.userId === id
+            normalizeId(
+                session.userId
+            ) === targetId
         ) {
+
+            session.userId =
+                normalizeId(
+                    next.id
+                );
 
             session.username =
                 next.username;
@@ -1640,7 +2107,7 @@
 
 
             if (
-                next.active === false
+                !isUserActive(next)
             ) {
 
                 clearSession();
@@ -1661,7 +2128,7 @@
             {
 
                 userId:
-                    id,
+                    targetId,
 
                 username:
                     next.username
@@ -1681,9 +2148,15 @@
      * DELETE USER
      * ========================================================= */
 
-    async function deleteUser(id) {
+    async function deleteUser(
+        id
+    ) {
 
-        if (!id) {
+        const targetId =
+            normalizeId(id);
+
+
+        if (!targetId) {
 
             throw new Error(
                 'معرف المستخدم مطلوب'
@@ -1698,7 +2171,9 @@
 
         if (
             current &&
-            current.id === id
+            normalizeId(
+                current.id
+            ) === targetId
         ) {
 
             throw new Error(
@@ -1715,7 +2190,9 @@
         const user =
             users.find(
                 item =>
-                    item.id === id
+                    normalizeId(
+                        item.id
+                    ) === targetId
             );
 
 
@@ -1731,7 +2208,9 @@
         const remaining =
             users.filter(
                 item =>
-                    item.id !== id
+                    normalizeId(
+                        item.id
+                    ) !== targetId
             );
 
 
@@ -1742,7 +2221,8 @@
         if (
             normalizeRole(
                 user.role
-            ) === ROLES.ADMIN
+            ) === ROLES.ADMIN &&
+            isUserActive(user)
         ) {
 
             const activeAdmins =
@@ -1751,7 +2231,7 @@
                         normalizeRole(
                             item.role
                         ) === ROLES.ADMIN &&
-                        item.active !== false
+                        isUserActive(item)
                 ).length;
 
 
@@ -1778,7 +2258,7 @@
             {
 
                 userId:
-                    id,
+                    targetId,
 
                 username:
                     user.username
@@ -1887,11 +2367,11 @@
 
 
         /*
-         * الحساب غير نشط
+         * الحساب غير نشط.
          */
 
         if (
-            user.active === false
+            !isUserActive(user)
         ) {
 
             return {
@@ -1908,7 +2388,7 @@
 
 
         /*
-         * الحساب مقفل
+         * الحساب مقفل.
          */
 
         if (
@@ -1978,7 +2458,7 @@
 
 
         /*
-         * ترقية legacy password إلى PBKDF2.
+         * ترقية Legacy Password.
          */
 
         if (
@@ -1988,14 +2468,11 @@
 
             try {
 
-                const upgradedHash =
+                user.passwordHash =
                     await createPasswordHash(
                         password
                     );
 
-
-                user.passwordHash =
-                    upgradedHash;
 
                 delete user.password;
 
@@ -2011,10 +2488,6 @@
         }
 
 
-        /*
-         * تحديث بيانات الدخول.
-         */
-
         const users =
             await getAllUsers();
 
@@ -2022,14 +2495,21 @@
         const index =
             users.findIndex(
                 item =>
-                    item.id === user.id
+                    normalizeId(
+                        item.id
+                    ) ===
+                    normalizeId(
+                        user.id
+                    )
             );
 
 
         if (index !== -1) {
 
             users[index] =
-                clone(user);
+                normalizeStoredUser(
+                    user
+                );
 
 
             users[index].lastLogin =
@@ -2058,7 +2538,9 @@
                 generateId(),
 
             userId:
-                user.id,
+                normalizeId(
+                    user.id
+                ),
 
             username:
                 user.username,
@@ -2132,6 +2614,10 @@
         userId
     ) {
 
+        const targetId =
+            normalizeId(userId);
+
+
         const users =
             await getAllUsers();
 
@@ -2139,7 +2625,9 @@
         const index =
             users.findIndex(
                 item =>
-                    item.id === userId
+                    normalizeId(
+                        item.id
+                    ) === targetId
             );
 
 
@@ -2182,6 +2670,12 @@
             nowISO();
 
 
+        users[index] =
+            normalizeStoredUser(
+                user
+            );
+
+
         await saveAllUsers(
             users
         );
@@ -2193,7 +2687,9 @@
      * SESSION
      * ========================================================= */
 
-    function saveSession(session) {
+    function saveSession(
+        session
+    ) {
 
         try {
 
@@ -2205,12 +2701,18 @@
                 )
             );
 
+
+            return true;
+
         } catch (error) {
 
             console.error(
                 'تعذر حفظ جلسة المستخدم:',
                 error
             );
+
+
+            return false;
 
         }
 
@@ -2248,11 +2750,15 @@
             }
 
 
-            if (
+            const expires =
                 new Date(
                     session.expiresAt
-                ).getTime() <=
-                Date.now()
+                ).getTime();
+
+
+            if (
+                !Number.isFinite(expires) ||
+                expires <= Date.now()
             ) {
 
                 clearSession();
@@ -2286,36 +2792,46 @@
         }
 
 
-        const user =
-            await findUser(
-                session.username
-            );
+        let user =
+            null;
 
+
+        /*
+         * البحث بالـ ID أولاً.
+         */
 
         if (
-            !user ||
-            user.active === false
+            session.userId
         ) {
 
-            clearSession();
-
-            return null;
+            user =
+                await findUserById(
+                    session.userId
+                );
 
         }
 
 
         /*
-         * إذا تغير username أو role
-         * نزامن الجلسة.
+         * fallback بالـ username.
          */
 
-        let changed =
-            false;
+        if (
+            !user &&
+            session.username
+        ) {
+
+            user =
+                await findUser(
+                    session.username
+                );
+
+        }
 
 
         if (
-            session.userId !==
-            user.id
+            !user ||
+            !isUserActive(user)
         ) {
 
             clearSession();
@@ -2335,6 +2851,30 @@
             normalizeRole(
                 user.role
             );
+
+
+        let changed =
+            false;
+
+
+        if (
+            normalizeId(
+                session.userId
+            ) !==
+            normalizeId(
+                user.id
+            )
+        ) {
+
+            session.userId =
+                normalizeId(
+                    user.id
+                );
+
+            changed =
+                true;
+
+        }
 
 
         if (
@@ -2527,32 +3067,36 @@
     }
 
 
-    function getRoleLabel(role) {
+    function getRoleLabel(
+        role
+    ) {
 
-        role =
+        const normalized =
             normalizeRole(
                 role
             );
 
 
         return (
-            ROLE_LABELS[role] ||
+            ROLE_LABELS[normalized] ||
             'مستخدم'
         );
 
     }
 
 
-    function getRolePermissions(role) {
+    function getRolePermissions(
+        role
+    ) {
 
-        role =
+        const normalized =
             normalizeRole(
                 role
             );
 
 
         return [
-            ...(PERMISSIONS[role] || [])
+            ...(PERMISSIONS[normalized] || [])
         ];
 
     }
@@ -2562,7 +3106,9 @@
      * SANITIZE
      * ========================================================= */
 
-    function sanitizeUser(user) {
+    function sanitizeUser(
+        user
+    ) {
 
         if (!user) {
             return null;
@@ -2664,8 +3210,8 @@
 
 
         const user =
-            await findUser(
-                session.username
+            await findUserById(
+                session.userId
             );
 
 
@@ -2680,10 +3226,12 @@
 
         const valid =
             await verifyPasswordHash(
+
                 currentPassword,
 
                 user.passwordHash ||
                 user.password
+
             );
 
 
@@ -2772,7 +3320,7 @@
 
 
         await updateUser(
-            userId,
+            user.id,
             {
                 password:
                     newPassword
@@ -2785,7 +3333,7 @@
             {
 
                 targetUserId:
-                    userId,
+                    user.id,
 
                 targetUsername:
                     user.username
@@ -2844,7 +3392,11 @@
 
                         user.hospital,
 
-                        user.role
+                        user.role,
+
+                        getRoleLabel(
+                            user.role
+                        )
 
                     ]
                         .filter(Boolean)
@@ -2883,13 +3435,13 @@
             active:
                 users.filter(
                     user =>
-                        user.active !== false
+                        isUserActive(user)
                 ).length,
 
             inactive:
                 users.filter(
                     user =>
-                        user.active === false
+                        !isUserActive(user)
                 ).length,
 
             byRole: {}
@@ -2930,8 +3482,8 @@
 
 
         /*
-         * لا ننشئ Admin إذا كان هناك
-         * مدير نشط بالفعل.
+         * إذا يوجد Admin نشط،
+         * لا نفعل شيئاً.
          */
 
         const hasActiveAdmin =
@@ -2940,23 +3492,19 @@
                     normalizeRole(
                         user.role
                     ) === ROLES.ADMIN &&
-                    user.active !== false
+                    isUserActive(user)
             );
 
 
         if (hasActiveAdmin) {
+
             return false;
+
         }
 
 
         /*
-         * إذا كانت قاعدة البيانات تحتوي
-         * على مستخدمين ولكن لا يوجد Admin،
-         * لا ننشئ حساباً تلقائياً فوق
-         * بيانات موجودة.
-         *
-         * هذا يمنع تغيير صلاحيات نظام
-         * قائم بشكل غير متوقع.
+         * قاعدة مستخدمين فارغة فقط.
          */
 
         if (users.length > 0) {
@@ -2972,7 +3520,7 @@
 
         const passwordHash =
             await createPasswordHash(
-                'admin123'
+                CONFIG.DEFAULT_ADMIN_PASSWORD
             );
 
 
@@ -2986,7 +3534,7 @@
                 generateId(),
 
             username:
-                'admin',
+                CONFIG.DEFAULT_ADMIN_USERNAME,
 
             name:
                 'System Administrator',
@@ -3038,7 +3586,7 @@
 
 
         console.warn(
-            'MediPrescribe: تم إنشاء حساب Demo admin. يجب تغيير كلمة المرور الافتراضية.'
+            'MediPrescribe: تم إنشاء حساب Admin افتراضي. يجب تغيير كلمة المرور فوراً.'
         );
 
 
@@ -3110,14 +3658,34 @@
                 element.dataset.permission;
 
 
-            const allowed =
-                await hasPermission(
-                    permission
+            if (!permission) {
+                continue;
+            }
+
+
+            try {
+
+                const allowed =
+                    await hasPermission(
+                        permission
+                    );
+
+
+                element.hidden =
+                    !allowed;
+
+            } catch (error) {
+
+                console.warn(
+                    'Permission check failed:',
+                    error
                 );
 
 
-            element.hidden =
-                !allowed;
+                element.hidden =
+                    true;
+
+            }
 
         }
 
@@ -3151,11 +3719,15 @@
 
         } else {
 
-            document.dispatchEvent(
-                new CustomEvent(
-                    'mediprescribe:login-required'
-                )
-            );
+            try {
+
+                document.dispatchEvent(
+                    new CustomEvent(
+                        'mediprescribe:login-required'
+                    )
+                );
+
+            } catch (_) {}
 
         }
 
@@ -3189,6 +3761,22 @@
         }
 
 
+        /*
+         * إذا كانت البيانات الجديدة،
+         * استخدم createUser.
+         */
+
+        if (
+            !user.id
+        ) {
+
+            return createUser(
+                user
+            );
+
+        }
+
+
         const users =
             await getAllUsers();
 
@@ -3202,6 +3790,12 @@
         const duplicate =
             users.find(
                 item =>
+                    normalizeId(
+                        item.id
+                    ) !==
+                    normalizeId(
+                        user.id
+                    ) &&
                     normalizeUsername(
                         item.username
                     ) === username
@@ -3218,15 +3812,9 @@
 
 
         const newUser =
-            clone(user);
-
-
-        if (!newUser.id) {
-
-            newUser.id =
-                generateId();
-
-        }
+            normalizeStoredUser(
+                clone(user)
+            );
 
 
         newUser.username =
@@ -3258,28 +3846,6 @@
             );
 
 
-        newUser.email =
-            String(
-                newUser.email || ''
-            )
-                .trim()
-                .toLowerCase();
-
-
-        newUser.phone =
-            String(
-                newUser.phone || ''
-            )
-                .trim();
-
-
-        newUser.hospital =
-            String(
-                newUser.hospital || ''
-            )
-                .trim();
-
-
         newUser.permissions =
             normalizePermissions(
                 newUser.permissions
@@ -3287,8 +3853,7 @@
 
 
         /*
-         * Legacy password:
-         * تحويله إلى PBKDF2 قبل التخزين.
+         * Legacy password.
          */
 
         if (
@@ -3311,11 +3876,6 @@
         }
 
 
-        /*
-         * إذا لم توجد passwordHash
-         * لا نحفظ حساباً بلا credential.
-         */
-
         if (
             !newUser.passwordHash
         ) {
@@ -3334,22 +3894,6 @@
 
         newUser.updatedAt =
             nowISO();
-
-
-        newUser.lastLogin =
-            newUser.lastLogin ||
-            null;
-
-
-        newUser.failedLoginAttempts =
-            Number(
-                newUser.failedLoginAttempts || 0
-            );
-
-
-        newUser.lockedUntil =
-            newUser.lockedUntil ||
-            null;
 
 
         users.push(
@@ -3406,6 +3950,7 @@
     let initialized =
         false;
 
+
     let initializationPromise =
         null;
 
@@ -3418,7 +3963,9 @@
 
 
         if (initializationPromise) {
+
             return initializationPromise;
+
         }
 
 
@@ -3428,7 +3975,7 @@
                 try {
 
                     /*
-                     * انتظار DB.
+                     * DB init إذا كانت موجودة.
                      */
 
                     if (
@@ -3442,8 +3989,15 @@
 
 
                     /*
-                     * إنشاء Demo Admin
-                     * فقط عند قاعدة مستخدمين فارغة.
+                     * تحقق من DB.
+                     */
+
+                    getDB();
+
+
+                    /*
+                     * إنشاء Admin فقط
+                     * إذا كانت قاعدة المستخدمين فارغة.
                      */
 
                     await ensureAdminUser();
@@ -3460,15 +4014,21 @@
                         true;
 
 
-                    document.dispatchEvent(
-                        new CustomEvent(
-                            'mediprescribe:users-ready'
-                        )
-                    );
+                    try {
+
+                        document.dispatchEvent(
+                            new CustomEvent(
+                                'mediprescribe:users-ready'
+                            )
+                        );
+
+                    } catch (_) {}
 
 
                     console.log(
-                        '✅ MediPrescribe users.js v5.0.0 جاهز'
+                        '✅ MediPrescribe users.js v' +
+                        CONFIG.VERSION +
+                        ' جاهز'
                     );
 
 
@@ -3482,15 +4042,19 @@
                     );
 
 
-                    document.dispatchEvent(
-                        new CustomEvent(
-                            'mediprescribe:users-error',
-                            {
-                                detail:
-                                    error
-                            }
-                        )
-                    );
+                    try {
+
+                        document.dispatchEvent(
+                            new CustomEvent(
+                                'mediprescribe:users-error',
+                                {
+                                    detail:
+                                        error
+                                }
+                            )
+                        );
+
+                    } catch (_) {}
 
 
                     return false;
@@ -3521,7 +4085,7 @@
     const UserAPI = {
 
         version:
-            '5.0.0',
+            CONFIG.VERSION,
 
         CONFIG,
 
@@ -3607,7 +4171,7 @@
 
 
     /*
-     * Compatibility globals
+     * Compatibility globals.
      */
 
     window.getCurrentUser =
@@ -3625,11 +4189,6 @@
     window.hashPassword =
         legacyHashPassword;
 
-
-    /*
-     * مهم:
-     * توحيد verifyPassword مع users.js
-     */
 
     window.verifyPassword =
         verifyPasswordHash;
@@ -3651,6 +4210,32 @@
      * AUTO INIT
      * ========================================================= */
 
+    function startInitialization() {
+
+        /*
+         * تأخير بسيط جداً للسماح لـ db.js
+         * بالتحميل إذا كان script غير متزامن.
+         */
+
+        Promise.resolve()
+            .then(
+                () =>
+                    initUsers()
+            )
+            .catch(
+                error => {
+
+                    console.error(
+                        'MediPrescribe users auto-init error:',
+                        error
+                    );
+
+                }
+            );
+
+    }
+
+
     if (
         document.readyState ===
         'loading'
@@ -3658,23 +4243,16 @@
 
         document.addEventListener(
             'DOMContentLoaded',
-
-            function () {
-
-                initUsers();
-
-            },
-
+            startInitialization,
             {
                 once:
                     true
             }
-
         );
 
     } else {
 
-        initUsers();
+        startInitialization();
 
     }
 
