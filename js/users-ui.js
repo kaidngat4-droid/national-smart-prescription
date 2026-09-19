@@ -1,10 +1,11 @@
 /* =========================================================
  * MediPrescribe
  * users-ui.js
- * Version: 3.0.0
+ * Version: 3.1.0
  *
  * إدارة المستخدمين + RBAC
- * متوافق مع users.html المرفق
+ * مصدر الجلسة الموحد: User.getCurrentUser()
+ * Session Key: medi_session
  * ========================================================= */
 
 (function (window, document) {
@@ -21,7 +22,8 @@
     toastDuration: 3500,
     minPasswordLength: 8,
     minFullNameLength: 3,
-    minUsernameLength: 3
+    minUsernameLength: 3,
+    loginPage: "login.html"
   };
 
   /* =========================================================
@@ -41,6 +43,8 @@
     pendingDeleteId: null,
 
     canManage: false,
+
+    currentUser: null,
 
     loading: false,
     initialized: false,
@@ -233,7 +237,8 @@
 
     if (
       window.User &&
-      typeof window.User.getRoleLabel === "function"
+      typeof window.User.getRoleLabel ===
+        "function"
     ) {
       try {
         const result =
@@ -259,6 +264,100 @@
       ] ||
       "👤"
     );
+  }
+
+  /* =========================================================
+     CURRENT USER / SESSION
+     ========================================================= */
+
+  /*
+   * المصدر الوحيد للمستخدم الحالي:
+   *
+   * 1) Auth.getCurrentUser() إذا كان Auth موجوداً.
+   * 2) User.getCurrentUser() كمرجع أساسي.
+   *
+   * لا نقرأ:
+   * currentUser
+   * mp_current_user
+   * mp_session
+   *
+   * لأن users.js يعتمد على:
+   * medi_session
+   */
+
+  async function getAuthenticatedUser() {
+    try {
+      if (
+        window.Auth &&
+        typeof window.Auth.getCurrentUser ===
+          "function"
+      ) {
+        const user =
+          await window.Auth.getCurrentUser({
+            force: true,
+            redirect: false
+          });
+
+        if (user) {
+          return user;
+        }
+      }
+    } catch (error) {
+      console.warn(
+        "MediPrescribe: Auth.getCurrentUser failed",
+        error
+      );
+    }
+
+    try {
+      if (
+        window.User &&
+        typeof window.User.getCurrentUser ===
+          "function"
+      ) {
+        const user =
+          await window.User.getCurrentUser();
+
+        if (user) {
+          return user;
+        }
+      }
+    } catch (error) {
+      console.warn(
+        "MediPrescribe: User.getCurrentUser failed",
+        error
+      );
+    }
+
+    return null;
+  }
+
+  async function requireAuthenticatedUser() {
+    const user =
+      await getAuthenticatedUser();
+
+    if (user) {
+      state.currentUser = user;
+      return user;
+    }
+
+    state.currentUser = null;
+
+    try {
+      if (
+        window.location.pathname.endsWith(
+          CONFIG.loginPage
+        )
+      ) {
+        return null;
+      }
+
+      window.location.replace(
+        CONFIG.loginPage
+      );
+    } catch (_) {}
+
+    return null;
   }
 
   /* =========================================================
@@ -527,11 +626,6 @@
           error
         );
 
-        /*
-         * إذا كان init موجوداً وفشل،
-         * نوقف التحميل حتى لا تظهر أخطاء
-         * مضللة لاحقاً.
-         */
         throw error;
       }
     }
@@ -714,10 +808,6 @@
       }
     );
 
-    /*
-     * إذا كانت قيمة المستخدم القديمة
-     * غير موجودة في القائمة، نضيفها.
-     */
     if (
       current &&
       !Array.from(
@@ -731,16 +821,12 @@
         document.createElement("option");
 
       option.value = current;
-      option.textContent =
-        current;
+      option.textContent = current;
 
-      select.appendChild(
-        option
-      );
+      select.appendChild(option);
     }
 
-    select.value =
-      current;
+    select.value = current;
   }
 
   /* =========================================================
@@ -904,56 +990,63 @@
      ========================================================= */
 
   async function checkPermission() {
+    const current =
+      state.currentUser ||
+      await getAuthenticatedUser();
+
+    if (!current) {
+      state.canManage = false;
+      updatePermissionUI();
+      return false;
+    }
+
+    state.currentUser =
+      current;
+
+    const role =
+      getRole(current);
+
+    /*
+     * admin هو مدير النظام في users.js.
+     * لا نعتمد على User.isAdmin()
+     * لأنها غير موجودة في API الحالي.
+     */
+
+    if (role === "admin") {
+      state.canManage = true;
+      updatePermissionUI();
+      return true;
+    }
+
     let allowed = false;
 
     try {
       if (
         window.User &&
-        typeof window.User.isAdmin ===
+        typeof window.User.hasPermission ===
           "function"
       ) {
-        if (
-          await window.User.isAdmin()
-        ) {
-          allowed = true;
+        allowed =
+          Boolean(
+            await window.User.hasPermission(
+              "users.manage"
+            )
+          );
+
+        if (!allowed) {
+          allowed =
+            Boolean(
+              await window.User.hasPermission(
+                "*"
+              )
+            );
         }
       }
     } catch (error) {
       console.warn(
-        "MediPrescribe: isAdmin check failed",
+        "MediPrescribe: permission check failed",
         error
       );
-    }
-
-    if (!allowed) {
-      try {
-        if (
-          window.User &&
-          typeof window.User.hasPermission ===
-            "function"
-        ) {
-          allowed =
-            Boolean(
-              await window.User.hasPermission(
-                "users.manage"
-              )
-            );
-
-          if (!allowed) {
-            allowed =
-              Boolean(
-                await window.User.hasPermission(
-                  "*"
-                )
-              );
-          }
-        }
-      } catch (error) {
-        console.warn(
-          "MediPrescribe: permission check failed",
-          error
-        );
-      }
     }
 
     state.canManage =
@@ -1184,6 +1277,7 @@
           <td
             colspan="7"
             style="text-align:center;padding:35px;">
+
             <div style="margin-bottom:12px;">
               ⚠️ فشل تحميل المستخدمين
             </div>
@@ -1202,6 +1296,7 @@
               data-action="retry-load">
               🔄 إعادة المحاولة
             </button>
+
           </td>
         </tr>
       `;
@@ -2674,6 +2769,64 @@
   }
 
   /* =========================================================
+     LOGOUT
+     ========================================================= */
+
+  async function logoutCurrentUser() {
+    try {
+      /*
+       * الأفضل استخدام Auth.logout()
+       * إذا كان auth.js محملاً.
+       */
+      if (
+        window.Auth &&
+        typeof window.Auth.logout ===
+          "function"
+      ) {
+        await window.Auth.logout();
+
+        return;
+      }
+    } catch (error) {
+      console.warn(
+        "MediPrescribe: Auth.logout failed",
+        error
+      );
+    }
+
+    try {
+      /*
+       * users.js هو المصدر الأساسي
+       * للجلسة.
+       */
+      if (
+        window.User &&
+        typeof window.User.logout ===
+          "function"
+      ) {
+        await window.User.logout();
+      }
+    } catch (error) {
+      console.warn(
+        "MediPrescribe: User.logout failed",
+        error
+      );
+    }
+
+    /*
+     * تنظيف احتياطي فقط للمفتاح الصحيح.
+     * لا نستخدم currentUser أو mp_session.
+     */
+    try {
+      localStorage.removeItem(
+        "medi_session"
+      );
+    } catch (_) {}
+
+    state.currentUser = null;
+  }
+
+  /* =========================================================
      EVENTS
      ========================================================= */
 
@@ -2981,26 +3134,10 @@
       logout.addEventListener(
         "click",
         async function () {
+          logout.disabled = true;
+
           try {
-            if (
-              window.User &&
-              typeof window.User.logout ===
-                "function"
-            ) {
-              await window.User.logout();
-            } else {
-              try {
-                localStorage.removeItem(
-                  "currentUser"
-                );
-
-                localStorage.removeItem(
-                  "mp_current_user"
-                );
-
-                sessionStorage.clear();
-              } catch (_) {}
-            }
+            await logoutCurrentUser();
           } catch (error) {
             console.error(
               "Logout failed:",
@@ -3008,8 +3145,9 @@
             );
           }
 
-          window.location.href =
-            "index.html";
+          window.location.replace(
+            "index.html"
+          );
         }
       );
     }
@@ -3101,7 +3239,9 @@
      CURRENT USER BADGE
      ========================================================= */
 
-  async function updateUserBadge() {
+  async function updateUserBadge(
+    currentUser
+  ) {
     const badge =
       byId("user-badge");
 
@@ -3109,43 +3249,36 @@
       return;
     }
 
-    try {
-      if (
-        window.User &&
-        typeof window.User.getCurrentUser ===
-          "function"
-      ) {
-        const current =
-          await window.User.getCurrentUser();
+    const current =
+      currentUser ||
+      state.currentUser ||
+      await getAuthenticatedUser();
 
-        if (current) {
-          const name =
-            getUserName(
-              current
-            );
-
-          const role =
-            getRoleLabel(
-              getRole(current)
-            );
-
-          badge.textContent =
-            name +
-            " · " +
-            role;
-
-          return;
-        }
-      }
-    } catch (error) {
-      console.warn(
-        "MediPrescribe: current user unavailable",
-        error
-      );
+    if (!current) {
+      /*
+       * لا نعرض "زائر".
+       * لا نضع fallback مضللاً.
+       */
+      badge.textContent =
+        "غير مسجل";
+      return;
     }
 
+    state.currentUser =
+      current;
+
+    const name =
+      getUserName(current);
+
+    const role =
+      getRoleLabel(
+        getRole(current)
+      );
+
     badge.textContent =
-      "المستخدم الحالي";
+      name +
+      " · " +
+      role;
   }
 
   /* =========================================================
@@ -3171,12 +3304,42 @@
     renderPermissions([]);
 
     try {
+      /*
+       * 1. تحميل User API
+       */
       await initializeUserAPI();
 
+      /*
+       * 2. التأكد من وجود جلسة صحيحة
+       */
+      const currentUser =
+        await requireAuthenticatedUser();
+
+      if (!currentUser) {
+        return;
+      }
+
+      /*
+       * 3. حفظ المستخدم الحالي
+       */
+      state.currentUser =
+        currentUser;
+
+      /*
+       * 4. فحص الصلاحيات
+       */
       await checkPermission();
 
-      await updateUserBadge();
+      /*
+       * 5. تحديث اسم المستخدم والدور
+       */
+      await updateUserBadge(
+        currentUser
+      );
 
+      /*
+       * 6. تحميل المستخدمين
+       */
       await loadUsers();
 
     } catch (error) {
@@ -3230,6 +3393,7 @@
     openUserModal,
     openCreateUserModal,
     clearFilters,
+    getCurrentUser: getAuthenticatedUser,
     state
   };
 
